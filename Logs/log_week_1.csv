@@ -1,3 +1,8 @@
 action_datetime,path_name,method,ip,status_response,response,description,request_body,request_query,duration
 2025-04-14T08:03:26.014Z,/test,GET,::1,200,"{\"message\":\"Hello, world!\"}",Request to /test,"",{},6.51
 2025-04-14T08:03:26.017Z,/test,GET,::1,200,"{\"message\":\"Hello, world!\"}",Request to /test,"",{},9.83
+2025-04-14T09:21:03.116Z,/api/auth/login,POST,::1,401,"{\"message\":\"Invalid email or password\"}",Request to /api/auth/login,{"email":"admin@example.com","password":"123456"},{},11.41
+2025-04-14T09:21:55.291Z,/api/auth/login,POST,::1,401,"{\"message\":\"Invalid email or password\"}",Request to /api/auth/login,{"email":"admin@example.com","password":"123456"},{},3.91
+2025-04-14T09:21:56.269Z,/api/auth/login,POST,::1,401,"{\"message\":\"Invalid email or password\"}",Request to /api/auth/login,{"email":"admin@example.com","password":"123456"},{},2.85
+2025-04-14T09:24:27.603Z,/api/auth/login,POST,::1,401,"{\"message\":\"Invalid email or password\"}",Request to /api/auth/login,{"email":"admin@example.com","password":"123456"},{},20.32
+2025-04-14T09:24:28.427Z,/api/auth/login,POST,::1,401,"{\"message\":\"Invalid email or password\"}",Request to /api/auth/login,{"email":"admin@example.com","password":"123456"},{},5.35

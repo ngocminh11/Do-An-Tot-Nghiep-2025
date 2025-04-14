@@ -12,7 +12,7 @@ const connectDB = require('./Config/db');
 const requestLogger = require('./Middlewares/requestLogger');
 
 // Import routes
-const authRoutes = require('./Routes/auth');
+const authRoutes = require('./Routes/authRoutes');
 
 // Load env
 dotenv.config();
@@ -28,11 +28,11 @@ app.use(requestLogger); //Ghi log request/response
 app.use(cors());
 app.use(morgan('dev'));
 app.use(bodyParser.json());
+app.use('/api/auth', authRoutes);
 
 // Routes
-app.get('/test', (req, res) => {
-    res.status(200).send({ message: 'Hello, world!' });
-  });
+app.use('/api/auth', authRoutes);
+
   
 // Start server
 const PORT = process.env.PORT || 5000;
