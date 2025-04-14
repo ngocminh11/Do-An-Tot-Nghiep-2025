@@ -1,10 +1,18 @@
+// Import required modules
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
+
+// Import database connection
 const connectDB = require('./Config/db');
+
+// Import custom modules
 const requestLogger = require('./Middlewares/requestLogger');
+
+// Import routes
+const authRoutes = require('./Routes/auth');
 
 // Load env
 dotenv.config();
@@ -16,7 +24,7 @@ const app = express();
 
 // Middlewares
 app.use(express.json());
-app.use(requestLogger); // 👈 Ghi log request/response
+app.use(requestLogger); //Ghi log request/response
 app.use(cors());
 app.use(morgan('dev'));
 app.use(bodyParser.json());
