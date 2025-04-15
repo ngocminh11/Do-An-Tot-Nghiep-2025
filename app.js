@@ -10,10 +10,8 @@ const connectDB = require('./Config/db');
 
 // Import custom modules
 const requestLogger = require('./Middlewares/requestLogger');
-
 // Import routes
-const authRoutes = require('./Routes/authRoutes');
-
+const productRoutes = require("./Routes/ProductRoutes");
 // Load env
 dotenv.config();
 
@@ -28,10 +26,9 @@ app.use(requestLogger); //Ghi log request/response
 app.use(cors());
 app.use(morgan('dev'));
 app.use(bodyParser.json());
-app.use('/api/auth', authRoutes);
 
 // Routes
-app.use('/api/auth', authRoutes);
+app.use("/products", productRoutes);
 
   
 // Start server
