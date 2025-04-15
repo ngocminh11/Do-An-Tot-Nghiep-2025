@@ -43,7 +43,6 @@ const filterProducts = async (req, res) => {
     res.status(ResponseCode.ERROR_INTERNAL_SERVER).json({
       code: ResponseCode.ERROR_INTERNAL_SERVER,
       message: ResponseMessage.ERROR_INTERNAL_SERVER,
-      error: err.message,
     });
   }
 };
@@ -61,7 +60,6 @@ const getAllProducts = async (req, res) => {
       res.status(ResponseCode.ERROR_INTERNAL_SERVER).json({
         code: ResponseCode.ERROR_INTERNAL_SERVER,
         message: ResponseMessage.ERROR_INTERNAL_SERVER,
-        error: err.message,
       });
     }
   };
