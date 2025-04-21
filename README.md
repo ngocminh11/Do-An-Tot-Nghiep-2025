@@ -122,7 +122,7 @@ Một ứng dụng web full-stack giúp quản lý sản phẩm mỹ phẩm, kho
 ## 📁 Project Structure | Cấu Trúc Thư Mục
 
 ```
-cosmetic-management/
+project_mypham/
 ├── client/              # React frontend
 │   └── src/
 │       ├── components/
