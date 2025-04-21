@@ -146,8 +146,8 @@ project_mypham/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/cosmetic-management.git
-cd cosmetic-management
+git clone https://github.com/ngocminh11/Do-An-Tot-Nghiep-2025.git
+cd project_mypham
 ```
 
 ### 2. Backend Setup
@@ -161,8 +161,8 @@ Create `.env` file:
 
 ```env
 PORT=5000
-MONGO_URI=mongodb://localhost:27017/cosmeticDB
-JWT_SECRET=your_jwt_secret
+MONGO_URI=mongodb://localhost:27017/project_mypham
+JWT_SECRET=mysecretkey
 ```
 
 Run backend:
