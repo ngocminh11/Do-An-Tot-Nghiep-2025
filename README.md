@@ -8,7 +8,7 @@ Một ứng dụng web full-stack giúp quản lý sản phẩm mỹ phẩm, kho
 
 ##  Features | Tính Năng
 
-### 🛍 Product Management | Quản Lý Sản Phẩm
+###  Product Management | Quản Lý Sản Phẩm
 
 - Create, update, delete products  
   Tạo, sửa, xoá sản phẩm
@@ -141,7 +141,7 @@ project_mypham/
 
 ---
 
-## ⚙️ Installation | Cài Đặt
+##  Installation | Cài Đặt
 
 ### 1. Clone the Repository
 
@@ -183,7 +183,7 @@ npm start
 
 ---
 
-## 🗃️ Suggested MongoDB Collections
+##  Suggested MongoDB Collections
 
 | Collection     | Description                          |
 |----------------|--------------------------------------|
@@ -200,15 +200,15 @@ npm start
 
 ---
 
-## 📧 Contact | Liên Hệ
+##  Contact | Liên Hệ
 
-- 👤 Author: [Trần Ngọc Minh]  
-- ✉️ Email: [ngocminh110804@gmail.com]  
-- 🌐 GitHub: [https://github.com/ngocminh11/Do-An-Tot-Nghiep-2025.git]
+-  Author: [Trần Ngọc Minh]  
+-  Email: [ngocminh110804@gmail.com]  
+-  GitHub: [https://github.com/ngocminh11/Do-An-Tot-Nghiep-2025.git]
 
 ---
 
-## 📄 License | Giấy Phép
+##  License | Giấy Phép
 
 This project is licensed under the MIT License.
 
