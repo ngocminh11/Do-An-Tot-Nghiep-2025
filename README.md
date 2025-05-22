@@ -1,14 +1,14 @@
 
-# 💄 Cosmetic Management System | Hệ Thống Quản Lý Mỹ Phẩm
+#  Cosmetic Management System | Hệ Thống Quản Lý Mỹ Phẩm
 
 A full-stack web application for managing cosmetics products, inventory, customer orders, and promotional campaigns.  
 Một ứng dụng web full-stack giúp quản lý sản phẩm mỹ phẩm, kho hàng, đơn hàng khách hàng và các chương trình khuyến mãi.
 
 ---
 
-## 🚀 Features | Tính Năng
+##  Features | Tính Năng
 
-### 🛍️ Product Management | Quản Lý Sản Phẩm
+### 🛍 Product Management | Quản Lý Sản Phẩm
 
 - Create, update, delete products  
   Tạo, sửa, xoá sản phẩm
@@ -27,7 +27,7 @@ Một ứng dụng web full-stack giúp quản lý sản phẩm mỹ phẩm, kho
 - Inventory and price management  
   Quản lý giá và tồn kho
 
-### 🛒 Cart Management | Quản Lý Giỏ Hàng
+###  Cart Management | Quản Lý Giỏ Hàng
 
 - View, update, and remove items  
   Xem, cập nhật, xoá sản phẩm
@@ -38,7 +38,7 @@ Một ứng dụng web full-stack giúp quản lý sản phẩm mỹ phẩm, kho
 - Add notes to orders  
   Ghi chú đơn hàng
 
-### 💳 Payment & Checkout | Thanh Toán & Giao Hàng
+###  Payment & Checkout | Thanh Toán & Giao Hàng
 
 - Input shipping info  
   Nhập thông tin giao hàng
@@ -47,7 +47,7 @@ Một ứng dụng web full-stack giúp quản lý sản phẩm mỹ phẩm, kho
 - Order confirmation and email notification  
   Xác nhận đơn hàng & gửi email xác nhận
 
-### 👤 Account Management | Quản Lý Tài Khoản
+###  Account Management | Quản Lý Tài Khoản
 
 - Register / login / logout  
   Đăng ký / đăng nhập / đăng xuất
@@ -64,7 +64,7 @@ Một ứng dụng web full-stack giúp quản lý sản phẩm mỹ phẩm, kho
 - Role-based access control  
   Phân quyền người dùng (admin, staff, customer)
 
-### 🎁 Promotions & Marketing | Quản Lý Khuyến Mãi
+###  Promotions & Marketing | Quản Lý Khuyến Mãi
 
 - Create and manage discount codes  
   Tạo & quản lý mã giảm giá
@@ -73,7 +73,7 @@ Một ứng dụng web full-stack giúp quản lý sản phẩm mỹ phẩm, kho
 - Manage campaigns  
   Quản lý chiến dịch marketing
 
-### 🗣️ Customer Support | Hỗ Trợ Khách Hàng
+###  Customer Support | Hỗ Trợ Khách Hàng
 
 - FAQ section  
   Câu hỏi thường gặp
@@ -84,21 +84,21 @@ Một ứng dụng web full-stack giúp quản lý sản phẩm mỹ phẩm, kho
 - Ticket tracking and email alerts  
   Theo dõi yêu cầu & thông báo email
 
-### 📖 Content & Resources | Nội Dung & Tài Nguyên
+### Content & Resources | Nội Dung & Tài Nguyên
 
 - Beauty articles, tutorials, video guides  
   Bài viết làm đẹp, hướng dẫn sử dụng, video
 - Manage policy, about pages  
   Quản lý trang chính sách, giới thiệu
 
-### ⭐ Reviews & Ratings | Đánh Giá & Nhận Xét
+###  Reviews & Ratings | Đánh Giá & Nhận Xét
 
 - Submit and manage product reviews  
   Gửi và quản lý đánh giá sản phẩm
 - Display average ratings  
   Hiển thị đánh giá trung bình
 
-### 📊 Analytics & Reports | Thống Kê & Báo Cáo
+###  Analytics & Reports | Thống Kê & Báo Cáo
 
 - Revenue reports (daily/weekly/monthly)  
   Báo cáo doanh thu theo ngày/tuần/tháng
@@ -111,7 +111,7 @@ Một ứng dụng web full-stack giúp quản lý sản phẩm mỹ phẩm, kho
 
 ---
 
-## 🧱 Tech Stack | Công Nghệ Sử Dụng
+##  Tech Stack | Công Nghệ Sử Dụng
 
 - **Frontend:** ReactJS, React Router, Axios, TailwindCSS  
 - **Backend:** NodeJS, Express, JWT, Mongoose  
@@ -119,7 +119,7 @@ Một ứng dụng web full-stack giúp quản lý sản phẩm mỹ phẩm, kho
 
 ---
 
-## 📁 Project Structure | Cấu Trúc Thư Mục
+##  Project Structure | Cấu Trúc Thư Mục
 
 ```
 project_mypham/
@@ -165,10 +165,12 @@ MONGO_URI=mongodb://localhost:27017/project_mypham
 JWT_SECRET=mysecretkey
 ```
 
-Run backend:
+Run :
 
-```bash
-npm run dev
+Backend: node server/server.js
+Frontend: npm start trong thư mục client
+
+Lưu ý: Cần cài cors trong Node.js để cho phép gọi API từ React.
 ```
 
 ### 3. Frontend Setup
