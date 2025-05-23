@@ -122,21 +122,36 @@ Một ứng dụng web full-stack giúp quản lý sản phẩm mỹ phẩm, kho
 ##  Project Structure | Cấu Trúc Thư Mục
 
 ```
-project_mypham/
-├── client/              # React frontend
-│   └── src/
-│       ├── components/
-│       ├── pages/
-│       ├── services/
-│       └── App.jsx
-├── server/              # NodeJS backend
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   ├── middleware/
-│   └── server.js
-├── .env
-└── README.md
+├── BE/                                # Backend - NodeJS
+│   ├── Config/                        # Cấu hình hệ thống (DB, server, etc.)
+│   ├── Constants/                     # Hằng số dùng toàn hệ thống
+│   ├── Controllers/                   # Controller xử lý logic
+│   ├── Logs/                          # Lưu log hệ thống
+│   ├── Middlewares/                   # Middleware xử lý giữa các bước
+│   ├── Models/                        # Mô hình dữ liệu Mongoose
+│   ├── Routes/                        # Định nghĩa các tuyến API
+│   ├── Services/                      # Các service dùng cho controller
+│   ├── Utils/                         # Tiện ích chung
+│   ├── .env                           # Biến môi trường thực tế
+│   ├── .env.example                   # File mẫu biến môi trường
+│   ├── .gitignore
+│   ├── app.js                         # Điểm khởi đầu của server NodeJS
+│   ├── package-lock.json
+│   ├── package.json
+│   └── runSeed.js                     # Script seed dữ liệu mẫu
+├── FE/                                # Frontend - ReactJS
+│   ├── node_modules/
+│   ├── public/
+│   ├── src/
+│   │   ├── components/                # Component dùng chung
+│   │   ├── pages/                     # Trang giao diện
+│   │   ├── services/                  # Giao tiếp API
+│   │   └── App.jsx                    # Thành phần chính React
+│   ├── .gitignore
+│   ├── package-lock.json
+│   ├── package.json
+│   └── README.md
+
 ```
 
 ---
