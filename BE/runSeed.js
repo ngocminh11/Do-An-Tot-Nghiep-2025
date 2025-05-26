@@ -1,24 +1,21 @@
-// runSeed.js
+const mongoose = require('mongoose');
+const runCategorySeed = require('./Seeds/category.seed');
+const runProductSeed = require('./Seeds/product.seed');
 
-const fs = require('fs');
-const path = require('path');
+(async () => {
+  try {
+    await mongoose.connect('mongodb://localhost:27017/datn_mypham');
+    console.log('✅ Đã kết nối MongoDB');
 
-// Đọc tất cả các file trong thư mục Seeds
-const seedFolder = path.join(__dirname, 'Seeds');
-fs.readdir(seedFolder, (err, files) => {
-  if (err) {
-    console.error('Lỗi khi đọc thư mục Seeds:', err);
-    return;
+    console.log('Đang chạy file seed: category.seed.js');
+    const category = await runCategorySeed();
+
+    console.log('Đang chạy file seed: product.seed.js');
+    await runProductSeed(category); // truyền category vào nếu cần
+
+    await mongoose.disconnect();
+    console.log('✅ Đã ngắt kết nối MongoDB');
+  } catch (error) {
+    console.error('❌ Lỗi khi seed dữ liệu:', error);
   }
-
-  // Lọc các file có đuôi .js
-  const seedFiles = files.filter(file => file.endsWith('.js'));
-
-  // Thực thi từng file seed
-  seedFiles.forEach(file => {
-    const filePath = path.join(seedFolder, file);
-    console.log(`Đang chạy file seed: ${filePath}`);
-
-    require(filePath);  // Thực thi file seed
-  });
-});
+})();
