@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const runCategorySeed = require('./Seeds/category.seed');
 const runProductSeed = require('./Seeds/Products/product.seed');
+const runUserSeed = require('./Seeds/Users/user.seed');
 
 (async () => {
   try {
@@ -12,6 +13,9 @@ const runProductSeed = require('./Seeds/Products/product.seed');
 
     console.log('Đang chạy file seed: product.seed.js');
     await runProductSeed(category); // truyền category vào nếu cần
+
+    console.log('Đang chạy file seed: user.seed.js');
+    await runUserSeed();
 
     await mongoose.disconnect();
     console.log(' Đã ngắt kết nối MongoDB');

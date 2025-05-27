@@ -25,7 +25,7 @@ const seed = async () => {
       // Kiểm tra name đã tồn tại chưa (name là unique)
       const exists = await Product.findOne({ name: product.name });
       if (exists) {
-        console.log(`⚠️ Đã tồn tại: ${product.name}`);
+        console.log(`Đã tồn tại: ${product.name}`);
         continue;
       }
 

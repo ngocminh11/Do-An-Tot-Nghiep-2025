@@ -1,0 +1,128 @@
+[
+  {
+    "userId": 1,
+    "name": "Nguyễn Văn A",
+    "phone": "0901234567",
+    "dob": "1990-01-01T00:00:00Z",
+    "gender": "male",
+    "addrs": [
+      {
+        "addrId": "ObjectId(\"6651a1111a3e100000000001\")",
+        "label": "Nhà",
+        "fullAddr": "123 Nguyễn Huệ",
+        "city": "HCM",
+        "dist": "Q1",
+        "ward": "P. Bến Nghé",
+        "isDef": true
+      }
+    ]
+  },
+  {
+    "userId": 2,
+    "name": "Trần Thị B",
+    "phone": "0902233445",
+    "dob": "1992-03-15T00:00:00Z",
+    "gender": "female",
+    "addrs": [
+      {
+        "addrId": "ObjectId(\"6651a1111a3e100000000002\")",
+        "label": "Công ty",
+        "fullAddr": "456 Lê Lợi",
+        "city": "HCM",
+        "dist": "Q3",
+        "ward": "P. Võ Thị Sáu",
+        "isDef": true
+      }
+    ]
+  },
+  {
+    "userId": 3,
+    "name": "Lê Văn C",
+    "phone": "0909988776",
+    "dob": "1995-07-20T00:00:00Z",
+    "gender": "male",
+    "addrs": [
+      {
+        "addrId": "ObjectId(\"6651a1111a3e100000000003\")",
+        "label": "Nhà",
+        "fullAddr": "78 Trần Hưng Đạo",
+        "city": "Hà Nội",
+        "dist": "Hoàn Kiếm",
+        "ward": "P. Hàng Bạc",
+        "isDef": true
+      }
+    ]
+  },
+  {
+    "userId": 4,
+    "name": "Phạm Thị D",
+    "phone": "0911223344",
+    "dob": "1993-05-12T00:00:00Z",
+    "gender": "female",
+    "addrs": [
+      {
+        "addrId": "ObjectId(\"6651a1111a3e100000000004\")",
+        "label": "Nhà",
+        "fullAddr": "321 Lý Thường Kiệt",
+        "city": "Đà Nẵng",
+        "dist": "Hải Châu",
+        "ward": "P. Hải Châu 1",
+        "isDef": true
+      }
+    ]
+  },
+  {
+    "userId": 5,
+    "name": "Đặng Văn E",
+    "phone": "0933445566",
+    "dob": "1994-09-10T00:00:00Z",
+    "gender": "male",
+    "addrs": [
+      {
+        "addrId": "ObjectId(\"6651a1111a3e100000000005\")",
+        "label": "Công ty",
+        "fullAddr": "65 Nguyễn Văn Linh",
+        "city": "Hà Nội",
+        "dist": "Thanh Xuân",
+        "ward": "P. Nhân Chính",
+        "isDef": true
+      }
+    ]
+  },
+  {
+    "userId": 6,
+    "name": "Võ Thị F",
+    "phone": "0904556677",
+    "dob": "1996-11-22T00:00:00Z",
+    "gender": "female",
+    "addrs": [
+      {
+        "addrId": "ObjectId(\"6651a1111a3e100000000006\")",
+        "label": "Nhà",
+        "fullAddr": "88 Điện Biên Phủ",
+        "city": "Cần Thơ",
+        "dist": "Ninh Kiều",
+        "ward": "P. Tân An",
+        "isDef": true
+      }
+    ]
+  },
+  {
+    "userId": 7,
+    "name": "Ngô Văn G",
+    "phone": "0905667788",
+    "dob": "1991-12-05T00:00:00Z",
+    "gender": "male",
+    "addrs": [
+      {
+        "addrId": "ObjectId(\"6651a1111a3e100000000007\")",
+        "label": "Nhà",
+        "fullAddr": "22 Phạm Ngũ Lão",
+        "city": "Huế",
+        "dist": "TP. Huế",
+        "ward": "P. Thuận Hòa",
+        "isDef": true
+      }
+    ]
+  }
+]
