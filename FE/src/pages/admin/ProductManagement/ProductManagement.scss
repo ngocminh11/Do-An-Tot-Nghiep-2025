@@ -1,0 +1,129 @@
+.product-management {
+    padding: 24px;
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+
+        h1 {
+            margin: 0;
+            color: #1a1a1a;
+            font-size: 24px;
+        }
+    }
+
+    .ant-table {
+        background: white;
+        border-radius: 2px;
+
+        .ant-table-thead>tr>th {
+            background: #fafafa;
+            font-weight: 500;
+        }
+
+        .ant-table-tbody>tr>td {
+            vertical-align: middle;
+        }
+
+        img {
+            border-radius: 4px;
+        }
+
+        .status-active {
+            color: #52c41a;
+            font-weight: 500;
+        }
+
+        .status-inactive {
+            color: #ff4d4f;
+            font-weight: 500;
+        }
+    }
+
+    .status-tag {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        text-transform: capitalize;
+
+        &.published {
+            background-color: #f6ffed;
+            border: 1px solid #b7eb8f;
+            color: #52c41a;
+        }
+
+        &.draft {
+            background-color: #fffbe6;
+            border: 1px solid #ffe58f;
+            color: #faad14;
+        }
+
+        &.archived {
+            background-color: #fff2f0;
+            border: 1px solid #ffccc7;
+            color: #ff4d4f;
+        }
+    }
+
+    .ant-modal {
+        .ant-form {
+            .ant-form-item-label {
+                font-weight: 500;
+            }
+
+            .ant-form-item {
+                margin-bottom: 24px;
+
+                &:last-child {
+                    margin-bottom: 0;
+                }
+            }
+
+            .ant-upload-list {
+                margin-top: 8px;
+            }
+
+            .ant-upload-list-picture-card .ant-upload-list-item {
+                padding: 8px;
+                border: 1px solid #d9d9d9;
+            }
+        }
+    }
+
+    .ant-modal-body {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+}
+
+// Responsive styles
+@media (max-width: 768px) {
+    .product-management {
+        padding: 16px;
+
+        .header {
+            margin-bottom: 16px;
+
+            h1 {
+                font-size: 20px;
+            }
+        }
+
+        .ant-table {
+            .ant-table-content {
+                overflow-x: auto;
+            }
+        }
+
+        .ant-form-item {
+            margin-bottom: 16px;
+        }
+
+        .ant-modal {
+            width: 90% !important;
+            margin: 0 auto;
+        }
+    }
+}

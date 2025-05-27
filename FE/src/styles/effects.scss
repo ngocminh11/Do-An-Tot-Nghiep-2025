@@ -1,0 +1,325 @@
+// Modern Glass Effect
+.glass-effect {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+// Gradient Effects
+.gradient-primary {
+    background: linear-gradient(45deg, #007bff, #00ff88);
+}
+
+.gradient-dark {
+    background: linear-gradient(45deg, #2c3e50, #3498db);
+}
+
+.gradient-light {
+    background: linear-gradient(45deg, #f6f9fc, #e9ecef);
+}
+
+// Modern Card Design
+.modern-card {
+    @include card-style;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transform: translateX(-100%);
+        transition: 0.5s;
+    }
+
+    &:hover::before {
+        transform: translateX(100%);
+    }
+}
+
+// Floating Effect
+.floating {
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+// Neon Effect
+.neon {
+    text-shadow: 0 0 5px #fff,
+        0 0 10px #fff,
+        0 0 20px #007bff,
+        0 0 30px #007bff,
+        0 0 40px #007bff;
+}
+
+// Modern Button
+.modern-button {
+    @include button-style;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transform: translateX(-100%);
+        transition: 0.5s;
+        z-index: -1;
+    }
+
+    &:hover::before {
+        transform: translateX(100%);
+    }
+}
+
+// Shimmer Effect
+.shimmer {
+    background: linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.2) 50%,
+            rgba(255, 255, 255, 0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+// Modern Input
+.modern-input {
+    @include input-style;
+    border-radius: 25px;
+    padding: 12px 20px;
+    transition: all 0.3s ease;
+
+    &:focus {
+        box-shadow: 0 0 15px rgba(0, 123, 255, 0.3);
+        transform: translateY(-2px);
+    }
+}
+
+// Parallax Effect
+.parallax {
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+// Modern Navigation
+.modern-nav {
+    @include flex-between;
+    padding: 1rem 2rem;
+    @extend .glass-effect;
+    border-radius: 15px;
+    margin: 1rem;
+
+    @include mobile {
+        flex-direction: column;
+        padding: 1rem;
+    }
+}
+
+// Animated Background
+.animated-bg {
+    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+}
+
+@keyframes gradient {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+// Modern Grid Layout
+.modern-grid {
+    display: grid;
+    gap: 2rem;
+    padding: 2rem;
+
+    @include mobile {
+        grid-template-columns: 1fr;
+    }
+
+    @include tablet {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    @include laptop {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+// Card Hover Effects
+.hover-card {
+    @include card-style;
+    transition: all 0.3s ease;
+
+    &:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+}
+
+// Modern Footer
+.modern-footer {
+    background: linear-gradient(to right, #2c3e50, #3498db);
+    color: white;
+    padding: 3rem 0;
+    margin-top: 4rem;
+
+    .footer-content {
+        @include flex-between;
+        flex-wrap: wrap;
+        gap: 2rem;
+
+        @include mobile {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
+}
+
+// Loading Animation
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+// Scroll Progress Bar
+.scroll-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(to right, #007bff, #00ff88);
+    z-index: 1000;
+    transform-origin: 0%;
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+// Modern Modal
+.modern-modal {
+    @extend .glass-effect;
+    border-radius: 20px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    margin: 2rem auto;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-100px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+// Text Gradient
+.text-gradient {
+    background: linear-gradient(45deg, #007bff, #00ff88);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+// Modern Table
+.modern-table {
+    @extend .glass-effect;
+    border-radius: 15px;
+    overflow: hidden;
+
+    th,
+    td {
+        padding: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    tr:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+}
+
+// Image Hover Effect
+.image-hover {
+    position: relative;
+    overflow: hidden;
+
+    img {
+        transition: transform 0.5s ease;
+    }
+
+    &:hover img {
+        transform: scale(1.1);
+    }
+
+    .overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        @include flex-center;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+}

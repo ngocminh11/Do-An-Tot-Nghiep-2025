@@ -1,0 +1,35 @@
+body {
+    font-family: 'Inter', 'Roboto', Arial, sans-serif;
+    background: #f8f8f8;
+    margin: 0;
+    padding: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: 'Playfair Display', serif;
+}
+
+a {
+    color: #d72660;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.ant-btn-primary {
+    background: #d72660;
+    border-color: #d72660;
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+    background: #b71c50;
+    border-color: #b71c50;
+}

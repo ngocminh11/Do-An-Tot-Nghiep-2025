@@ -1,0 +1,88 @@
+.contact-page {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+
+    h2.ant-typography {
+        margin-bottom: 24px;
+        color: #1a1a1a;
+    }
+
+    .contact-form {
+        height: 100%;
+
+        .ant-form-item {
+            margin-bottom: 24px;
+        }
+
+        .ant-btn {
+            height: 40px;
+            font-size: 16px;
+        }
+    }
+
+    .contact-info {
+        height: 100%;
+
+        h3.ant-typography {
+            margin-bottom: 24px;
+            color: #1a1a1a;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 24px;
+
+            .anticon {
+                font-size: 24px;
+                color: #1890ff;
+                margin-right: 16px;
+                margin-top: 4px;
+            }
+
+            div {
+                .ant-typography {
+                    display: block;
+                    margin-bottom: 4px;
+
+                    &:last-child {
+                        margin-bottom: 0;
+                    }
+                }
+            }
+        }
+
+        .business-hours {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #f0f0f0;
+
+            h4.ant-typography {
+                margin-bottom: 16px;
+                color: #1a1a1a;
+            }
+
+            .hours-item {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 12px;
+
+                .ant-typography {
+                    color: #666;
+                }
+            }
+        }
+    }
+}
+
+// Responsive styles
+@media (max-width: 768px) {
+    .contact-page {
+        padding: 16px;
+
+        .ant-card {
+            margin-bottom: 16px;
+        }
+    }
+}
