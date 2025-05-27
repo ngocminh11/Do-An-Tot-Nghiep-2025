@@ -1,0 +1,1242 @@
+[
+  {
+    "id": "0001",
+    "name": "Serum Dưỡng Da - Mẫu 1",
+    "description": "Sản phẩm serum dưỡng da giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "La Roche-Posay",
+    "categoryName": "Serum Dưỡng Da",
+    "price": 331199.89,
+    "stockQuantity": 67,
+    "attributes": {
+      "volume": "30ml",
+      "skinType": [
+        "da hỗn hợp",
+        "da nhạy cảm",
+        "da dầu"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/serum_dưỡng_da_1.jpg"
+    ],
+    "viewCount": 2240,
+    "purchaseCount": 598,
+    "averageRating": 3.6,
+    "tags": [
+      "trị mụn",
+      "AHA",
+      "dưỡng ẩm"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-01T00:00:00",
+    "updatedAt": "2025-05-02T00:00:00"
+  },
+  {
+    "id": "0002",
+    "name": "Kem Chống Nắng - Mẫu 2",
+    "description": "Sản phẩm kem chống nắng giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Cosrx",
+    "categoryName": "Kem Chống Nắng",
+    "price": 348640.06,
+    "stockQuantity": 76,
+    "attributes": {
+      "volume": "50ml",
+      "skinType": [
+        "da thường",
+        "da nhạy cảm",
+        "da dầu"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/kem_chống_nắng_2.jpg"
+    ],
+    "viewCount": 4246,
+    "purchaseCount": 349,
+    "averageRating": 3.8,
+    "tags": [
+      "chống lão hóa",
+      "dưỡng ẩm",
+      "AHA"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-02T00:00:00",
+    "updatedAt": "2025-05-03T00:00:00"
+  },
+  {
+    "id": "0003",
+    "name": "Sữa Rửa Mặt - Mẫu 3",
+    "description": "Sản phẩm sữa rửa mặt giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "The Ordinary",
+    "categoryName": "Sữa Rửa Mặt",
+    "price": 359803.74,
+    "stockQuantity": 100,
+    "attributes": {
+      "volume": "30ml",
+      "skinType": [
+        "da dầu",
+        "da khô",
+        "da thường"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/sữa_rửa_mặt_3.jpg"
+    ],
+    "viewCount": 1267,
+    "purchaseCount": 106,
+    "averageRating": 4.3,
+    "tags": [
+      "BHA",
+      "niacinamide",
+      "collagen"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-03T00:00:00",
+    "updatedAt": "2025-05-04T00:00:00"
+  },
+  {
+    "id": "0004",
+    "name": "Kem Dưỡng Ẩm - Mẫu 4",
+    "description": "Sản phẩm kem dưỡng ẩm giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "The Ordinary",
+    "categoryName": "Kem Dưỡng Ẩm",
+    "price": 165274.43,
+    "stockQuantity": 47,
+    "attributes": {
+      "volume": "50ml",
+      "skinType": [
+        "da khô",
+        "da dầu",
+        "da nhạy cảm"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/kem_dưỡng_ẩm_4.jpg"
+    ],
+    "viewCount": 3831,
+    "purchaseCount": 199,
+    "averageRating": 4.7,
+    "tags": [
+      "vitamin C",
+      "collagen",
+      "trị mụn"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-04T00:00:00",
+    "updatedAt": "2025-05-05T00:00:00"
+  },
+  {
+    "id": "0005",
+    "name": "Toner - Mẫu 5",
+    "description": "Sản phẩm toner giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Innisfree",
+    "categoryName": "Toner",
+    "price": 159127.35,
+    "stockQuantity": 52,
+    "attributes": {
+      "volume": "30ml",
+      "skinType": [
+        "da khô",
+        "da nhạy cảm",
+        "da hỗn hợp"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/toner_5.jpg"
+    ],
+    "viewCount": 2984,
+    "purchaseCount": 141,
+    "averageRating": 4.4,
+    "tags": [
+      "niacinamide",
+      "AHA",
+      "vitamin C"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-05T00:00:00",
+    "updatedAt": "2025-05-06T00:00:00"
+  },
+  {
+    "id": "0006",
+    "name": "Mặt Nạ - Mẫu 6",
+    "description": "Sản phẩm mặt nạ giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Vichy",
+    "categoryName": "Mặt Nạ",
+    "price": 351879.36,
+    "stockQuantity": 70,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da dầu",
+        "da khô",
+        "da thường"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/mặt_nạ_6.jpg"
+    ],
+    "viewCount": 4888,
+    "purchaseCount": 451,
+    "averageRating": 4.5,
+    "tags": [
+      "BHA",
+      "AHA",
+      "SPF50"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-06T00:00:00",
+    "updatedAt": "2025-05-07T00:00:00"
+  },
+  {
+    "id": "0007",
+    "name": "Tẩy Tế Bào Chết - Mẫu 7",
+    "description": "Sản phẩm tẩy tế bào chết giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "The Ordinary",
+    "categoryName": "Tẩy Tế Bào Chết",
+    "price": 229575.24,
+    "stockQuantity": 32,
+    "attributes": {
+      "volume": "50ml",
+      "skinType": [
+        "da hỗn hợp",
+        "da thường",
+        "da khô"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/tẩy_tế_bào_chết_7.jpg"
+    ],
+    "viewCount": 1149,
+    "purchaseCount": 280,
+    "averageRating": 4.7,
+    "tags": [
+      "se khít lỗ chân lông",
+      "trị mụn",
+      "làm sáng"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-07T00:00:00",
+    "updatedAt": "2025-05-08T00:00:00"
+  },
+  {
+    "id": "0008",
+    "name": "Nước Tẩy Trang - Mẫu 8",
+    "description": "Sản phẩm nước tẩy trang giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Some By Mi",
+    "categoryName": "Nước Tẩy Trang",
+    "price": 531402.37,
+    "stockQuantity": 95,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da hỗn hợp",
+        "da khô",
+        "da thường"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/nước_tẩy_trang_8.jpg"
+    ],
+    "viewCount": 1053,
+    "purchaseCount": 169,
+    "averageRating": 4.8,
+    "tags": [
+      "SPF50",
+      "vitamin C",
+      "se khít lỗ chân lông"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-08T00:00:00",
+    "updatedAt": "2025-05-09T00:00:00"
+  },
+  {
+    "id": "0009",
+    "name": "Serum Dưỡng Da - Mẫu 9",
+    "description": "Sản phẩm serum dưỡng da giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Paula's Choice",
+    "categoryName": "Serum Dưỡng Da",
+    "price": 410933.78,
+    "stockQuantity": 93,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da hỗn hợp",
+        "da nhạy cảm",
+        "da thường"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/serum_dưỡng_da_9.jpg"
+    ],
+    "viewCount": 3199,
+    "purchaseCount": 306,
+    "averageRating": 3.6,
+    "tags": [
+      "dưỡng ẩm",
+      "collagen",
+      "niacinamide"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-09T00:00:00",
+    "updatedAt": "2025-05-10T00:00:00"
+  },
+  {
+    "id": "0010",
+    "name": "Kem Chống Nắng - Mẫu 10",
+    "description": "Sản phẩm kem chống nắng giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Innisfree",
+    "categoryName": "Kem Chống Nắng",
+    "price": 175507.79,
+    "stockQuantity": 63,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da khô",
+        "da thường",
+        "da dầu"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/kem_chống_nắng_10.jpg"
+    ],
+    "viewCount": 2696,
+    "purchaseCount": 541,
+    "averageRating": 4.8,
+    "tags": [
+      "BHA",
+      "SPF50",
+      "dưỡng ẩm"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-10T00:00:00",
+    "updatedAt": "2025-05-11T00:00:00"
+  },
+  {
+    "id": "0011",
+    "name": "Sữa Rửa Mặt - Mẫu 11",
+    "description": "Sản phẩm sữa rửa mặt giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Cosrx",
+    "categoryName": "Sữa Rửa Mặt",
+    "price": 375199.6,
+    "stockQuantity": 58,
+    "attributes": {
+      "volume": "30ml",
+      "skinType": [
+        "da dầu",
+        "da hỗn hợp",
+        "da khô"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/sữa_rửa_mặt_11.jpg"
+    ],
+    "viewCount": 1779,
+    "purchaseCount": 420,
+    "averageRating": 3.7,
+    "tags": [
+      "PHA",
+      "làm sáng",
+      "AHA"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-11T00:00:00",
+    "updatedAt": "2025-05-12T00:00:00"
+  },
+  {
+    "id": "0012",
+    "name": "Kem Dưỡng Ẩm - Mẫu 12",
+    "description": "Sản phẩm kem dưỡng ẩm giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Naruko",
+    "categoryName": "Kem Dưỡng Ẩm",
+    "price": 318217.88,
+    "stockQuantity": 32,
+    "attributes": {
+      "volume": "30ml",
+      "skinType": [
+        "da nhạy cảm",
+        "da thường",
+        "da hỗn hợp"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/kem_dưỡng_ẩm_12.jpg"
+    ],
+    "viewCount": 1455,
+    "purchaseCount": 444,
+    "averageRating": 4.8,
+    "tags": [
+      "làm sáng",
+      "collagen",
+      "niacinamide"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-12T00:00:00",
+    "updatedAt": "2025-05-13T00:00:00"
+  },
+  {
+    "id": "0013",
+    "name": "Toner - Mẫu 13",
+    "description": "Sản phẩm toner giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Naruko",
+    "categoryName": "Toner",
+    "price": 329779.56,
+    "stockQuantity": 35,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da thường",
+        "da khô",
+        "da hỗn hợp"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/toner_13.jpg"
+    ],
+    "viewCount": 3700,
+    "purchaseCount": 412,
+    "averageRating": 4.0,
+    "tags": [
+      "dưỡng ẩm",
+      "vitamin C",
+      "BHA"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-13T00:00:00",
+    "updatedAt": "2025-05-14T00:00:00"
+  },
+  {
+    "id": "0014",
+    "name": "Mặt Nạ - Mẫu 14",
+    "description": "Sản phẩm mặt nạ giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Cosrx",
+    "categoryName": "Mặt Nạ",
+    "price": 300066.78,
+    "stockQuantity": 54,
+    "attributes": {
+      "volume": "50ml",
+      "skinType": [
+        "da hỗn hợp",
+        "da dầu",
+        "da thường"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/mặt_nạ_14.jpg"
+    ],
+    "viewCount": 4609,
+    "purchaseCount": 170,
+    "averageRating": 4.9,
+    "tags": [
+      "trị mụn",
+      "SPF50",
+      "BHA"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-14T00:00:00",
+    "updatedAt": "2025-05-15T00:00:00"
+  },
+  {
+    "id": "0015",
+    "name": "Tẩy Tế Bào Chết - Mẫu 15",
+    "description": "Sản phẩm tẩy tế bào chết giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Cosrx",
+    "categoryName": "Tẩy Tế Bào Chết",
+    "price": 287845.67,
+    "stockQuantity": 39,
+    "attributes": {
+      "volume": "30ml",
+      "skinType": [
+        "da hỗn hợp",
+        "da khô",
+        "da dầu"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/tẩy_tế_bào_chết_15.jpg"
+    ],
+    "viewCount": 2600,
+    "purchaseCount": 551,
+    "averageRating": 3.9,
+    "tags": [
+      "BHA",
+      "niacinamide",
+      "vitamin C"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-15T00:00:00",
+    "updatedAt": "2025-05-16T00:00:00"
+  },
+  {
+    "id": "0016",
+    "name": "Nước Tẩy Trang - Mẫu 16",
+    "description": "Sản phẩm nước tẩy trang giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Cosrx",
+    "categoryName": "Nước Tẩy Trang",
+    "price": 593808.23,
+    "stockQuantity": 30,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da hỗn hợp",
+        "da dầu",
+        "da nhạy cảm"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/nước_tẩy_trang_16.jpg"
+    ],
+    "viewCount": 4159,
+    "purchaseCount": 158,
+    "averageRating": 4.0,
+    "tags": [
+      "chống lão hóa",
+      "BHA",
+      "SPF50"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-16T00:00:00",
+    "updatedAt": "2025-05-17T00:00:00"
+  },
+  {
+    "id": "0017",
+    "name": "Serum Dưỡng Da - Mẫu 17",
+    "description": "Sản phẩm serum dưỡng da giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "The Ordinary",
+    "categoryName": "Serum Dưỡng Da",
+    "price": 230103.12,
+    "stockQuantity": 13,
+    "attributes": {
+      "volume": "50ml",
+      "skinType": [
+        "da nhạy cảm",
+        "da khô",
+        "da hỗn hợp"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/serum_dưỡng_da_17.jpg"
+    ],
+    "viewCount": 2852,
+    "purchaseCount": 409,
+    "averageRating": 3.6,
+    "tags": [
+      "làm sáng",
+      "se khít lỗ chân lông",
+      "trị mụn"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-17T00:00:00",
+    "updatedAt": "2025-05-18T00:00:00"
+  },
+  {
+    "id": "0018",
+    "name": "Kem Chống Nắng - Mẫu 18",
+    "description": "Sản phẩm kem chống nắng giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Some By Mi",
+    "categoryName": "Kem Chống Nắng",
+    "price": 150136.27,
+    "stockQuantity": 59,
+    "attributes": {
+      "volume": "50ml",
+      "skinType": [
+        "da nhạy cảm",
+        "da thường",
+        "da dầu"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/kem_chống_nắng_18.jpg"
+    ],
+    "viewCount": 3889,
+    "purchaseCount": 386,
+    "averageRating": 3.6,
+    "tags": [
+      "làm sáng",
+      "se khít lỗ chân lông",
+      "trị mụn"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-18T00:00:00",
+    "updatedAt": "2025-05-19T00:00:00"
+  },
+  {
+    "id": "0019",
+    "name": "Sữa Rửa Mặt - Mẫu 19",
+    "description": "Sản phẩm sữa rửa mặt giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Innisfree",
+    "categoryName": "Sữa Rửa Mặt",
+    "price": 546964.65,
+    "stockQuantity": 77,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da khô",
+        "da dầu",
+        "da nhạy cảm"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/sữa_rửa_mặt_19.jpg"
+    ],
+    "viewCount": 3095,
+    "purchaseCount": 412,
+    "averageRating": 4.7,
+    "tags": [
+      "niacinamide",
+      "BHA",
+      "SPF50"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-19T00:00:00",
+    "updatedAt": "2025-05-20T00:00:00"
+  },
+  {
+    "id": "0020",
+    "name": "Kem Dưỡng Ẩm - Mẫu 20",
+    "description": "Sản phẩm kem dưỡng ẩm giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "The Ordinary",
+    "categoryName": "Kem Dưỡng Ẩm",
+    "price": 414193.16,
+    "stockQuantity": 84,
+    "attributes": {
+      "volume": "30ml",
+      "skinType": [
+        "da nhạy cảm",
+        "da dầu",
+        "da thường"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/kem_dưỡng_ẩm_20.jpg"
+    ],
+    "viewCount": 2946,
+    "purchaseCount": 343,
+    "averageRating": 3.7,
+    "tags": [
+      "BHA",
+      "chống lão hóa",
+      "dưỡng ẩm"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-20T00:00:00",
+    "updatedAt": "2025-05-21T00:00:00"
+  },
+  {
+    "id": "0021",
+    "name": "Toner - Mẫu 21",
+    "description": "Sản phẩm toner giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Cosrx",
+    "categoryName": "Toner",
+    "price": 468876.02,
+    "stockQuantity": 84,
+    "attributes": {
+      "volume": "50ml",
+      "skinType": [
+        "da nhạy cảm",
+        "da dầu",
+        "da thường"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/toner_21.jpg"
+    ],
+    "viewCount": 4626,
+    "purchaseCount": 115,
+    "averageRating": 4.0,
+    "tags": [
+      "dưỡng ẩm",
+      "se khít lỗ chân lông",
+      "collagen"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-21T00:00:00",
+    "updatedAt": "2025-05-22T00:00:00"
+  },
+  {
+    "id": "0022",
+    "name": "Mặt Nạ - Mẫu 22",
+    "description": "Sản phẩm mặt nạ giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Naruko",
+    "categoryName": "Mặt Nạ",
+    "price": 568358.09,
+    "stockQuantity": 59,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da nhạy cảm",
+        "da hỗn hợp",
+        "da khô"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/mặt_nạ_22.jpg"
+    ],
+    "viewCount": 1594,
+    "purchaseCount": 455,
+    "averageRating": 4.6,
+    "tags": [
+      "làm sáng",
+      "niacinamide",
+      "collagen"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-22T00:00:00",
+    "updatedAt": "2025-05-23T00:00:00"
+  },
+  {
+    "id": "0023",
+    "name": "Tẩy Tế Bào Chết - Mẫu 23",
+    "description": "Sản phẩm tẩy tế bào chết giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "The Ordinary",
+    "categoryName": "Tẩy Tế Bào Chết",
+    "price": 598418.91,
+    "stockQuantity": 40,
+    "attributes": {
+      "volume": "30ml",
+      "skinType": [
+        "da thường",
+        "da dầu",
+        "da khô"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/tẩy_tế_bào_chết_23.jpg"
+    ],
+    "viewCount": 2707,
+    "purchaseCount": 169,
+    "averageRating": 4.8,
+    "tags": [
+      "trị mụn",
+      "BHA",
+      "SPF50"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-23T00:00:00",
+    "updatedAt": "2025-05-24T00:00:00"
+  },
+  {
+    "id": "0024",
+    "name": "Nước Tẩy Trang - Mẫu 24",
+    "description": "Sản phẩm nước tẩy trang giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Naruko",
+    "categoryName": "Nước Tẩy Trang",
+    "price": 489682.19,
+    "stockQuantity": 78,
+    "attributes": {
+      "volume": "30ml",
+      "skinType": [
+        "da dầu",
+        "da thường",
+        "da khô"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/nước_tẩy_trang_24.jpg"
+    ],
+    "viewCount": 4627,
+    "purchaseCount": 185,
+    "averageRating": 4.6,
+    "tags": [
+      "SPF50",
+      "AHA",
+      "vitamin C"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-24T00:00:00",
+    "updatedAt": "2025-05-25T00:00:00"
+  },
+  {
+    "id": "0025",
+    "name": "Serum Dưỡng Da - Mẫu 25",
+    "description": "Sản phẩm serum dưỡng da giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Vichy",
+    "categoryName": "Serum Dưỡng Da",
+    "price": 446750.49,
+    "stockQuantity": 20,
+    "attributes": {
+      "volume": "50ml",
+      "skinType": [
+        "da hỗn hợp",
+        "da thường",
+        "da dầu"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/serum_dưỡng_da_25.jpg"
+    ],
+    "viewCount": 1002,
+    "purchaseCount": 514,
+    "averageRating": 4.9,
+    "tags": [
+      "PHA",
+      "BHA",
+      "chống lão hóa"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-25T00:00:00",
+    "updatedAt": "2025-05-26T00:00:00"
+  },
+  {
+    "id": "0026",
+    "name": "Kem Chống Nắng - Mẫu 26",
+    "description": "Sản phẩm kem chống nắng giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Paula's Choice",
+    "categoryName": "Kem Chống Nắng",
+    "price": 374474.07,
+    "stockQuantity": 52,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da hỗn hợp",
+        "da nhạy cảm",
+        "da thường"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/kem_chống_nắng_26.jpg"
+    ],
+    "viewCount": 4225,
+    "purchaseCount": 113,
+    "averageRating": 4.8,
+    "tags": [
+      "collagen",
+      "PHA",
+      "chống lão hóa"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-26T00:00:00",
+    "updatedAt": "2025-05-27T00:00:00"
+  },
+  {
+    "id": "0027",
+    "name": "Sữa Rửa Mặt - Mẫu 27",
+    "description": "Sản phẩm sữa rửa mặt giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "La Roche-Posay",
+    "categoryName": "Sữa Rửa Mặt",
+    "price": 301263.05,
+    "stockQuantity": 31,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da dầu",
+        "da thường",
+        "da hỗn hợp"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/sữa_rửa_mặt_27.jpg"
+    ],
+    "viewCount": 1491,
+    "purchaseCount": 124,
+    "averageRating": 4.7,
+    "tags": [
+      "trị mụn",
+      "vitamin C",
+      "BHA"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-27T00:00:00",
+    "updatedAt": "2025-05-28T00:00:00"
+  },
+  {
+    "id": "0028",
+    "name": "Kem Dưỡng Ẩm - Mẫu 28",
+    "description": "Sản phẩm kem dưỡng ẩm giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "The Ordinary",
+    "categoryName": "Kem Dưỡng Ẩm",
+    "price": 408165.55,
+    "stockQuantity": 29,
+    "attributes": {
+      "volume": "50ml",
+      "skinType": [
+        "da dầu",
+        "da khô",
+        "da nhạy cảm"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/kem_dưỡng_ẩm_28.jpg"
+    ],
+    "viewCount": 2039,
+    "purchaseCount": 583,
+    "averageRating": 3.7,
+    "tags": [
+      "vitamin C",
+      "SPF50",
+      "BHA"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-28T00:00:00",
+    "updatedAt": "2025-05-29T00:00:00"
+  },
+  {
+    "id": "0029",
+    "name": "Toner - Mẫu 29",
+    "description": "Sản phẩm toner giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Some By Mi",
+    "categoryName": "Toner",
+    "price": 381463.11,
+    "stockQuantity": 52,
+    "attributes": {
+      "volume": "30ml",
+      "skinType": [
+        "da nhạy cảm",
+        "da hỗn hợp",
+        "da thường"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/toner_29.jpg"
+    ],
+    "viewCount": 3848,
+    "purchaseCount": 146,
+    "averageRating": 3.9,
+    "tags": [
+      "niacinamide",
+      "làm sáng",
+      "SPF50"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-29T00:00:00",
+    "updatedAt": "2025-05-30T00:00:00"
+  },
+  {
+    "id": "0030",
+    "name": "Mặt Nạ - Mẫu 30",
+    "description": "Sản phẩm mặt nạ giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Innisfree",
+    "categoryName": "Mặt Nạ",
+    "price": 362462.78,
+    "stockQuantity": 48,
+    "attributes": {
+      "volume": "50ml",
+      "skinType": [
+        "da khô",
+        "da nhạy cảm",
+        "da thường"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/mặt_nạ_30.jpg"
+    ],
+    "viewCount": 4149,
+    "purchaseCount": 170,
+    "averageRating": 4.1,
+    "tags": [
+      "vitamin C",
+      "niacinamide",
+      "AHA"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-30T00:00:00",
+    "updatedAt": "2025-05-31T00:00:00"
+  },
+  {
+    "id": "0031",
+    "name": "Tẩy Tế Bào Chết - Mẫu 31",
+    "description": "Sản phẩm tẩy tế bào chết giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Some By Mi",
+    "categoryName": "Tẩy Tế Bào Chết",
+    "price": 414971.51,
+    "stockQuantity": 42,
+    "attributes": {
+      "volume": "30ml",
+      "skinType": [
+        "da hỗn hợp",
+        "da khô",
+        "da dầu"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/tẩy_tế_bào_chết_31.jpg"
+    ],
+    "viewCount": 4294,
+    "purchaseCount": 155,
+    "averageRating": 3.9,
+    "tags": [
+      "PHA",
+      "dưỡng ẩm",
+      "làm sáng"
+    ],
+    "status": "published",
+    "createdAt": "2025-05-31T00:00:00",
+    "updatedAt": "2025-06-01T00:00:00"
+  },
+  {
+    "id": "0032",
+    "name": "Nước Tẩy Trang - Mẫu 32",
+    "description": "Sản phẩm nước tẩy trang giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Paula's Choice",
+    "categoryName": "Nước Tẩy Trang",
+    "price": 560912.24,
+    "stockQuantity": 65,
+    "attributes": {
+      "volume": "30ml",
+      "skinType": [
+        "da thường",
+        "da dầu",
+        "da hỗn hợp"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/nước_tẩy_trang_32.jpg"
+    ],
+    "viewCount": 3985,
+    "purchaseCount": 302,
+    "averageRating": 4.5,
+    "tags": [
+      "làm sáng",
+      "chống lão hóa",
+      "AHA"
+    ],
+    "status": "published",
+    "createdAt": "2025-06-01T00:00:00",
+    "updatedAt": "2025-06-02T00:00:00"
+  },
+  {
+    "id": "0033",
+    "name": "Serum Dưỡng Da - Mẫu 33",
+    "description": "Sản phẩm serum dưỡng da giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Some By Mi",
+    "categoryName": "Serum Dưỡng Da",
+    "price": 547158.86,
+    "stockQuantity": 27,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da dầu",
+        "da hỗn hợp",
+        "da khô"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/serum_dưỡng_da_33.jpg"
+    ],
+    "viewCount": 2628,
+    "purchaseCount": 533,
+    "averageRating": 4.3,
+    "tags": [
+      "chống lão hóa",
+      "se khít lỗ chân lông",
+      "trị mụn"
+    ],
+    "status": "published",
+    "createdAt": "2025-06-02T00:00:00",
+    "updatedAt": "2025-06-03T00:00:00"
+  },
+  {
+    "id": "0034",
+    "name": "Kem Chống Nắng - Mẫu 34",
+    "description": "Sản phẩm kem chống nắng giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Some By Mi",
+    "categoryName": "Kem Chống Nắng",
+    "price": 169847.26,
+    "stockQuantity": 88,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da khô",
+        "da hỗn hợp",
+        "da dầu"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/kem_chống_nắng_34.jpg"
+    ],
+    "viewCount": 1578,
+    "purchaseCount": 279,
+    "averageRating": 4.2,
+    "tags": [
+      "PHA",
+      "vitamin C",
+      "niacinamide"
+    ],
+    "status": "published",
+    "createdAt": "2025-06-03T00:00:00",
+    "updatedAt": "2025-06-04T00:00:00"
+  },
+  {
+    "id": "0035",
+    "name": "Sữa Rửa Mặt - Mẫu 35",
+    "description": "Sản phẩm sữa rửa mặt giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Cosrx",
+    "categoryName": "Sữa Rửa Mặt",
+    "price": 212782.26,
+    "stockQuantity": 45,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da khô",
+        "da hỗn hợp",
+        "da thường"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/sữa_rửa_mặt_35.jpg"
+    ],
+    "viewCount": 4653,
+    "purchaseCount": 478,
+    "averageRating": 4.2,
+    "tags": [
+      "AHA",
+      "se khít lỗ chân lông",
+      "niacinamide"
+    ],
+    "status": "published",
+    "createdAt": "2025-06-04T00:00:00",
+    "updatedAt": "2025-06-05T00:00:00"
+  },
+  {
+    "id": "0036",
+    "name": "Kem Dưỡng Ẩm - Mẫu 36",
+    "description": "Sản phẩm kem dưỡng ẩm giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Cosrx",
+    "categoryName": "Kem Dưỡng Ẩm",
+    "price": 433927.76,
+    "stockQuantity": 57,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da thường",
+        "da nhạy cảm",
+        "da khô"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/kem_dưỡng_ẩm_36.jpg"
+    ],
+    "viewCount": 2034,
+    "purchaseCount": 193,
+    "averageRating": 4.5,
+    "tags": [
+      "se khít lỗ chân lông",
+      "BHA",
+      "PHA"
+    ],
+    "status": "published",
+    "createdAt": "2025-06-05T00:00:00",
+    "updatedAt": "2025-06-06T00:00:00"
+  },
+  {
+    "id": "0037",
+    "name": "Toner - Mẫu 37",
+    "description": "Sản phẩm toner giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Innisfree",
+    "categoryName": "Toner",
+    "price": 522343.18,
+    "stockQuantity": 51,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da hỗn hợp",
+        "da khô",
+        "da nhạy cảm"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/toner_37.jpg"
+    ],
+    "viewCount": 2529,
+    "purchaseCount": 476,
+    "averageRating": 4.5,
+    "tags": [
+      "se khít lỗ chân lông",
+      "BHA",
+      "AHA"
+    ],
+    "status": "published",
+    "createdAt": "2025-06-06T00:00:00",
+    "updatedAt": "2025-06-07T00:00:00"
+  },
+  {
+    "id": "0038",
+    "name": "Mặt Nạ - Mẫu 38",
+    "description": "Sản phẩm mặt nạ giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Naruko",
+    "categoryName": "Mặt Nạ",
+    "price": 349757.59,
+    "stockQuantity": 78,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da hỗn hợp",
+        "da dầu",
+        "da nhạy cảm"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/mặt_nạ_38.jpg"
+    ],
+    "viewCount": 3265,
+    "purchaseCount": 521,
+    "averageRating": 3.6,
+    "tags": [
+      "PHA",
+      "BHA",
+      "dưỡng ẩm"
+    ],
+    "status": "published",
+    "createdAt": "2025-06-07T00:00:00",
+    "updatedAt": "2025-06-08T00:00:00"
+  },
+  {
+    "id": "0039",
+    "name": "Tẩy Tế Bào Chết - Mẫu 39",
+    "description": "Sản phẩm tẩy tế bào chết giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "Vichy",
+    "categoryName": "Tẩy Tế Bào Chết",
+    "price": 284096.18,
+    "stockQuantity": 81,
+    "attributes": {
+      "volume": "100ml",
+      "skinType": [
+        "da nhạy cảm",
+        "da thường",
+        "da dầu"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/tẩy_tế_bào_chết_39.jpg"
+    ],
+    "viewCount": 1749,
+    "purchaseCount": 458,
+    "averageRating": 3.6,
+    "tags": [
+      "AHA",
+      "trị mụn",
+      "chống lão hóa"
+    ],
+    "status": "published",
+    "createdAt": "2025-06-08T00:00:00",
+    "updatedAt": "2025-06-09T00:00:00"
+  },
+  {
+    "id": "0040",
+    "name": "Nước Tẩy Trang - Mẫu 40",
+    "description": "Sản phẩm nước tẩy trang giúp chăm sóc và bảo vệ làn da hiệu quả.",
+    "brand": "La Roche-Posay",
+    "categoryName": "Nước Tẩy Trang",
+    "price": 560817.77,
+    "stockQuantity": 13,
+    "attributes": {
+      "volume": "50ml",
+      "skinType": [
+        "da hỗn hợp",
+        "da khô",
+        "da nhạy cảm"
+      ]
+    },
+    "imageUrls": [
+      "https://example.com/nước_tẩy_trang_40.jpg"
+    ],
+    "viewCount": 4543,
+    "purchaseCount": 201,
+    "averageRating": 4.3,
+    "tags": [
+      "trị mụn",
+      "collagen",
+      "BHA"
+    ],
+    "status": "published",
+    "createdAt": "2025-06-09T00:00:00",
+    "updatedAt": "2025-06-10T00:00:00"
+  }
+]

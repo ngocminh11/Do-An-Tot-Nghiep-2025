@@ -2,7 +2,7 @@ require('dotenv').config();  // Dòng này phải nằm trên cùng
 
 const express = require('express');
 const mongoose = require('mongoose');
-const productRoutes = require('./Routes/product.routes');
+const productRoutes = require('./Routes/Admin/product.routes');
 const logToCSV = require('./Utils/logger');
 
 const app = express();
