@@ -1,0 +1,95 @@
+.home-page {
+    .banner-carousel {
+        margin-bottom: 32px;
+
+        .carousel-item {
+            position: relative;
+            height: 400px;
+
+            img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+            .carousel-content {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                text-align: center;
+                color: #fff;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+
+                h2 {
+                    font-size: 32px;
+                    margin-bottom: 16px;
+                }
+
+                p {
+                    font-size: 18px;
+                    max-width: 600px;
+                    margin: 0 auto;
+                }
+            }
+        }
+    }
+
+    .featured-products {
+        padding: 0 24px;
+
+        h2 {
+            margin-bottom: 24px;
+            color: #1a1a1a;
+            font-size: 24px;
+        }
+
+        .ant-card {
+            .ant-card-cover {
+                img {
+                    height: 200px;
+                    object-fit: cover;
+                }
+            }
+
+            .ant-card-meta-title {
+                font-size: 16px;
+                margin-bottom: 8px;
+            }
+
+            .ant-card-meta-description {
+                color: #ff4d4f;
+                font-weight: 500;
+            }
+        }
+    }
+}
+
+// Responsive styles
+@media (max-width: 768px) {
+    .home-page {
+        .banner-carousel {
+            .carousel-item {
+                height: 300px;
+
+                .carousel-content {
+                    h2 {
+                        font-size: 24px;
+                    }
+
+                    p {
+                        font-size: 16px;
+                    }
+                }
+            }
+        }
+
+        .featured-products {
+            padding: 0 16px;
+
+            h2 {
+                font-size: 20px;
+            }
+        }
+    }
+}

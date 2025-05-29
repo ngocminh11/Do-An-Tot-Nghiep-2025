@@ -1,28 +1,45 @@
 {
-  "name": "client",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^13.5.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
-  },
+  "name": "cocoo-cosmetics",
+  "version": "1.0.0",
+  "description": "CoCoo - Online Cosmetics Sales Website",
+  "main": "index.js",
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@ant-design/charts": "^2.2.6",
+    "@ant-design/cssinjs": "^1.22.1",
+    "@ant-design/icons": "^5.5.2",
+    "@antv/util": "^3.3.10",
+    "@ckeditor/ckeditor5-build-classic": "^44.1.0",
+    "@ckeditor/ckeditor5-react": "^9.4.0",
+    "antd": "^5.23.0",
+    "antd-style": "^3.7.1",
+    "axios": "^1.7.9",
+    "babel-loader": "^9.2.1",
+    "bootstrap": "^5.3.3",
+    "chart.js": "^4.4.7",
+    "express": "^4.21.2",
+    "html-webpack-plugin": "^5.6.3",
+    "js-cookie": "^3.0.5",
+    "notistack": "^3.0.1",
+    "react": "^18.3.1",
+    "react-bootstrap": "^2.10.7",
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "^18.3.1",
+    "react-icons": "^5.4.0",
+    "react-image-crop": "^11.0.7",
+    "react-router-dom": "^7.1.1",
+    "react-scripts": "^5.0.1",
+    "react-toastify": "^11.0.2",
+    "recharts": "^2.15.0",
+    "sass": "^1.83.0",
+    "socket.io-client": "^4.8.1",
+    "webpack": "^5.97.1",
+    "xlsx": "^0.18.5"
   },
   "browserslist": {
     "production": [

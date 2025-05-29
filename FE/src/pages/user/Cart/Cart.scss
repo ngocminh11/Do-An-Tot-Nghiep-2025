@@ -1,0 +1,112 @@
+.cart-page {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+
+    h2 {
+        margin-bottom: 24px;
+        color: #1a1a1a;
+    }
+
+    .cart-content {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 24px;
+
+        .ant-table {
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+
+            .product-info {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+
+                img {
+                    width: 80px;
+                    height: 80px;
+                    object-fit: cover;
+                    border-radius: 4px;
+                }
+
+                span {
+                    font-weight: 500;
+                }
+            }
+
+            .ant-table-cell {
+                vertical-align: middle;
+            }
+        }
+
+        .cart-summary {
+            height: fit-content;
+            position: sticky;
+            top: 24px;
+
+            .summary-item {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 16px;
+                color: #666;
+
+                &.total {
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #1a1a1a;
+                    border-top: 1px solid #f0f0f0;
+                    padding-top: 16px;
+                    margin-top: 16px;
+                }
+            }
+
+            .ant-btn {
+                margin-top: 24px;
+            }
+        }
+    }
+
+    .empty-cart {
+        text-align: center;
+        padding: 48px;
+        background: #fff;
+        border-radius: 8px;
+
+        .icon {
+            font-size: 64px;
+            color: #d9d9d9;
+            margin-bottom: 16px;
+        }
+
+        p {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 24px;
+        }
+    }
+}
+
+// Responsive styles
+@media (max-width: 768px) {
+    .cart-page {
+        padding: 16px;
+
+        .cart-content {
+            grid-template-columns: 1fr;
+
+            .ant-table {
+                .product-info {
+                    img {
+                        width: 60px;
+                        height: 60px;
+                    }
+                }
+            }
+
+            .cart-summary {
+                position: static;
+            }
+        }
+    }
+}
