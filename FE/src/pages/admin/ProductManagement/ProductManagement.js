@@ -12,14 +12,14 @@ import {
     message,
     Popconfirm,
     Tag,
-    Image
+    Image,
+    Tooltip,
 } from 'antd';
 import {
     PlusOutlined,
     EditOutlined,
     DeleteOutlined,
     UploadOutlined,
-    EyeOutlined,
 } from '@ant-design/icons';
 import productService from '../../../services/productService';
 import './ProductManagement.scss';
@@ -35,6 +35,7 @@ const ProductManagement = () => {
     const [editingProduct, setEditingProduct] = useState(null);
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
+    const [imageList, setImageList] = useState([]);
     const [pagination, setPagination] = useState({
         current: 1,
         pageSize: 10,
@@ -42,21 +43,17 @@ const ProductManagement = () => {
     });
 
     // Fetch products
-    const fetchProducts = async (params = {}) => {
+    const fetchProducts = async () => {
         try {
             setLoading(true);
-            const response = await productService.getAllProducts({
-                page: params.current || 1,
-                limit: params.pageSize || 10,
-                ...params,
-            });
-            setProducts(response.data);
-            setPagination({
-                ...pagination,
-                total: response.total,
-            });
+            const response = await productService.getAllProducts();
+            setProducts(response);
+            setPagination((prev) => ({
+                ...prev,
+                total: response.length,
+            }));
         } catch (error) {
-            message.error('Failed to fetch products');
+            message.error(error.message || 'Failed to fetch products');
         } finally {
             setLoading(false);
         }
@@ -72,7 +69,7 @@ const ProductManagement = () => {
             setCategories(categoriesData);
             setBrands(brandsData);
         } catch (error) {
-            message.error('Failed to fetch categories and brands');
+            message.error(error.message || 'Failed to fetch categories and brands');
         }
     };
 
@@ -93,13 +90,24 @@ const ProductManagement = () => {
 
     const handleAdd = () => {
         setEditingProduct(null);
+        setImageList([]);
         form.resetFields();
         setModalVisible(true);
     };
 
     const handleEdit = (record) => {
         setEditingProduct(record);
-        form.setFieldsValue(record);
+        setImageList(record.imageUrls?.map(url => ({ url })) || []);
+        form.setFieldsValue({
+            ...record,
+            price: parseFloat(record.price.$numberDecimal),
+            stockQuantity: record.stockQuantity,
+            category: record.categoryId,
+            brand: record.brandId,
+            volume: record.attributes.volume,
+            skinType: record.attributes.skinType || [],
+            status: record.status,
+        });
         setModalVisible(true);
     };
 
@@ -109,48 +117,50 @@ const ProductManagement = () => {
             message.success('Product deleted successfully');
             fetchProducts();
         } catch (error) {
-            message.error('Failed to delete product');
+            message.error(error.message || 'Failed to delete product');
         }
     };
 
     const handleSubmit = async (values) => {
         try {
+            const productData = {
+                ...values,
+                imageUrls: imageList.map(img => img.url),
+                categoryId: values.category,
+                brandId: values.brand,
+                attributes: {
+                    volume: values.volume,
+                    skinType: values.skinType,
+                },
+            };
+
             if (editingProduct) {
-                await productService.updateProduct(editingProduct.id, values);
+                await productService.updateProduct(editingProduct._id, productData);
                 message.success('Product updated successfully');
             } else {
-                await productService.createProduct(values);
+                await productService.createProduct(productData);
                 message.success('Product created successfully');
             }
             setModalVisible(false);
             fetchProducts();
         } catch (error) {
-            message.error('Failed to save product');
-        }
-    };
-
-    const handleImageUpload = async (file) => {
-        try {
-            const response = await productService.uploadProductImage(file);
-            return response.imageUrl;
-        } catch (error) {
-            message.error('Failed to upload image');
-            return '';
+            message.error(error.message || 'Failed to save product');
         }
     };
 
     const columns = [
         {
             title: 'Image',
-            dataIndex: 'imageUrl',
-            key: 'imageUrl',
-            render: (imageUrl) => (
+            dataIndex: 'imageUrls',
+            key: 'imageUrls',
+            render: (imageUrls) => (
                 <Image
-                    src={imageUrl}
+                    src={imageUrls?.[0] || ''}
                     alt="Product"
                     width={50}
                     height={50}
                     style={{ objectFit: 'cover' }}
+                    preview={false}
                 />
             ),
         },
@@ -161,24 +171,10 @@ const ProductManagement = () => {
             sorter: true,
         },
         {
-            title: 'Category',
-            dataIndex: 'categoryId',
-            key: 'categoryId',
-            render: (categoryId) => {
-                const category = categories.find(c => c.id === categoryId);
-                return category ? category.name : '-';
-            },
-        },
-        {
-            title: 'Brand',
-            dataIndex: 'brand',
-            key: 'brand',
-        },
-        {
             title: 'Price',
             dataIndex: 'price',
             key: 'price',
-            render: (price) => `$${price.toFixed(2)}`,
+            render: (price) => `${parseFloat(price.$numberDecimal).toLocaleString('vi-VN')} VNĐ`,
             sorter: true,
         },
         {
@@ -188,40 +184,53 @@ const ProductManagement = () => {
             sorter: true,
         },
         {
+            title: 'Average Rating',
+            dataIndex: 'averageRating',
+            key: 'averageRating',
+            render: (rating) => rating ? rating.$numberDecimal : 'N/A',
+            sorter: true,
+        },
+        {
             title: 'Status',
             dataIndex: 'status',
             key: 'status',
             render: (status) => (
-                <span className={`status-${status.toLowerCase()}`}>
-                    {status}
-                </span>
+                <Tag color={
+                    status === 'published' ? 'blue' :
+                    status === 'draft' ? 'orange' : 'default'
+                }>
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                </Tag>
             ),
+            filters: [
+                { text: 'Published', value: 'published' },
+                { text: 'Draft', value: 'draft' },
+            ],
         },
         {
             title: 'Actions',
             key: 'actions',
             render: (_, record) => (
-                <Space>
-                    <Button
-                        type="primary"
-                        icon={<EditOutlined />}
-                        onClick={() => handleEdit(record)}
-                    >
-                        Edit
-                    </Button>
+                <Space size="middle">
+                    <Tooltip title="Edit">
+                        <Button
+                            type="primary"
+                            icon={<EditOutlined />}
+                            onClick={() => handleEdit(record)}
+                        />
+                    </Tooltip>
                     <Popconfirm
                         title="Are you sure you want to delete this product?"
-                        onConfirm={() => handleDelete(record.id)}
+                        onConfirm={() => handleDelete(record._id)}
                         okText="Yes"
                         cancelText="No"
                     >
-                        <Button
-                            type="primary"
-                            danger
-                            icon={<DeleteOutlined />}
-                        >
-                            Delete
-                        </Button>
+                        <Tooltip title="Delete">
+                            <Button
+                                danger
+                                icon={<DeleteOutlined />}
+                            />
+                        </Tooltip>
                     </Popconfirm>
                 </Space>
             ),
@@ -244,18 +253,20 @@ const ProductManagement = () => {
             <Table
                 columns={columns}
                 dataSource={products}
-                rowKey="id"
-                pagination={pagination}
+                rowKey="_id"
                 loading={loading}
+                pagination={pagination}
                 onChange={handleTableChange}
             />
 
             <Modal
                 title={editingProduct ? 'Edit Product' : 'Add Product'}
                 open={modalVisible}
+                onOk={form.submit}
                 onCancel={() => setModalVisible(false)}
-                footer={null}
                 width={800}
+                okText={editingProduct ? 'Update' : 'Create'}
+                cancelText="Cancel"
             >
                 <Form
                     form={form}
@@ -279,13 +290,13 @@ const ProductManagement = () => {
                     </Form.Item>
 
                     <Form.Item
-                        name="categoryId"
+                        name="category"
                         label="Category"
                         rules={[{ required: true, message: 'Please select a category' }]}
                     >
                         <Select>
                             {categories.map(category => (
-                                <Option key={category.id} value={category.id}>
+                                <Option key={category._id} value={category._id}>
                                     {category.name}
                                 </Option>
                             ))}
@@ -295,12 +306,12 @@ const ProductManagement = () => {
                     <Form.Item
                         name="brand"
                         label="Brand"
-                        rules={[{ required: true, message: 'Please enter brand' }]}
+                        rules={[{ required: true, message: 'Please select a brand' }]}
                     >
                         <Select>
                             {brands.map(brand => (
-                                <Option key={brand} value={brand}>
-                                    {brand}
+                                <Option key={brand._id} value={brand._id}>
+                                    {brand.name}
                                 </Option>
                             ))}
                         </Select>
@@ -309,13 +320,12 @@ const ProductManagement = () => {
                     <Form.Item
                         name="price"
                         label="Price"
-                        rules={[{ required: true, message: 'Please enter price' }]}
+                        rules={[{ required: true, message: 'Please enter product price' }]}
                     >
                         <InputNumber
-                            min={0}
-                            step={0.01}
                             style={{ width: '100%' }}
-                            formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            min={0}
+                            formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                             parser={value => value.replace(/\$\s?|(,*)/g, '')}
                         />
                     </Form.Item>
@@ -325,43 +335,63 @@ const ProductManagement = () => {
                         label="Stock Quantity"
                         rules={[{ required: true, message: 'Please enter stock quantity' }]}
                     >
-                        <InputNumber min={0} style={{ width: '100%' }} />
+                        <InputNumber style={{ width: '100%' }} min={0} />
                     </Form.Item>
 
                     <Form.Item
-                        name="imageUrl"
-                        label="Product Image"
-                        rules={[{ required: true, message: 'Please upload a product image' }]}
+                        name="volume"
+                        label="Volume"
+                        rules={[{ required: true, message: 'Please enter product volume' }]}
                     >
-                        <Upload
-                            listType="picture"
-                            maxCount={1}
-                            beforeUpload={handleImageUpload}
-                        >
-                            <Button icon={<UploadOutlined />}>Upload Image</Button>
-                        </Upload>
+                        <Input placeholder="e.g., 50ml" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="skinType"
+                        label="Skin Type"
+                        rules={[{ required: true, message: 'Please select skin types' }]}
+                    >
+                        <Select mode="multiple" placeholder="Select skin types">
+                            <Option value="normal">Normal</Option>
+                            <Option value="dry">Dry</Option>
+                            <Option value="oily">Oily</Option>
+                            <Option value="combination">Combination</Option>
+                            <Option value="sensitive">Sensitive</Option>
+                        </Select>
                     </Form.Item>
 
                     <Form.Item
                         name="status"
                         label="Status"
-                        rules={[{ required: true, message: 'Please select status' }]}
+                        rules={[{ required: true, message: 'Please select product status' }]}
                     >
                         <Select>
-                            <Option value="ACTIVE">Active</Option>
-                            <Option value="INACTIVE">Inactive</Option>
+                            <Option value="published">Published</Option>
+                            <Option value="draft">Draft</Option>
                         </Select>
                     </Form.Item>
 
-                    <Form.Item>
-                        <Space>
-                            <Button type="primary" htmlType="submit">
-                                {editingProduct ? 'Update' : 'Create'}
-                            </Button>
-                            <Button onClick={() => setModalVisible(false)}>
-                                Cancel
-                            </Button>
-                        </Space>
+                    <Form.Item
+                        label="Product Images"
+                        name="imageUrls"
+                    >
+                        <Upload
+                            listType="picture-card"
+                            fileList={imageList}
+                            onChange={({ fileList }) => setImageList(fileList)}
+                            customRequest={async ({ file, onSuccess }) => {
+                                const url = await handleImageUpload(file);
+                                onSuccess(url);
+                            }}
+                            multiple
+                        >
+                            {imageList.length >= 5 ? null : (
+                                <div>
+                                    <PlusOutlined />
+                                    <div style={{ marginTop: 8 }}>Upload</div>
+                                </div>
+                            )}
+                        </Upload>
                     </Form.Item>
                 </Form>
             </Modal>

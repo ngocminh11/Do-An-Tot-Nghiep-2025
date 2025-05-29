@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, Upload, message, Spin } from 'antd';
+import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, message, Spin, Upload, Image } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
-import { productAPI } from '../../../services/api';
+import productService from '../../../services/productService';
 import './ProductManagement.scss';
 
 const { Option } = Select;
@@ -14,16 +14,18 @@ const ProductManagement = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState([]);
+    const [brands, setBrands] = useState([]);
+    const [imageList, setImageList] = useState([]);
 
     useEffect(() => {
         fetchProducts();
-        fetchCategories();
+        fetchCategoriesAndBrands();
     }, []);
 
     const fetchProducts = async () => {
         try {
             setLoading(true);
-            const data = await productAPI.getProducts();
+            const { data } = await productService.getAllProducts();
             setProducts(data);
         } catch (error) {
             message.error('Không thể tải danh sách sản phẩm');
@@ -32,12 +34,89 @@ const ProductManagement = () => {
         }
     };
 
-    const fetchCategories = async () => {
+    const fetchCategoriesAndBrands = async () => {
         try {
-            const data = await productAPI.getCategories();
-            setCategories(data);
+            const [categoriesData, brandsData] = await Promise.all([
+                productService.getCategories(),
+                productService.getBrands()
+            ]);
+            setCategories(categoriesData);
+            setBrands(brandsData);
         } catch (error) {
-            message.error('Không thể tải danh mục sản phẩm');
+            message.error('Không thể tải danh mục và thương hiệu');
+        }
+    };
+
+    const handleAdd = () => {
+        setEditingProduct(null);
+        setImageList([]);
+        form.resetFields();
+        setIsModalVisible(true);
+    };
+
+    const handleEdit = (product) => {
+        setEditingProduct(product);
+        setImageList(product.imageUrls?.map(url => ({ url })) || []);
+        form.setFieldsValue({
+            ...product,
+            category: product.categoryId,
+            brand: product.brandId
+        });
+        setIsModalVisible(true);
+    };
+
+    const handleDelete = (product) => {
+        Modal.confirm({
+            title: 'Xác nhận xóa',
+            content: 'Bạn có chắc chắn muốn xóa sản phẩm này?',
+            okText: 'Xóa',
+            okType: 'danger',
+            cancelText: 'Hủy',
+            onOk: async () => {
+                try {
+                    await productService.deleteProduct(product._id);
+                    message.success('Xóa sản phẩm thành công');
+                    fetchProducts();
+                } catch (error) {
+                    message.error('Không thể xóa sản phẩm');
+                }
+            }
+        });
+    };
+
+    const handleImageUpload = async (file) => {
+        try {
+            const response = await productService.uploadProductImage(file);
+            return response.imageUrl;
+        } catch (error) {
+            message.error('Không thể tải lên hình ảnh');
+            return '';
+        }
+    };
+
+    const handleModalOk = async () => {
+        try {
+            const values = await form.validateFields();
+            const productData = {
+                ...values,
+                imageUrls: imageList.map(img => img.url),
+                categoryId: values.category,
+                brandId: values.brand
+            };
+            delete productData.category;
+            delete productData.brand;
+
+            if (editingProduct) {
+                await productService.updateProduct(editingProduct._id, productData);
+                message.success('Cập nhật sản phẩm thành công');
+            } else {
+                await productService.createProduct(productData);
+                message.success('Thêm sản phẩm thành công');
+            }
+            setIsModalVisible(false);
+            fetchProducts();
+        } catch (error) {
+            message.error('Có lỗi xảy ra khi lưu sản phẩm');
         }
     };
 
@@ -47,10 +126,11 @@ const ProductManagement = () => {
             dataIndex: 'imageUrls',
             key: 'imageUrls',
             render: (imageUrls) => (
-                <img
-                    src={imageUrls?.[0] || 'https://via.placeholder.com/50'}
-                    alt="Product"
-                    style={{ width: 50, height: 50, objectFit: 'cover' }}
+                <Image
+                    width={50}
+                    height={50}
+                    src={imageUrls?.[0] || 'placeholder.jpg'}
+                    preview={false}
                 />
             ),
         },
@@ -71,26 +151,15 @@ const ProductManagement = () => {
             key: 'stockQuantity',
         },
         {
-            title: 'Danh mục',
-            dataIndex: 'categoryId',
-            key: 'categoryId',
-            render: (categoryId) => {
-                const category = categories.find(c => c._id === categoryId);
-                return category ? category.name : 'Unknown';
-            }
-        },
-        {
             title: 'Trạng thái',
             dataIndex: 'status',
             key: 'status',
-            render: (status) => {
-                const statusColors = {
-                    published: 'success',
-                    draft: 'warning',
-                    archived: 'error'
-                };
-                return <span className={`status-tag ${status}`}>{status}</span>;
-            }
+            render: (status) => (
+                <span className={`status-tag ${status}`}>
+                    {status === 'published' ? 'Đã xuất bản' :
+                        status === 'draft' ? 'Nháp' : 'Đã lưu trữ'}
+                </span>
+            ),
         },
         {
             title: 'Thao tác',
@@ -116,71 +185,11 @@ const ProductManagement = () => {
         },
     ];
 
-    const handleAdd = () => {
-        setEditingProduct(null);
-        form.resetFields();
-        setIsModalVisible(true);
-    };
-
-    const handleEdit = (product) => {
-        setEditingProduct(product);
-        form.setFieldsValue({
-            name: product.name,
-            description: product.description,
-            brand: product.brand,
-            categoryId: product.categoryId,
-            price: product.price,
-            stockQuantity: product.stockQuantity,
-            status: product.status
-        });
-        setIsModalVisible(true);
-    };
-
-    const handleDelete = (product) => {
-        Modal.confirm({
-            title: 'Xác nhận xóa',
-            content: 'Bạn có chắc chắn muốn xóa sản phẩm này?',
-            okText: 'Xóa',
-            okType: 'danger',
-            cancelText: 'Hủy',
-            onOk: async () => {
-                try {
-                    await productAPI.deleteProduct(product._id);
-                    message.success('Xóa sản phẩm thành công');
-                    fetchProducts();
-                } catch (error) {
-                    message.error('Không thể xóa sản phẩm');
-                }
-            }
-        });
-    };
-
-    const handleModalOk = async () => {
-        try {
-            const values = await form.validateFields();
-            if (editingProduct) {
-                await productAPI.updateProduct(editingProduct._id, values);
-                message.success('Cập nhật sản phẩm thành công');
-            } else {
-                await productAPI.createProduct(values);
-                message.success('Thêm sản phẩm thành công');
-            }
-            setIsModalVisible(false);
-            fetchProducts();
-        } catch (error) {
-            message.error('Có lỗi xảy ra khi lưu sản phẩm');
-        }
-    };
-
     return (
         <div className="product-management">
             <div className="header">
                 <h1>Quản lý sản phẩm</h1>
-                <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={handleAdd}
-                >
+                <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
                     Thêm sản phẩm
                 </Button>
             </div>
@@ -196,17 +205,14 @@ const ProductManagement = () => {
 
             <Modal
                 title={editingProduct ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}
-                open={isModalVisible}
+                visible={isModalVisible}
                 onOk={handleModalOk}
                 onCancel={() => setIsModalVisible(false)}
                 okText={editingProduct ? 'Cập nhật' : 'Thêm'}
                 cancelText="Hủy"
                 width={800}
             >
-                <Form
-                    form={form}
-                    layout="vertical"
-                >
+                <Form form={form} layout="vertical">
                     <Form.Item
                         name="name"
                         label="Tên sản phẩm"
@@ -214,7 +220,6 @@ const ProductManagement = () => {
                     >
                         <Input />
                     </Form.Item>
-
                     <Form.Item
                         name="description"
                         label="Mô tả"
@@ -222,17 +227,8 @@ const ProductManagement = () => {
                     >
                         <TextArea rows={4} />
                     </Form.Item>
-
                     <Form.Item
-                        name="brand"
-                        label="Thương hiệu"
-                        rules={[{ required: true, message: 'Vui lòng nhập thương hiệu' }]}
-                    >
-                        <Input />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="categoryId"
+                        name="category"
                         label="Danh mục"
                         rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}
                     >
@@ -244,19 +240,26 @@ const ProductManagement = () => {
                             ))}
                         </Select>
                     </Form.Item>
-
+                    <Form.Item
+                        name="brand"
+                        label="Thương hiệu"
+                        rules={[{ required: true, message: 'Vui lòng chọn thương hiệu' }]}
+                    >
+                        <Select>
+                            {brands.map(brand => (
+                                <Option key={brand._id} value={brand._id}>
+                                    {brand.name}
+                                </Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
                     <Form.Item
                         name="price"
                         label="Giá"
                         rules={[{ required: true, message: 'Vui lòng nhập giá' }]}
                     >
-                        <InputNumber
-                            style={{ width: '100%' }}
-                            formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                            parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                        />
+                        <InputNumber style={{ width: '100%' }} min={0} />
                     </Form.Item>
-
                     <Form.Item
                         name="stockQuantity"
                         label="Số lượng"
@@ -264,7 +267,6 @@ const ProductManagement = () => {
                     >
                         <InputNumber style={{ width: '100%' }} min={0} />
                     </Form.Item>
-
                     <Form.Item
                         name="status"
                         label="Trạng thái"
@@ -276,10 +278,32 @@ const ProductManagement = () => {
                             <Option value="archived">Đã lưu trữ</Option>
                         </Select>
                     </Form.Item>
+                    <Form.Item
+                        label="Hình ảnh sản phẩm"
+                        name="imageUrls"
+                    >
+                        <Upload
+                            listType="picture-card"
+                            fileList={imageList}
+                            onChange={({ fileList }) => setImageList(fileList)}
+                            customRequest={async ({ file, onSuccess }) => {
+                                const url = await handleImageUpload(file);
+                                onSuccess(url);
+                            }}
+                            multiple
+                        >
+                            {imageList.length >= 5 ? null : (
+                                <div>
+                                    <PlusOutlined />
+                                    <div style={{ marginTop: 8 }}>Tải lên</div>
+                                </div>
+                            )}
+                        </Upload>
+                    </Form.Item>
                 </Form>
             </Modal>
         </div>
     );
 };
 
-export default ProductManagement; 
+export default ProductManagement;

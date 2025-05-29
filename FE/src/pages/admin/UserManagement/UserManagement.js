@@ -17,15 +17,12 @@ import './UserManagement.scss';
 
 const { Option } = Select;
 
-// Dữ liệu tĩnh dựa theo JSON mẫu
 
-// 1. Thông tin tài khoản người dùng (User)
 const mockUsers = [
     { _id: "1", roleId: "admin", email: "admin@example.com", status: "active" },
     { _id: "2", roleId: "user", email: "user@example.com", status: "active" },
 ];
 
-// 2. Chi tiết tài khoản người dùng (User Detail)
 const mockUserDetails = [
     {
         _id: "ud1",
@@ -56,7 +53,6 @@ const mockUserDetails = [
     },
 ];
 
-// 3. Quyền hạn của người dùng (User Permissions)
 const mockUserPermissions = [
     {
         _id: "perm1",
@@ -65,7 +61,6 @@ const mockUserPermissions = [
     },
 ];
 
-// 4. Sản phẩm (Products)
 const mockProducts = [
     {
         _id: "p1",
@@ -90,7 +85,6 @@ const mockProducts = [
     },
 ];
 
-// 5. Đơn hàng (Order) – lịch sử giao dịch
 const mockOrders = [
     {
         _id: "o1",
@@ -128,7 +122,6 @@ const mockOrders = [
     },
 ];
 
-// 6. Nhật ký hoạt động của người dùng (User’s Log) – ví dụ bổ sung (không dùng trong component demo)
 const mockUserLogs = [
     {
         _id: "l1",
@@ -154,7 +147,6 @@ const UserManagement = () => {
     const [viewingUser, setViewingUser] = useState(null);
     const [form] = Form.useForm();
 
-    // Định nghĩa các cột cho Table
     const columns = [
         { title: 'ID', dataIndex: '_id', key: '_id' },
         {
@@ -162,7 +154,6 @@ const UserManagement = () => {
             dataIndex: 'fullName',
             key: 'fullName',
             render: (_, record) => {
-                // Lấy thông tin fullName từ mockUserDetails dựa vào userId
                 const userDetail = mockUserDetails.find(detail => detail.userId === record._id);
                 return userDetail ? userDetail.fullName : 'N/A';
             },

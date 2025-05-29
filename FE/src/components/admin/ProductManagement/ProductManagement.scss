@@ -1,4 +1,6 @@
 .product-management {
+    padding: 24px;
+
     .header {
         display: flex;
         justify-content: space-between;
@@ -7,62 +9,119 @@
 
         h1 {
             margin: 0;
-            color: #1a1a1a;
+            font-size: 24px;
+            font-weight: 600;
         }
     }
 
-    .ant-table {
+    .ant-table-wrapper {
         background: #fff;
-        border-radius: 4px;
-
-        .ant-table-thead>tr>th {
-            background: #fafafa;
-            font-weight: 500;
-        }
-
-        .ant-table-tbody>tr>td {
-            vertical-align: middle;
-        }
-
-        img {
-            border-radius: 4px;
-        }
+        padding: 24px;
+        border-radius: 8px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
 
     .status-tag {
         padding: 4px 8px;
         border-radius: 4px;
         font-size: 12px;
-        text-transform: capitalize;
+        font-weight: 500;
 
         &.published {
-            background-color: #f6ffed;
-            border: 1px solid #b7eb8f;
-            color: #52c41a;
+            background-color: #e6f7ff;
+            color: #1890ff;
         }
 
         &.draft {
-            background-color: #fffbe6;
-            border: 1px solid #ffe58f;
-            color: #faad14;
+            background-color: #fff7e6;
+            color: #fa8c16;
         }
 
         &.archived {
-            background-color: #fff2f0;
-            border: 1px solid #ffccc7;
-            color: #ff4d4f;
+            background-color: #f5f5f5;
+            color: #8c8c8c;
         }
     }
 
-    .ant-modal {
-        .ant-form {
-            .ant-form-item-label {
-                font-weight: 500;
-            }
+    .ant-upload-list-picture-card .ant-upload-list-item {
+        padding: 8px;
+        border: 1px solid #d9d9d9;
+        border-radius: 4px;
+    }
 
-            .ant-upload-list-picture-card .ant-upload-list-item {
-                padding: 8px;
-                border: 1px solid #d9d9d9;
+    .ant-form-item-label {
+        font-weight: 500;
+    }
+
+    .ant-modal-body {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .ant-table-thead>tr>th {
+        background: #fafafa;
+        font-weight: 600;
+    }
+
+    .ant-table-tbody>tr:hover>td {
+        background: #f5f5f5;
+    }
+
+    .ant-btn {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    // Image preview styles
+    .ant-image {
+        border-radius: 4px;
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    // Form styles
+    .ant-form {
+        .ant-input-number {
+            width: 100%;
+        }
+
+        .ant-select {
+            width: 100%;
+        }
+
+        .ant-upload.ant-upload-select-picture-card {
+            width: 128px;
+            height: 128px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+    }
+
+    // Modal styles
+    .ant-modal {
+        .ant-modal-header {
+            border-bottom: 1px solid #f0f0f0;
+            padding: 16px 24px;
+        }
+
+        .ant-modal-footer {
+            border-top: 1px solid #f0f0f0;
+            padding: 16px 24px;
+        }
+    }
+
+    // Table styles
+    .ant-table {
+        .ant-table-cell {
+            vertical-align: middle;
+        }
+
+        .ant-table-row {
+            &:hover {
+                .ant-btn {
+                    opacity: 1;
+                }
             }
         }
     }
@@ -71,6 +130,8 @@
 // Responsive styles
 @media (max-width: 768px) {
     .product-management {
+        padding: 16px;
+
         .header {
             flex-direction: column;
             align-items: flex-start;
@@ -79,6 +140,10 @@
             h1 {
                 font-size: 20px;
             }
+        }
+
+        .ant-table-wrapper {
+            padding: 16px;
         }
 
         .ant-table {
@@ -92,6 +157,50 @@
         .ant-modal {
             width: 90% !important;
             margin: 0 auto;
+
+            .ant-modal-body {
+                padding: 16px;
+            }
+        }
+
+        .ant-form {
+            .ant-form-item {
+                margin-bottom: 16px;
+            }
+        }
+    }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+    .product-management {
+        .ant-table-wrapper {
+            background: #1f1f1f;
+        }
+
+        .ant-table-thead>tr>th {
+            background: #141414;
+        }
+
+        .ant-table-tbody>tr:hover>td {
+            background: #262626;
+        }
+
+        .status-tag {
+            &.published {
+                background-color: #111b26;
+                color: #1890ff;
+            }
+
+            &.draft {
+                background-color: #2b2111;
+                color: #fa8c16;
+            }
+
+            &.archived {
+                background-color: #262626;
+                color: #8c8c8c;
+            }
         }
     }
 }
