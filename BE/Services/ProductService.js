@@ -1,6 +1,7 @@
 const Product = require("../Models/ProductModel");
+const Category = require("../Models/Categories");
 const ConstantMessage = require("../Constants/ResponseMessage");
-
+BE/Models/Products.js
 
 const createCategory = async (categoryName) => {
   // Optional: implement if categories are stored separately
@@ -44,11 +45,21 @@ const filterProducts = async (filter) => {
 
 const getAllProducts = () => Product.find({});
 
+const getCategories = async () => {
+  try {
+    return await Category.find({});
+  } catch (error) {
+    const err = new Error(`${ConstantMessage.ERROR_GET_CATEGORIES}: ${error.message}`);
+    throw err;
+  }
+};
+
 module.exports = {
   createCategory,
   searchProducts: searchProducts,
   filterProducts,
-  getAllProducts
+  getAllProducts,
+  getCategories
 };
 
 

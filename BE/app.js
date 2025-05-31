@@ -4,12 +4,13 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const productRoutes = require('./Routes/product.routes');
+const categoryRoutes = require('./Routes/category.routes');
 const logToCSV = require('./Utils/logger');
 
 const app = express();
 const PORT = process.env.PORT;
 
-app.use(cors()); 
+app.use(cors());
 
 app.use(express.json());
 
@@ -20,6 +21,7 @@ mongoose.connect(process.env.MONGODB_URI, {
   .catch(err => console.error('Lỗi kết nối MongoDB:', err));
 
 app.use('/admin/products', productRoutes);
+app.use('/admin/categories', categoryRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server chạy trên cổng ${PORT}`);
