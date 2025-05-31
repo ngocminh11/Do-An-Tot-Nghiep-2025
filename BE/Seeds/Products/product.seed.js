@@ -15,10 +15,7 @@ module.exports = async function seedProducts() {
   const products = JSON.parse(rawData);
 
   for (const item of products) {
-    // Giả sử file JSON có mảng categories với slug hoặc name
-    // Ví dụ: item.basicInformation.categories = ["serum-duong-da", "kem-duong-am"]
     
-    // Tìm tất cả category Id tương ứng
     const categories = await Category.find({ slug: { $in: item.basicInformation.categories } });
     
     if (categories.length === 0) {
@@ -37,7 +34,6 @@ module.exports = async function seedProducts() {
     const nextProductId = await getNextProductId();
 
     const product = new Product({
-      productId: nextProductId,
       basicInformation: {
         productName: item.basicInformation.productName,
         sku: item.basicInformation.sku,

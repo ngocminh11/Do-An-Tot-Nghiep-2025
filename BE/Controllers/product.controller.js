@@ -4,7 +4,7 @@ const Product = require('../Models/Products');
 exports.createProduct = async (req, res) => {
   try {
     const exist = await Product.findOne({ 'basicInformation.sku': req.body.basicInformation.sku });
-    if (exist) return res.status(400).json({ message: 'Sản phẩm đã tồn tại với SKU này' });
+    if (exist) return res.status(400).json({ message: 'Sản phẩm đã tồn tại' });
 
     const product = new Product({ 
       ...req.body, 
@@ -13,11 +13,14 @@ exports.createProduct = async (req, res) => {
     });
 
     const savedProduct = await product.save();
-    res.status(201).json(savedProduct);
+    res.status(201).json({
+      message: 'Thêm sản phẩm thành công',
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Lấy sản phẩm theo id
 exports.getProduct = async (req, res) => {

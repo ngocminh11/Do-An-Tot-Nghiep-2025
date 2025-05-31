@@ -35,11 +35,11 @@ const ProductSchema = new mongoose.Schema({
     expiration: { type: String, required: true }
   },
   technicalDetails: {
-    sizeOrWeight: { type: String, required: true },
-    colorOrVariant: { type: String, default: null },
-    suitableSkinTypes: { type: String, required: true },
-    certifications: { type: String, required: true }
-  },
+  sizeOrWeight: { type: String, required: true },
+  suitableSkinTypes: { type: [String], required: true }, 
+  origin: { type: String },
+  certifications: { type: [String], required: true } 
+},
   seo: {
     keywords: { type: String, required: true },
     metaTitle: { type: String, required: true },
