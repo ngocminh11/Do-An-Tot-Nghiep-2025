@@ -9,7 +9,7 @@ const logToCSV = require('./Utils/logger');
 const app = express();
 const PORT = process.env.PORT;
 
-app.use(cors()); 
+const cors = require('cors');
 
 app.use(express.json());
 
