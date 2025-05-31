@@ -4,7 +4,6 @@ const ConstantMessage = require("../Constants/ResponseMessage");
 BE/Models/Products.js
 
 const createCategory = async (categoryName) => {
-  // Optional: implement if categories are stored separately
 };
 
 const searchProducts = async (name) => {

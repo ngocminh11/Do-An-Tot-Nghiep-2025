@@ -1,0 +1,97 @@
+[
+  {
+    "basicInformation": {
+      "productName": "Cocoo Clear Skin Acne & Dark Spot Cream",
+      "sku": "COCOO-ACNE-NAM-001",
+      "categories": ["acne-treatment", "serum-duong-da"],
+      "brand": "Cocoo"
+    },
+    "pricingAndInventory": {
+      "originalPrice": 500000,
+      "salePrice": 450000,
+      "currency": "VND",
+      "stockQuantity": 150,
+      "unit": "bottle"
+    },
+    "media": {
+      "mainImage": "https://example.com/images/kem-tri-mun-cocoo.jpg",
+      "imageGallery": [
+        "https://example.com/images/kem-tri-mun-cocoo-1.jpg",
+        "https://example.com/images/kem-tri-mun-cocoo-2.jpg"
+      ],
+      "videoUrl": "https://example.com/videos/kem-tri-mun-cocoo-demo.mp4"
+    },
+    "description": {
+      "shortDescription": "Kem trị mụn & trị nám Cocoo giúp làm sạch, ngăn ngừa mụn và giảm thâm nám, phù hợp với da mụn, da nhạy cảm.",
+      "detailedDescription": "Sản phẩm được chiết xuất từ các thành phần tự nhiên như trà xanh, cam thảo, và chiết xuất tràm trà, cùng vitamin E, hỗ trợ điều trị mụn và làm mờ vết nám.",
+      "ingredients": "Trà xanh, Cam thảo, Chiết xuất tràm trà, Vitamin E, và các thành phần tự nhiên khác",
+      "usageInstructions": "Rửa mặt sạch, sau đó thoa một lượng kem vừa đủ lên vùng da cần điều trị vào buổi sáng và tối. Tránh vùng mắt và vùng môi.",
+      "expiration": "18 tháng kể từ ngày sản xuất"
+    },
+    "technicalDetails": {
+      "sizeOrWeight": "30ml",
+      "colorOrVariant": null,
+      "suitableSkinTypes": "Da mụn, da nhạy cảm",
+      "certifications": "Đạt tiêu chuẩn an toàn mỹ phẩm của Cocoo, không chứa paraben và đã được kiểm nghiệm da liễu"
+    },
+    "seo": {
+      "keywords": "kem trị mụn, kem trị nám, Cocoo, chăm sóc da, da mụn, da nhạy cảm",
+      "metaTitle": "Kem trị mụn & trị nám Cocoo - Giải pháp cho làn da sáng mịn",
+      "metaDescription": "Khám phá Kem trị mụn & trị nám Cocoo, với thành phần tự nhiên an toàn cho làn da mụn và da nhạy cảm, giúp cải thiện làn da hiệu quả.",
+      "urlSlug": "kem-tri-mun-cocoo-clear-skin"
+    },
+    "policy": {
+      "shippingReturnWarranty": "Miễn phí vận chuyển toàn quốc; Đổi trả trong 7 ngày nếu sản phẩm có lỗi từ nhà sản xuất",
+      "additionalOptions": "Hỗ trợ tư vấn sử dụng và chăm sóc da; Các chương trình khuyến mãi, bundle sản phẩm kèm theo khi mua số lượng lớn"
+    },
+    "createdAt": "2025-05-20T10:00:00Z",
+    "updatedAt": "2025-05-21T11:00:00Z"
+  },
+  {
+    "basicInformation": {
+      "productName": "The Ordinary Vitamin C Anti-Aging Serum",
+      "sku": "ORD-VC-ANTI-001",
+      "categories": ["acne-treatment"],
+      "brand": "The Ordinary"
+    },
+    "pricingAndInventory": {
+      "originalPrice": 300000,
+      "salePrice": 270000,
+      "currency": "VND",
+      "stockQuantity": 80,
+      "unit": "bottle"
+    },
+    "media": {
+      "mainImage": "https://example.com/images/ordinary-vitamin-c.jpg",
+      "imageGallery": [
+        "https://example.com/images/ordinary-vitamin-c-1.jpg"
+      ],
+      "videoUrl": null
+    },
+    "description": {
+      "shortDescription": "Serum Vitamin C giúp làm sáng da, mờ thâm và chống lão hóa hiệu quả.",
+      "detailedDescription": "Chứa vitamin C tinh khiết giúp làm đều màu da và tăng cường collagen, giảm nếp nhăn.",
+      "ingredients": "Vitamin C, Hyaluronic Acid, Aqua",
+      "usageInstructions": "Thoa serum lên mặt sạch vào buổi sáng và tối trước kem dưỡng.",
+      "expiration": "24 tháng kể từ ngày sản xuất"
+    },
+    "technicalDetails": {
+      "sizeOrWeight": "30ml",
+      "colorOrVariant": "Transparent",
+      "suitableSkinTypes": "Mọi loại da",
+      "certifications": "Cruelty-free, không paraben"
+    },
+    "seo": {
+      "keywords": "vitamin C, serum chống lão hóa, The Ordinary, chăm sóc da",
+      "metaTitle": "The Ordinary Vitamin C Anti-Aging Serum",
+      "metaDescription": "Serum Vitamin C của The Ordinary giúp làm sáng da và chống lão hóa hiệu quả.",
+      "urlSlug": "the-ordinary-vitamin-c-anti-aging-serum"
+    },
+    "policy": {
+      "shippingReturnWarranty": "Miễn phí vận chuyển khi mua từ 2 sản phẩm; Đổi trả trong 7 ngày nếu sản phẩm bị lỗi",
+      "additionalOptions": "Hỗ trợ tư vấn qua chat trực tuyến; Ưu đãi khách hàng thân thiết"
+    },
+    "createdAt": "2025-05-22T08:00:00Z",
+    "updatedAt": "2025-05-22T09:00:00Z"
+  }
+]

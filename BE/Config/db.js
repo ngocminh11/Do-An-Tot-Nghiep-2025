@@ -9,21 +9,16 @@ const connectDB = async () => {
       useUnifiedTopology: true,
     });
 
-    // Kiểm tra nếu kết nối thành công
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    // Thực hiện một truy vấn test đơn giản (ví dụ, kiểm tra thông tin cơ sở dữ liệu)
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
     const dbStatus = await mongoose.connection.db.admin().serverStatus();
     console.log('MongoDB Server Status:', dbStatus);
 
   } catch (error) {
-    console.error(`❌ MongoDB connection failed: ${error.message}`);
+    console.error(`MongoDB connection failed: ${error.message}`);
 
-    // Sử dụng mã lỗi và thông điệp từ constants
-    const errorCode = ResponseCode.ERROR_INTERNAL_SERVER;  // Lỗi máy chủ
+    const errorCode = ResponseCode.ERROR_INTERNAL_SERVER;  
     const errorMessage = ResponseMessage.ERROR_INTERNAL_SERVER;
 
-    // Dừng chương trình nếu kết nối thất bại
-    process.exit(1); // Nếu không kết nối được, dừng chương trình
   }
 };
 
