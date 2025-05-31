@@ -2,7 +2,8 @@ require('dotenv').config();  // Dòng này phải nằm trên cùng
 
 const express = require('express');
 const mongoose = require('mongoose');
-const productRoutes = require('./Routes/product.routes');
+const categoryRoutes = require('./Routes/product.routes');
+const productRoutes = require('./Routes/category.routes');
 const logToCSV = require('./Utils/logger');
 
 const app = express();
@@ -17,7 +18,8 @@ mongoose.connect(process.env.MONGODB_URI, {
   .catch(err => console.error('Lỗi kết nối MongoDB:', err));
 
 //app.use(logToCSV); bi loi log
-app.use('/admin/products', productRoutes);
+app.use('/admin/products', categoryRoutes);
+app.use('/admin/categories', productRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server chạy trên cổng ${PORT}`);

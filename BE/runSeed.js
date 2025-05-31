@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-const runCategorySeed = require('./Seeds/category.seed');
-const runProductSeed = require('./Seeds/product.seed');
+const runCategorySeed = require('./Seeds/Categories/category.seed');
+const runProductSeed = require('./Seeds/Products/product.seed');
 
 (async () => {
   try {

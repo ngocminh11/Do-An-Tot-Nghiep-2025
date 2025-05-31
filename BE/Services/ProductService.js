@@ -3,7 +3,6 @@ const ConstantMessage = require("../Constants/ResponseMessage");
 
 
 const createCategory = async (categoryName) => {
-  // Optional: implement if categories are stored separately
 };
 
 const searchProducts = async (name) => {
