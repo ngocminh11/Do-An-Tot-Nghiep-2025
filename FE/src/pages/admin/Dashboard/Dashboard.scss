@@ -1,0 +1,51 @@
+.dashboard {
+    h1 {
+        margin-bottom: 24px;
+        color: #1a1a1a;
+    }
+
+    .ant-card {
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+
+        .ant-statistic-title {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .ant-statistic-content {
+            font-size: 24px;
+            font-weight: 600;
+        }
+    }
+
+    .ant-table {
+        .status-completed {
+            color: #52c41a;
+        }
+
+        .status-processing {
+            color: #1890ff;
+        }
+
+        .status-pending {
+            color: #faad14;
+        }
+    }
+}
+
+// Responsive styles
+@media (max-width: 768px) {
+    .dashboard {
+        h1 {
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+
+        .ant-card {
+            .ant-statistic-content {
+                font-size: 20px;
+            }
+        }
+    }
+}

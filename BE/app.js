@@ -7,7 +7,9 @@ const productRoutes = require('./Routes/category.routes');
 const logToCSV = require('./Utils/logger');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
+
+app.use(cors()); 
 
 app.use(express.json());
 
