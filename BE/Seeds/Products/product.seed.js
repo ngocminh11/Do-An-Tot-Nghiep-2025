@@ -34,6 +34,7 @@ module.exports = async function seedProducts() {
     const nextProductId = await getNextProductId();
 
     const product = new Product({
+      idProduct: item.idProduct, 
       basicInformation: {
         productName: item.basicInformation.productName,
         sku: item.basicInformation.sku,
