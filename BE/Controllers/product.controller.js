@@ -1,20 +1,66 @@
 const Product = require('../Models/Products');
 
 // Tạo sản phẩm mới, kiểm tra tồn tại theo SKU
+const slugify = require('slugify');
+
 exports.createProduct = async (req, res) => {
   try {
-    const exist = await Product.findOne({ 'basicInformation.sku': req.body.basicInformation.sku });
-    if (exist) return res.status(400).json({ message: 'Sản phẩm đã tồn tại' });
+    const { basicInformation, idProduct, seo } = req.body;
 
-    const product = new Product({ 
-      ...req.body, 
-      createdAt: new Date(), 
-      updatedAt: new Date() 
-    });
+    // Kiểm tra trùng SKU
+    if (basicInformation?.sku) {
+      const existSku = await Product.findOne({ 
+        'basicInformation.sku': basicInformation.sku 
+      });
+      if (existSku) return res.status(400).json({ message: 'SKU đã được sử dụng bởi sản phẩm khác' });
+    }
+
+    // Kiểm tra trùng tên sản phẩm
+    if (basicInformation?.productName) {
+      const existName = await Product.findOne({
+        'basicInformation.productName': basicInformation.productName
+      });
+      if (existName) return res.status(400).json({ message: 'Tên sản phẩm đã được sử dụng bởi sản phẩm khác' });
+    }
+
+    // Kiểm tra trùng idProduct
+    if (idProduct) {
+      const existIdProduct = await Product.findOne({
+        idProduct: idProduct
+      });
+      if (existIdProduct) return res.status(400).json({ message: 'idProduct đã được sử dụng bởi sản phẩm khác' });
+    }
+
+    // Xử lý urlSlug
+    let urlSlug = seo?.urlSlug;
+    if (!urlSlug && basicInformation?.productName) {
+      urlSlug = slugify(basicInformation.productName, { lower: true, strict: true });
+    }
+
+    // Kiểm tra trùng urlSlug
+    if (urlSlug) {
+      const existSlug = await Product.findOne({ 'seo.urlSlug': urlSlug });
+      if (existSlug) return res.status(400).json({ message: 'urlSlug đã được sử dụng bởi sản phẩm khác' });
+    }
+
+    // Gán lại urlSlug cho seo trong req.body (trường hợp tự tạo)
+    const productData = {
+      ...req.body,
+      seo: {
+        ...req.body.seo,
+        urlSlug: urlSlug
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const product = new Product(productData);
 
     const savedProduct = await product.save();
+
     res.status(201).json({
       message: 'Thêm sản phẩm thành công',
+      product: savedProduct
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -33,15 +79,35 @@ exports.getProduct = async (req, res) => {
   }
 };
 
-// Cập nhật sản phẩm theo id
 exports.updateProduct = async (req, res) => {
   try {
-    if (req.body.basicInformation?.sku) {
-      const exist = await Product.findOne({ 
-        'basicInformation.sku': req.body.basicInformation.sku, 
+    const { basicInformation, idProduct } = req.body;
+
+    // Kiểm tra trùng SKU nếu có
+    if (basicInformation?.sku) {
+      const existSku = await Product.findOne({ 
+        'basicInformation.sku': basicInformation.sku, 
         _id: { $ne: req.params.id } 
       });
-      if (exist) return res.status(400).json({ message: 'SKU đã được sử dụng bởi sản phẩm khác' });
+      if (existSku) return res.status(400).json({ message: 'SKU đã được sử dụng bởi sản phẩm khác' });
+    }
+
+    // Kiểm tra trùng tên sản phẩm nếu có
+    if (basicInformation?.productName) {
+      const existName = await Product.findOne({
+        'basicInformation.productName': basicInformation.productName,
+        _id: { $ne: req.params.id }
+      });
+      if (existName) return res.status(400).json({ message: 'Tên sản phẩm đã được sử dụng bởi sản phẩm khác' });
+    }
+
+    // Kiểm tra trùng idProduct nếu có
+    if (idProduct) {
+      const existIdProduct = await Product.findOne({
+        idProduct: idProduct,
+        _id: { $ne: req.params.id }
+      });
+      if (existIdProduct) return res.status(400).json({ message: 'idProduct đã được sử dụng bởi sản phẩm khác' });
     }
 
     const updateData = { ...req.body, updatedAt: new Date() };
@@ -76,16 +142,48 @@ exports.getAllProducts = async (req, res) => {
   }
 };
 
-// Tìm sản phẩm theo SKU query param
-exports.searchProductBySku = async (req, res) => {
+// Lấy danh sách sản phẩm có phân trang và tìm kiếm
+exports.getAllProducts = async (req, res) => {
   try {
-    const sku = req.query.sku;
-    if (!sku) return res.status(400).json({ message: 'Cần truyền sku để tìm kiếm' });
-
-    const product = await Product.findOne({ 'basicInformation.sku': sku });
-    if (!product) return res.status(404).json({ message: 'Không tìm thấy sản phẩm với SKU này' });
-
-    res.json(product);
+    const {
+      productName,
+      minPrice,
+      maxPrice,
+      skinType,
+      idProduct,
+      page = 1,
+      limit = 10
+    } = req.query;
+    const query = {};
+    if (idProduct) {
+      query.idProduct = idProduct;
+    }
+    if (productName) {
+      query['basicInformation.productName'] = {
+        $regex: productName,
+        $options: 'i'
+      };
+    }
+    if (minPrice || maxPrice) {
+      query['pricingAndInventory.salePrice'] = {};
+      if (minPrice) query['pricingAndInventory.salePrice'].$gte = Number(minPrice);
+      if (maxPrice) query['pricingAndInventory.salePrice'].$lte = Number(maxPrice);
+    }
+    if (skinType) {
+      query['technicalDetails.suitableSkinTypes'] = skinType;
+    }
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const [products, totalItems] = await Promise.all([
+      Product.find(query).skip(skip).limit(Number(limit)),
+      Product.countDocuments(query)
+    ]);
+    res.json({
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
+      currentPage: Number(page),
+      pageSize: products.length,
+      products
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
