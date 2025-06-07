@@ -6,6 +6,8 @@ import {
     ShoppingCartOutlined,
     UserOutlined,
     LogoutOutlined,
+    AppstoreOutlined,
+    TagsOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -26,6 +28,16 @@ const AdminLayout = ({ children }) => {
             key: '/admin/products',
             icon: <ShoppingOutlined />,
             label: 'Products',
+        },
+        {
+            key: '/admin/categories',
+            icon: <AppstoreOutlined />,
+            label: 'Category Management',
+        },
+        {
+            key: '/admin/tags',
+            icon: <TagsOutlined />,
+            label: 'Tag Management',
         },
         {
             key: '/admin/orders',

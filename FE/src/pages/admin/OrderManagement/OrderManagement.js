@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Table, Tag, Button, Space, Modal, Descriptions } from 'antd';
 import { EyeOutlined } from '@ant-design/icons';
-import { mockOrders } from '../../services/mockData';
+import { mockOrders } from '../../../services/mockData';
 import './OrderManagement.scss';
 
 const OrderManagement = () => {
