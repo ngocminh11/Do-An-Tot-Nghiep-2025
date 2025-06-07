@@ -1,40 +1,36 @@
 const Product = require('../Models/Products');
-
-// Tạo sản phẩm mới, kiểm tra tồn tại theo SKU
 const slugify = require('slugify');
 
 exports.createProduct = async (req, res) => {
   try {
     const { basicInformation, idProduct, seo } = req.body;
 
+    // Kiểm tra trùng idProduct
+    const existIdProduct = await Product.findOne({ idProduct });
+    if (existIdProduct) {
+      return res.status(400).json({ message: 'Id sản phẩm đã được sử dụng bởi sản phẩm khác' });
+    }
+
     // Kiểm tra trùng SKU
     if (basicInformation?.sku) {
-      const existSku = await Product.findOne({ 
-        'basicInformation.sku': basicInformation.sku 
-      });
+      const existSku = await Product.findOne({ 'basicInformation.sku': basicInformation.sku });
       if (existSku) return res.status(400).json({ message: 'SKU đã được sử dụng bởi sản phẩm khác' });
     }
 
     // Kiểm tra trùng tên sản phẩm
     if (basicInformation?.productName) {
-      const existName = await Product.findOne({
-        'basicInformation.productName': basicInformation.productName
-      });
+      const existName = await Product.findOne({ 'basicInformation.productName': basicInformation.productName });
       if (existName) return res.status(400).json({ message: 'Tên sản phẩm đã được sử dụng bởi sản phẩm khác' });
     }
 
-    // Kiểm tra trùng idProduct
-    if (idProduct) {
-      const existIdProduct = await Product.findOne({
-        idProduct: idProduct
-      });
-      if (existIdProduct) return res.status(400).json({ message: 'idProduct đã được sử dụng bởi sản phẩm khác' });
-    }
-
-    // Xử lý urlSlug
+    // Sinh urlSlug từ productName nếu chưa có
     let urlSlug = seo?.urlSlug;
     if (!urlSlug && basicInformation?.productName) {
-      urlSlug = slugify(basicInformation.productName, { lower: true, strict: true });
+      urlSlug = slugify(basicInformation.productName, {
+        lower: true,
+        strict: true,
+        locale: 'vi'
+      });
     }
 
     // Kiểm tra trùng urlSlug
@@ -43,19 +39,18 @@ exports.createProduct = async (req, res) => {
       if (existSlug) return res.status(400).json({ message: 'urlSlug đã được sử dụng bởi sản phẩm khác' });
     }
 
-    // Gán lại urlSlug cho seo trong req.body (trường hợp tự tạo)
+    // Chuẩn bị dữ liệu lưu
     const productData = {
       ...req.body,
       seo: {
         ...req.body.seo,
-        urlSlug: urlSlug
+        urlSlug
       },
       createdAt: new Date(),
       updatedAt: new Date()
     };
 
     const product = new Product(productData);
-
     const savedProduct = await product.save();
 
     res.status(201).json({
@@ -66,7 +61,6 @@ exports.createProduct = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 // Lấy sản phẩm theo id
 exports.getProduct = async (req, res) => {
@@ -79,15 +73,23 @@ exports.getProduct = async (req, res) => {
   }
 };
 
+// Cập nhật sản phẩm
 exports.updateProduct = async (req, res) => {
   try {
     const { basicInformation, idProduct } = req.body;
+    const { idProduct: paramIdProduct } = req.params;
+
+    // Tìm sản phẩm cần cập nhật
+    const currentProduct = await Product.findOne({ idProduct: paramIdProduct });
+    if (!currentProduct) {
+      return res.status(404).json({ message: 'Không tìm thấy sản phẩm để cập nhật' });
+    }
 
     // Kiểm tra trùng SKU nếu có
     if (basicInformation?.sku) {
-      const existSku = await Product.findOne({ 
-        'basicInformation.sku': basicInformation.sku, 
-        _id: { $ne: req.params.id } 
+      const existSku = await Product.findOne({
+        'basicInformation.sku': basicInformation.sku,
+        _id: { $ne: currentProduct._id }
       });
       if (existSku) return res.status(400).json({ message: 'SKU đã được sử dụng bởi sản phẩm khác' });
     }
@@ -96,35 +98,44 @@ exports.updateProduct = async (req, res) => {
     if (basicInformation?.productName) {
       const existName = await Product.findOne({
         'basicInformation.productName': basicInformation.productName,
-        _id: { $ne: req.params.id }
+        _id: { $ne: currentProduct._id }
       });
       if (existName) return res.status(400).json({ message: 'Tên sản phẩm đã được sử dụng bởi sản phẩm khác' });
     }
 
-    // Kiểm tra trùng idProduct nếu có
-    if (idProduct) {
+    // Kiểm tra trùng idProduct nếu có (và người dùng muốn đổi idProduct)
+    if (idProduct && idProduct !== paramIdProduct) {
       const existIdProduct = await Product.findOne({
         idProduct: idProduct,
-        _id: { $ne: req.params.id }
+        _id: { $ne: currentProduct._id }
       });
       if (existIdProduct) return res.status(400).json({ message: 'idProduct đã được sử dụng bởi sản phẩm khác' });
     }
 
+    // Cập nhật sản phẩm
     const updateData = { ...req.body, updatedAt: new Date() };
-    const updatedProduct = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true });
 
-    if (!updatedProduct) return res.status(404).json({ message: 'Không tìm thấy sản phẩm để cập nhật' });
+    const updatedProduct = await Product.findOneAndUpdate(
+      { idProduct: paramIdProduct },
+      updateData,
+      { new: true }
+    );
+
     res.json(updatedProduct);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Xóa sản phẩm theo id
+
+// Xóa sản phẩm
 exports.deleteProduct = async (req, res) => {
   try {
-    const deletedProduct = await Product.findByIdAndDelete(req.params.id);
-    if (!deletedProduct) return res.status(404).json({ message: 'Không tìm thấy sản phẩm để xóa' });
+    const deletedProduct = await Product.findOneAndDelete({ idProduct: req.params.idProduct });
+
+    if (!deletedProduct) {
+      return res.status(404).json({ message: 'Không tìm thấy sản phẩm để xóa' });
+    }
 
     res.json({ message: 'Xóa sản phẩm thành công' });
   } catch (error) {

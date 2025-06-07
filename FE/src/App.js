@@ -7,6 +7,17 @@ import { Layout } from 'antd';
 import Loading from './components/common/Loading/Loading';
 import CategoryFilter from './components/common/CategoryFilter/CategoryFilter';
 import { useAuth } from './contexts/AuthContext';
+import PostList from './pages/admin/PostManagement/PostList';
+import AddPost from './pages/admin/PostManagement/AddPost';
+import EditPost from './pages/admin/PostManagement/EditPost';
+import AddProduct from './pages/admin/ProductManagement/AddProduct';
+import CategoryManagement from './pages/admin/CategoryManagement/CategoryManagement';
+import TagManagement from './pages/admin/TagManagement/TagManagement';
+import AddCategory from './pages/admin/CategoryManagement/AddCategory';
+import EditCategory from './pages/admin/CategoryManagement/EditCategory';
+import AddTag from './pages/admin/TagManagement/AddTag';
+import EditTag from './pages/admin/TagManagement/EditTag';
+import EditProduct from './pages/admin/ProductManagement/EditProduct';
 
 // Lazy load user components
 const Home = lazy(() => import('./pages/user/Home/Home'));
@@ -51,8 +62,10 @@ import './App.scss';
 import './layouts/admin/AdminLayout.scss';
 import './pages/admin/Dashboard/Dashboard.scss';
 import './pages/admin/ProductManagement/ProductManagement.scss';
-import './pages/admin/OrderManagement.scss';
+import './pages/admin/OrderManagement/OrderManagement.scss';
 import './pages/admin/UserManagement/UserManagement.scss';
+import './pages/admin/CategoryManagement/CategoryManagement.scss';
+import './pages/admin/TagManagement/TagManagement.scss';
 
 const App = () => {
   useEffect(() => {
@@ -83,9 +96,20 @@ const App = () => {
   const adminRoutes = [
     { path: '/admin', element: <AdminLayout><Dashboard /></AdminLayout> },
     { path: '/admin/products', element: <AdminLayout><ProductManagement /></AdminLayout> },
+    { path: '/admin/products/add', element: <AdminLayout><AddProduct /></AdminLayout> },
+    { path: '/admin/products/:id', element: <AdminLayout><EditProduct /></AdminLayout> },
+    { path: '/admin/categories', element: <AdminLayout><CategoryManagement /></AdminLayout> },
+    { path: '/admin/categories/add', element: <AdminLayout><AddCategory /></AdminLayout> },
+    { path: '/admin/categories/edit/:id', element: <AdminLayout><EditCategory /></AdminLayout> },
+    { path: '/admin/tags', element: <AdminLayout><TagManagement /></AdminLayout> },
+    { path: '/admin/tags/add', element: <AdminLayout><AddTag /></AdminLayout> },
+    { path: '/admin/tags/edit/:id', element: <AdminLayout><EditTag /></AdminLayout> },
     { path: '/admin/users', element: <AdminLayout><UserManagement /></AdminLayout> },
     { path: '/admin/content', element: <AdminLayout><ContentManagement /></AdminLayout> },
     { path: '/admin/settings', element: <AdminLayout><Settings /></AdminLayout> },
+    { path: '/admin/posts', element: <AdminLayout><PostList /></AdminLayout> },
+    { path: '/admin/posts/add', element: <AdminLayout><AddPost /></AdminLayout> },
+    { path: '/admin/posts/edit/:id', element: <AdminLayout><EditPost /></AdminLayout> },
   ];
 
   return (

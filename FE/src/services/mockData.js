@@ -406,4 +406,11 @@ export const mockUserLogs = [
             city: "Hà Nội"
         }
     }
+];
+
+export const mockTags = [
+    { _id: '1', name: 'Skincare', description: 'Products for skincare routines' },
+    { _id: '2', name: 'Makeup', description: 'Cosmetic products for face, eyes, lips' },
+    { _id: '3', name: 'Hair', description: 'Hair care treatments and products' },
+    { _id: '4', name: 'Fragrance', description: 'Perfumes and scented products' },
 ]; 
