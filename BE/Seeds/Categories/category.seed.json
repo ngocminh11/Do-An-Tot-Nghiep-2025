@@ -1,5 +1,6 @@
 [
   {
+    "idCategory": "1",
     "name": "Serum Dưỡng Da",
     "description": "Các loại serum dưỡng da chuyên sâu giúp cải thiện và phục hồi làn da.",
     "slug": "serum-duong-da",
@@ -8,6 +9,7 @@
     "updatedAt": "2025-05-01T09:00:00Z"
   },
   {
+    "idCategory": "2",
     "name": "Kem Dưỡng Ẩm",
     "description": "Dòng kem dưỡng giúp cấp ẩm, khóa ẩm cho da mềm mại và mịn màng.",
     "slug": "kem-duong-am",
@@ -16,6 +18,7 @@
     "updatedAt": "2025-05-01T09:05:00Z"
   },
   {
+    "idCategory": "3",
     "name": "Toner / Nước Hoa Hồng",
     "description": "Toner hỗ trợ làm sạch sâu và cân bằng độ pH cho làn da.",
     "slug": "toner-nuoc-hoa-hong",
@@ -24,6 +27,7 @@
     "updatedAt": "2025-05-01T09:10:00Z"
   },
   {
+    "idCategory": "4",
     "name": "Acne Treatment",
     "description": "Sản phẩm đặc trị mụn giúp làm sạch và ngăn ngừa mụn hiệu quả.",
     "slug": "acne-treatment",
@@ -32,6 +36,7 @@
     "updatedAt": "2025-05-01T09:15:00Z"
   },
   {
+    "idCategory": "5",
     "name": "Anti-Aging",
     "description": "Sản phẩm chống lão hóa giúp làm mờ nếp nhăn và trẻ hóa làn da.",
     "slug": "anti-aging",
