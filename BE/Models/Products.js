@@ -35,6 +35,11 @@ const ProductSchema = new mongoose.Schema({
         wordCountValidator(1, 64) 
     ]
     },
+     status: {
+    type: String,
+    enum: ['active', 'inactive', 'archived'],
+    default: 'active'
+     },
     sku: {
       type: String,
       required: true,
@@ -45,7 +50,7 @@ const ProductSchema = new mongoose.Schema({
         wordCountValidator(1, 10) 
     ]    },
     categoryIds: [{
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: 'Category',
       required: true
     }],
