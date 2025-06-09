@@ -130,7 +130,7 @@ export const mockProducts = [
         name: "Kem Dưỡng Ẩm Hyaluronic Acid",
         description: "Kem dưỡng ẩm chuyên sâu với Hyaluronic Acid giúp da căng mịn, ẩm mượt.",
         brand: "Neutrogena",
-        categoryId: "1",
+        categoryId: "65f1a2b3c4d5e6f7g8h9i0j1",
         price: 350000,
         stockQuantity: 30,
         attributes: {
@@ -178,7 +178,7 @@ export const mockProducts = [
         name: "Kem Chống Nắng SPF50+",
         description: "Kem chống nắng quang phổ rộng bảo vệ da khỏi tia UVA/UVB.",
         brand: "La Roche-Posay",
-        categoryId: "1",
+        categoryId: "65f1a2b3c4d5e6f7g8h9i0j1",
         price: 550000,
         stockQuantity: 40,
         attributes: {

@@ -26,6 +26,30 @@ const deleteOldFiles = async (files) => {
   await Promise.all(deletePromises);
 };
 
+// Lấy tất cả sản phẩm
+exports.getAllProducts = async (req, res) => {
+  try {
+    const products = await Product.find();
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Lấy sản phẩm theo ID
+exports.getProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
+    }
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Tạo sản phẩm mới
 exports.createProduct = async (req, res) => {
   try {
     const { basicInformation, idProduct, seo } = req.body;
@@ -117,17 +141,6 @@ exports.createProduct = async (req, res) => {
       await deleteOldFiles(req.files);
     }
     handleUploadError(error, res);
-  }
-};
-
-// Lấy sản phẩm theo id
-exports.getProduct = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
-    res.json(product);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
   }
 };
 
@@ -224,34 +237,21 @@ exports.updateProduct = async (req, res) => {
 // Xóa sản phẩm
 exports.deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findOne({ idProduct: req.params.idProduct });
+    const product = await Product.findById(req.params.id);
 
     if (!product) {
-      return res.status(404).json({ message: 'Không tìm thấy sản phẩm để xóa' });
+      return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
     }
 
-    // Xóa các file media
-    if (product.mediaFiles) {
-      await deleteOldFiles([
-        ...(product.mediaFiles.images || []),
-        ...(product.mediaFiles.videos || [])
-      ]);
+    // Xóa các file hình ảnh
+    if (product.mediaFiles && product.mediaFiles.images) {
+      await Promise.all(product.mediaFiles.images.map(img =>
+        fs.unlink(img.path).catch(err => console.error('Error deleting file:', err))
+      ));
     }
 
-    // Xóa sản phẩm
-    await Product.findOneAndDelete({ idProduct: req.params.idProduct });
-
-    res.json({ message: 'Xóa sản phẩm thành công' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Lấy danh sách tất cả sản phẩm
-exports.getAllProducts = async (req, res) => {
-  try {
-    const products = await Product.find();
-    res.json(products);
+    await Product.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Đã xóa sản phẩm thành công' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
