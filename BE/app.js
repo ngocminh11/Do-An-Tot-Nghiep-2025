@@ -4,6 +4,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const categoryRoutes = require('./Routes/product.routes');
 const productRoutes = require('./Routes/category.routes');
+const userRoutes = require('./Routes/user.routes');
 const logToCSV = require('./Utils/logger');
 
 const app = express();
@@ -22,6 +23,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 //app.use(logToCSV); bi loi log
 app.use('/admin/products', categoryRoutes);
 app.use('/admin/categories', productRoutes);
+app.use('/admin/users', userRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server chạy trên cổng ${PORT}`);

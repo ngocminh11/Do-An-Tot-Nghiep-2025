@@ -1,0 +1,38 @@
+[
+  {
+    "idUser": "cus01",
+    "fullName": "Nguyễn Văn A",
+    "gender": "Nam",
+    "skinType": "Da dầu",
+    "email": "vana@example.com",
+    "passwordHash": "$2a$10$hashedpassword1234567890", 
+    "phone": "0912345678",
+    "address": "123 Lê Lợi, Q1, TP.HCM",
+    "role": "customer",
+    "orderIds": []
+  },
+  {
+    "idUser": "cus02",
+    "fullName": "Trần Thị B",
+    "gender": "Nữ",
+    "skinType": "Da khô",
+    "email": "tranb@example.com",
+    "passwordHash": "$2a$10$hashedpassword1234567890",
+    "phone": "0987654321",
+    "address": "456 Hai Bà Trưng, Q3, TP.HCM",
+    "role": "customer",
+    "orderIds": []
+  },
+  {
+    "idUser": "admin01",
+    "fullName": "Admin Hệ Thống",
+    "gender": "Nam",
+    "skinType": "",
+    "email": "admin@example.com",
+    "passwordHash": "$2a$10$hashedadminpassword123456",
+    "phone": "0909090909",
+    "address": "Trụ sở chính",
+    "role": "admin",
+    "orderIds": []
+  }
+]
