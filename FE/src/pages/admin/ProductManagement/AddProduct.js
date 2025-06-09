@@ -4,7 +4,6 @@ import {
   Input,
   InputNumber,
   Select,
-  DatePicker,
   Upload,
   Button,
   Row,
@@ -14,7 +13,6 @@ import {
   message
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import moment from 'moment';
 import productService from '../../../services/productService';
 import categoryService from '../../../services/categoryService';
 import './ProductManagement.scss';
@@ -22,46 +20,18 @@ import './ProductManagement.scss';
 const { Option } = Select;
 const { TextArea } = Input;
 
-// Hàm chuyển file thành Base64 (trả về một Promise với chuỗi Base64)
-const getBase64 = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = (error) => reject(error);
-  });
-};
-
-// Custom Upload request để chuyển đổi file sang Base64
-const customUpload = async ({ file, onSuccess, onError }) => {
-  try {
-    const base64 = await getBase64(file);
-    // Gán vào originFileObj để hàm extractUrl có thể lấy được
-    file.originFileObj = { ...file.originFileObj, base64 };
-    // Giả lập thành công upload (response chứa Base64)
-    onSuccess({ url: base64 }, file);
-  } catch (error) {
-    onError(error);
-  }
-};
-
 const AddProduct = () => {
   const [form] = Form.useForm();
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
 
-  // Lấy danh mục sản phẩm (chỉ lấy các danh mục có trạng thái active)
   useEffect(() => {
     const fetchCategories = async () => {
       setLoadingCategories(true);
       try {
-        const response = await categoryService.getAllCategories({ status: 'active' });
-        // Đảm bảo response là một mảng
-        const categories = Array.isArray(response) ? response : [];
-        setCategories(categories);
+        const response = await categoryService.getAllCategories();
+        setCategories(Array.isArray(response) ? response : []);
       } catch (error) {
-        console.error('Error fetching categories:', error);
-        setCategories([]);
         message.error('Không thể tải danh mục sản phẩm');
       } finally {
         setLoadingCategories(false);
@@ -69,23 +39,6 @@ const AddProduct = () => {
     };
     fetchCategories();
   }, []);
-
-  // Hàm trợ giúp chuyển đổi dữ liệu file từ Upload
-  const extractUrl = (item) => {
-    if (!item) return '';
-    if (typeof item === 'string') return item;
-    if (item.url) return item.url;
-    if (item.thumbUrl) return item.thumbUrl;
-    if (item.response && item.response.url) return item.response.url;
-    // Nếu đã được chuyển đổi sang base64, nó sẽ nằm trong item.originFileObj.base64
-    if (item.originFileObj && item.originFileObj.base64) return item.originFileObj.base64;
-    return '';
-  };
-
-  const isValidHttpUrl = (url) => {
-    if (typeof url !== 'string') return false;
-    return url.startsWith('http://') || url.startsWith('https://');
-  };
 
   const handleFinish = async (values) => {
     try {
@@ -102,7 +55,7 @@ const AddProduct = () => {
         formData.append('basicInformation[brand]', values.basicInformation.brand);
         if (Array.isArray(values.basicInformation.categoryIds)) {
           values.basicInformation.categoryIds.forEach(id =>
-            formData.append('basicInformation[categoryIds][]', String(id))
+            formData.append('basicInformation[categoryIds][]', id)
           );
         }
       }
@@ -128,7 +81,6 @@ const AddProduct = () => {
       // Append technical details
       if (values.technicalDetails) {
         formData.append('technicalDetails[sizeOrWeight]', values.technicalDetails.sizeOrWeight);
-        formData.append('technicalDetails[colorOrVariant]', values.technicalDetails.colorOrVariant || '');
         if (Array.isArray(values.technicalDetails.suitableSkinTypes)) {
           values.technicalDetails.suitableSkinTypes.forEach(type =>
             formData.append('technicalDetails[suitableSkinTypes][]', type)
@@ -151,7 +103,6 @@ const AddProduct = () => {
         }
         formData.append('seo[metaTitle]', values.seo.metaTitle);
         formData.append('seo[metaDescription]', values.seo.metaDescription);
-        formData.append('seo[urlSlug]', values.seo.urlSlug);
       }
 
       // Append policy
@@ -162,32 +113,22 @@ const AddProduct = () => {
 
       // Append media files
       if (values.media) {
-        // Main Image
         if (values.media.mainImage && values.media.mainImage.length > 0) {
           const mainImageFile = values.media.mainImage[0].originFileObj;
           if (mainImageFile) {
-            formData.append('mediaFiles', mainImageFile);
+            formData.append('images', mainImageFile);
           }
         }
-        // Image Gallery
         if (values.media.imageGallery && values.media.imageGallery.length > 0) {
           values.media.imageGallery.forEach(fileItem => {
             const imageFile = fileItem.originFileObj;
             if (imageFile) {
-              formData.append('mediaFiles', imageFile);
+              formData.append('images', imageFile);
             }
           });
         }
-        // Video
-        if (values.media.videoUrl && values.media.videoUrl.length > 0) {
-          const videoFile = values.media.videoUrl[0].originFileObj;
-          if (videoFile) {
-            formData.append('mediaFiles', videoFile);
-          }
-        }
       }
 
-      // Send request with FormData
       await productService.createProduct(formData);
       message.success('Thêm sản phẩm thành công!');
       form.resetFields();
@@ -204,14 +145,6 @@ const AddProduct = () => {
     }
   };
 
-  const handlePreview = async (file) => {
-    // Nếu file chưa có URL, chuyển đổi sang base64
-    if (!file.url && !file.preview) {
-      file.preview = await getBase64(file.originFileObj);
-    }
-    alert('Preview: ' + (file.url || file.preview));
-  };
-
   return (
     <div className="add-product-page">
       <h2>Thêm sản phẩm</h2>
@@ -220,6 +153,7 @@ const AddProduct = () => {
         <Form.Item name="idProduct" label="Mã sản phẩm (ID)">
           <Input placeholder="P002" />
         </Form.Item>
+
         {/* Thông tin cơ bản */}
         <Divider orientation="left">Thông tin cơ bản</Divider>
         <Row gutter={24}>
@@ -261,21 +195,17 @@ const AddProduct = () => {
                 allowClear
                 loading={loadingCategories}
                 placeholder="Chọn danh mục"
-                disabled={!Array.isArray(categories) || categories.length === 0}
               >
-                {!Array.isArray(categories) || categories.length === 0 ? (
-                  <Option disabled>Không có danh mục</Option>
-                ) : (
-                  categories.map((category) => (
-                    <Option key={category._id} value={category._id}>
-                      {category.name}
-                    </Option>
-                  ))
-                )}
+                {categories.map((category) => (
+                  <Option key={category._id} value={category._id}>
+                    {category.name}
+                  </Option>
+                ))}
               </Select>
             </Form.Item>
           </Col>
         </Row>
+
         {/* Giá và Tồn kho */}
         <Divider orientation="left">Giá sản phẩm và tồn kho</Divider>
         <Row gutter={24}>
@@ -319,60 +249,54 @@ const AddProduct = () => {
             <Input />
           </Form.Item>
         </Row>
+
         {/* Media */}
-        <Divider orientation="left">Hình ảnh & Video</Divider>
+        <Divider orientation="left">Hình ảnh</Divider>
         <Row gutter={24}>
-          <Col span={8}>
+          <Col span={12}>
             <Card bordered={false} bodyStyle={{ padding: 0 }}>
               <Form.Item
                 label="Hình ảnh chính"
                 name={['media', 'mainImage']}
                 rules={[{ required: true, message: 'Vui lòng tải hình ảnh chính' }]}
                 valuePropName="fileList"
-                getValueFromEvent={e => Array.isArray(e) ? e : e && e.fileList}
+                getValueFromEvent={e => Array.isArray(e) ? e : e?.fileList}
               >
                 <Upload
                   listType="picture-card"
-                  customRequest={customUpload}
-                  onPreview={handlePreview}
+                  beforeUpload={() => false}
                 >
-                  <div style={{ width: '100%', height: 120, background: '#ccc' }}>
+                  <div>
                     <PlusOutlined />
+                    <div style={{ marginTop: 8 }}>Upload</div>
                   </div>
                 </Upload>
               </Form.Item>
             </Card>
           </Col>
-          <Col span={8}>
+          <Col span={12}>
             <Card bordered={false} bodyStyle={{ padding: 0 }}>
-              <Form.Item label="Bộ sưu tập hình ảnh" name={['media', 'imageGallery']}>
+              <Form.Item
+                label="Thư viện ảnh"
+                name={['media', 'imageGallery']}
+                valuePropName="fileList"
+                getValueFromEvent={e => Array.isArray(e) ? e : e?.fileList}
+              >
                 <Upload
                   listType="picture-card"
                   multiple
-                  customRequest={customUpload}
+                  beforeUpload={() => false}
                 >
                   <div>
                     <PlusOutlined />
-                  </div>
-                </Upload>
-              </Form.Item>
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card bordered={false} bodyStyle={{ padding: 0 }}>
-              <Form.Item label="Video (tuỳ chọn)" name={['media', 'videoUrl']}>
-                <Upload
-                  listType="picture-card"
-                  customRequest={customUpload}
-                >
-                  <div>
-                    <PlusOutlined />
+                    <div style={{ marginTop: 8 }}>Upload</div>
                   </div>
                 </Upload>
               </Form.Item>
             </Card>
           </Col>
         </Row>
+
         {/* Mô tả sản phẩm */}
         <Divider orientation="left">Mô tả sản phẩm</Divider>
         <Row gutter={24}>
@@ -428,6 +352,7 @@ const AddProduct = () => {
             </Form.Item>
           </Col>
         </Row>
+
         {/* Thông số kỹ thuật */}
         <Divider orientation="left">Thông số kỹ thuật</Divider>
         <Row gutter={24}>
@@ -449,6 +374,10 @@ const AddProduct = () => {
               <Select mode="multiple" placeholder="Chọn loại da" allowClear>
                 <Option value="Da mụn">Da mụn</Option>
                 <Option value="Da nhạy cảm">Da nhạy cảm</Option>
+                <Option value="Da khô">Da khô</Option>
+                <Option value="Da dầu">Da dầu</Option>
+                <Option value="Da hỗn hợp">Da hỗn hợp</Option>
+                <Option value="Da thường">Da thường</Option>
               </Select>
             </Form.Item>
           </Col>
@@ -463,45 +392,34 @@ const AddProduct = () => {
           </Col>
           <Col span={8}>
             <Form.Item
-              name={['technicalDetails', 'colorOrVariant']}
-              label="Màu sắc / Phiên bản"
-            >
-              <Input placeholder="null nếu không có" />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item
               name={['technicalDetails', 'certifications']}
               label="Chứng nhận chất lượng"
             >
-              <Select mode="tags" placeholder="Đạt tiêu chuẩn an toàn mỹ phẩm của Cocoo, không chứa paraben và đã được kiểm nghiệm da liễu" allowClear />
+              <Select mode="tags" placeholder="Nhập chứng nhận chất lượng" allowClear />
             </Form.Item>
           </Col>
         </Row>
+
         {/* SEO */}
         <Divider orientation="left">SEO</Divider>
         <Row gutter={24}>
           <Col span={8}>
             <Form.Item name={['seo', 'keywords']} label="Từ khóa/Tags">
-              <Select mode="tags" placeholder="kem trị mụn, kem trị nám, Cocoo, chăm sóc da, da mụn, da nhạy cảm" allowClear />
+              <Select mode="tags" placeholder="Nhập từ khóa" allowClear />
             </Form.Item>
           </Col>
           <Col span={8}>
             <Form.Item name={['seo', 'metaTitle']} label="Meta Title">
-              <Input placeholder="Kem trị mụn & trị nám Cocoo - Giải pháp cho làn da sáng mịn" />
+              <Input placeholder="Nhập meta title" />
             </Form.Item>
           </Col>
           <Col span={8}>
             <Form.Item name={['seo', 'metaDescription']} label="Meta Description">
-              <Input placeholder="Khám phá Kem trị mụn & trị nám Cocoo, với thành phần tự nhiên an toàn cho làn da mụn và da nhạy cảm, giúp cải thiện làn da hiệu quả." />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name={['seo', 'urlSlug']} label="Slug">
-              <Input placeholder="kem-tri-mun-cocoo-clear-skian" />
+              <Input placeholder="Nhập meta description" />
             </Form.Item>
           </Col>
         </Row>
+
         {/* Chính sách & Tùy chọn */}
         <Divider orientation="left">Chính sách & Tùy chọn</Divider>
         <Row gutter={24}>
@@ -525,6 +443,7 @@ const AddProduct = () => {
             </Form.Item>
           </Col>
         </Row>
+
         <Form.Item>
           <Button type="primary" htmlType="submit" style={{ float: 'right' }}>
             Thêm sản phẩm
@@ -536,5 +455,6 @@ const AddProduct = () => {
 };
 
 export default AddProduct;
+
 
 

@@ -30,14 +30,6 @@ const EditProduct = () => {
     const [categories, setCategories] = useState([]);
     const [fileList, setFileList] = useState([]);
 
-    // Hàm chuyển đổi giá trị lấy từ event của Upload thành mảng fileList
-    const normFile = (e) => {
-        if (Array.isArray(e)) {
-            return e;
-        }
-        return e && e.fileList ? e.fileList : [];
-    };
-
     useEffect(() => {
         const fetchProduct = async () => {
             try {
@@ -45,41 +37,54 @@ const EditProduct = () => {
 
                 // Xử lý media files
                 if (product.mediaFiles) {
-                    const mediaFiles = [
-                        ...(product.mediaFiles.images || []),
-                        ...(product.mediaFiles.videos || [])
-                    ].map((file, index) => ({
+                    const mediaFiles = product.mediaFiles.images.map((file, index) => ({
                         uid: `-${index}`,
                         name: file.filename,
                         status: 'done',
                         url: file.path,
-                        type: file.mimetype.startsWith('image/') ? 'image' : 'video'
+                        type: file.mimetype
                     }));
                     setFileList(mediaFiles);
                 }
 
                 // Set giá trị vào form
                 form.setFieldsValue({
-                    ...product,
-                    media: {
-                        mainImage: product.mediaFiles?.images?.[0] ? [{
-                            uid: '-1',
-                            name: product.mediaFiles.images[0].filename,
-                            status: 'done',
-                            url: product.mediaFiles.images[0].path
-                        }] : [],
-                        imageGallery: product.mediaFiles?.images?.slice(1).map((img, index) => ({
-                            uid: `-${index + 2}`,
-                            name: img.filename,
-                            status: 'done',
-                            url: img.path
-                        })) || [],
-                        videoUrl: product.mediaFiles?.videos?.map((video, index) => ({
-                            uid: `-v${index}`,
-                            name: video.filename,
-                            status: 'done',
-                            url: video.path
-                        })) || []
+                    idProduct: product.idProduct,
+                    basicInformation: {
+                        productName: product.basicInformation.productName,
+                        sku: product.basicInformation.sku,
+                        brand: product.basicInformation.brand,
+                        categoryIds: product.basicInformation.categoryIds
+                    },
+                    pricingAndInventory: {
+                        originalPrice: product.pricingAndInventory.originalPrice,
+                        salePrice: product.pricingAndInventory.salePrice,
+                        stockQuantity: product.pricingAndInventory.stockQuantity,
+                        unit: product.pricingAndInventory.unit,
+                        currency: product.pricingAndInventory.currency
+                    },
+                    description: {
+                        shortDescription: product.description.shortDescription,
+                        detailedDescription: product.description.detailedDescription,
+                        ingredients: product.description.ingredients,
+                        usageInstructions: product.description.usageInstructions,
+                        expiration: product.description.expiration
+                    },
+                    technicalDetails: {
+                        sizeOrWeight: product.technicalDetails.sizeOrWeight,
+                        suitableSkinTypes: product.technicalDetails.suitableSkinTypes,
+                        origin: product.technicalDetails.origin,
+                        certifications: product.technicalDetails.certifications
+                    },
+                    seo: {
+                        keywords: product.seo.keywords,
+                        metaTitle: product.seo.metaTitle,
+                        metaDescription: product.seo.metaDescription,
+                        urlSlug: product.seo.urlSlug
+                    },
+                    policy: {
+                        shippingReturnWarranty: product.policy.shippingReturnWarranty,
+                        additionalOptions: product.policy.additionalOptions
                     }
                 });
             } catch (error) {
@@ -91,14 +96,10 @@ const EditProduct = () => {
 
         const fetchCategories = async () => {
             try {
-                const response = await categoryService.getAllCategories({ status: 'active' });
-                // Đảm bảo response là một mảng
-                const categories = Array.isArray(response) ? response : [];
-                setCategories(categories);
+                const response = await categoryService.getAllCategories();
+                setCategories(Array.isArray(response) ? response : []);
             } catch (error) {
-                console.error('Error fetching categories:', error);
                 message.error('Failed to fetch categories');
-                setCategories([]);
             }
         };
 
@@ -110,6 +111,9 @@ const EditProduct = () => {
         try {
             const formData = new FormData();
 
+            // Append product ID
+            formData.append('idProduct', values.idProduct);
+
             // Append basic information
             if (values.basicInformation) {
                 formData.append('basicInformation[productName]', values.basicInformation.productName);
@@ -117,7 +121,7 @@ const EditProduct = () => {
                 formData.append('basicInformation[brand]', values.basicInformation.brand);
                 if (Array.isArray(values.basicInformation.categoryIds)) {
                     values.basicInformation.categoryIds.forEach(id =>
-                        formData.append('basicInformation[categoryIds][]', String(id))
+                        formData.append('basicInformation[categoryIds][]', id)
                     );
                 }
             }
@@ -143,7 +147,6 @@ const EditProduct = () => {
             // Append technical details
             if (values.technicalDetails) {
                 formData.append('technicalDetails[sizeOrWeight]', values.technicalDetails.sizeOrWeight);
-                formData.append('technicalDetails[colorOrVariant]', values.technicalDetails.colorOrVariant || '');
                 if (Array.isArray(values.technicalDetails.suitableSkinTypes)) {
                     values.technicalDetails.suitableSkinTypes.forEach(type =>
                         formData.append('technicalDetails[suitableSkinTypes][]', type)
@@ -166,7 +169,6 @@ const EditProduct = () => {
                 }
                 formData.append('seo[metaTitle]', values.seo.metaTitle);
                 formData.append('seo[metaDescription]', values.seo.metaDescription);
-                formData.append('seo[urlSlug]', values.seo.urlSlug);
             }
 
             // Append policy
@@ -177,28 +179,19 @@ const EditProduct = () => {
 
             // Append media files
             if (values.media) {
-                // Main Image
                 if (values.media.mainImage && values.media.mainImage.length > 0) {
                     const mainImageFile = values.media.mainImage[0].originFileObj;
                     if (mainImageFile) {
-                        formData.append('mediaFiles', mainImageFile);
+                        formData.append('images', mainImageFile);
                     }
                 }
-                // Image Gallery
                 if (values.media.imageGallery && values.media.imageGallery.length > 0) {
                     values.media.imageGallery.forEach(fileItem => {
                         const imageFile = fileItem.originFileObj;
                         if (imageFile) {
-                            formData.append('mediaFiles', imageFile);
+                            formData.append('images', imageFile);
                         }
                     });
-                }
-                // Video
-                if (values.media.videoUrl && values.media.videoUrl.length > 0) {
-                    const videoFile = values.media.videoUrl[0].originFileObj;
-                    if (videoFile) {
-                        formData.append('mediaFiles', videoFile);
-                    }
                 }
             }
 
@@ -226,6 +219,15 @@ const EditProduct = () => {
                 {/* Basic Information */}
                 <Divider orientation="left">Thông tin cơ bản</Divider>
                 <Row gutter={24}>
+                    <Col span={12}>
+                        <Form.Item
+                            name="idProduct"
+                            label="Mã sản phẩm"
+                            rules={[{ required: true }]}
+                        >
+                            <Input disabled />
+                        </Form.Item>
+                    </Col>
                     <Col span={12}>
                         <Form.Item
                             name={['basicInformation', 'productName']}
@@ -260,7 +262,7 @@ const EditProduct = () => {
                             rules={[{ required: true }]}
                         >
                             <Select mode="multiple">
-                                {Array.isArray(categories) && categories.map((category) => (
+                                {categories.map((category) => (
                                     <Option key={category._id} value={category._id}>
                                         {category.name}
                                     </Option>
@@ -303,14 +305,14 @@ const EditProduct = () => {
                 </Row>
 
                 {/* Media */}
-                <Divider orientation="left">Hình ảnh & Video</Divider>
+                <Divider orientation="left">Hình ảnh</Divider>
                 <Row gutter={24}>
-                    <Col span={8}>
+                    <Col span={12}>
                         <Form.Item
                             name={['media', 'mainImage']}
                             label="Hình ảnh chính"
                             valuePropName="fileList"
-                            getValueFromEvent={normFile}
+                            getValueFromEvent={e => Array.isArray(e) ? e : e?.fileList}
                         >
                             <Upload
                                 listType="picture-card"
@@ -324,35 +326,16 @@ const EditProduct = () => {
                             </Upload>
                         </Form.Item>
                     </Col>
-                    <Col span={8}>
+                    <Col span={12}>
                         <Form.Item
                             name={['media', 'imageGallery']}
                             label="Thư viện ảnh"
                             valuePropName="fileList"
-                            getValueFromEvent={normFile}
+                            getValueFromEvent={e => Array.isArray(e) ? e : e?.fileList}
                         >
                             <Upload
                                 listType="picture-card"
                                 multiple
-                                beforeUpload={() => false}
-                            >
-                                <div>
-                                    <PlusOutlined />
-                                    <div style={{ marginTop: 8 }}>Upload</div>
-                                </div>
-                            </Upload>
-                        </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                        <Form.Item
-                            name={['media', 'videoUrl']}
-                            label="Video"
-                            valuePropName="fileList"
-                            getValueFromEvent={normFile}
-                        >
-                            <Upload
-                                listType="picture-card"
-                                maxCount={1}
                                 beforeUpload={() => false}
                             >
                                 <div>

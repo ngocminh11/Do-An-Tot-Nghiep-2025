@@ -1,23 +1,29 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Popconfirm, message, Spin } from 'antd';
+import { Table, Button, Space, Popconfirm, message, Spin, Tag } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import categoryService from '../../../services/categoryService';
 import './CategoryManagement.scss';
 
 const CategoryManagement = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Kiểm tra và hiển thị thông báo từ state navigation
+        if (location.state?.message) {
+            message[location.state.type || 'success'](location.state.message);
+            // Xóa state để tránh hiển thị lại khi refresh
+            window.history.replaceState({}, document.title);
+        }
+
         const fetchCategories = async () => {
             setLoading(true);
             try {
-                const response = await categoryService.getAllCategories({ limit: 9999 });
-                console.log("danh mục",response);
-                const categoriesData = Array.isArray(response) ? response : [];
-                setCategories(categoriesData.map(cat => ({ ...cat, _id: String(cat._id) })));
+                const response = await categoryService.getAllCategories();
+                setCategories(response);
             } catch (error) {
                 console.error('Error fetching categories:', error);
                 message.error('Không thể tải danh mục sản phẩm');
@@ -27,28 +33,60 @@ const CategoryManagement = () => {
             }
         };
         fetchCategories();
-    }, []);
+    }, [location]);
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'active':
+                return 'success';
+            case 'inactive':
+                return 'warning';
+            case 'archived':
+                return 'error';
+            default:
+                return 'default';
+        }
+    };
 
     const columns = [
         {
             title: 'Tên danh mục',
             dataIndex: 'name',
             key: 'name',
+            render: (text) => <span style={{ fontWeight: 'bold' }}>{text}</span>
         },
         {
             title: 'Mô tả',
             dataIndex: 'description',
             key: 'description',
+            ellipsis: true
         },
         {
             title: 'Danh mục cha',
-            dataIndex: 'parentId',
-            key: 'parentId',
+            dataIndex: 'parentCategory',
+            key: 'parentCategory',
             render: (parentId) => {
                 if (!parentId) return 'Không có';
-                const parent = categories.find(c => String(c._id) === String(parentId));
-                return parent ? parent.name : `Unknown (${parentId})`;
+                const parent = categories.find(c => c._id === parentId);
+                return parent ? parent.name : 'Không xác định';
             }
+        },
+        {
+            title: 'Vị trí',
+            dataIndex: 'position',
+            key: 'position',
+            sorter: (a, b) => a.position - b.position
+        },
+        {
+            title: 'Trạng thái',
+            dataIndex: 'status',
+            key: 'status',
+            render: (status) => (
+                <Tag color={getStatusColor(status)}>
+                    {status === 'active' ? 'Hoạt động' :
+                        status === 'inactive' ? 'Không hoạt động' : 'Đã lưu trữ'}
+                </Tag>
+            )
         },
         {
             title: 'Thao tác',
@@ -85,8 +123,7 @@ const CategoryManagement = () => {
         try {
             await categoryService.deleteCategory(id);
             message.success('Xóa danh mục thành công.');
-            const updatedCategories = categories.filter(cat => String(cat._id) !== String(id));
-            setCategories(updatedCategories);
+            setCategories(categories.filter(cat => cat._id !== id));
         } catch (error) {
             const errorMessage = error.message || 'Xóa danh mục thất bại.';
             message.error(errorMessage);
