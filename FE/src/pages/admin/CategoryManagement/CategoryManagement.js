@@ -14,9 +14,12 @@ const CategoryManagement = () => {
         const fetchCategories = async () => {
             setLoading(true);
             try {
-                const data = await categoryService.getAllCategories();
-                setCategories(data.map(cat => ({ ...cat, _id: String(cat._id) })));
+                const response = await categoryService.getAllCategories({ limit: 9999 });
+                console.log("danh mục",response);
+                const categoriesData = Array.isArray(response) ? response : [];
+                setCategories(categoriesData.map(cat => ({ ...cat, _id: String(cat._id) })));
             } catch (error) {
+                console.error('Error fetching categories:', error);
                 message.error('Không thể tải danh mục sản phẩm');
                 setCategories([]);
             } finally {

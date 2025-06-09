@@ -6,7 +6,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
-const fileUpload = require('express-fileupload');
+const path = require('path');
 const productRoutes = require('./Routes/product.routes');
 const categoryRoutes = require('./Routes/category.routes');
 const logToCSV = require('./Utils/logger');
@@ -14,18 +14,18 @@ const logToCSV = require('./Utils/logger');
 const app = express();
 const PORT = process.env.PORT;
 
+// Middleware
 app.use(cors());
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(fileUpload({
-  useTempFiles: true,
-  tempFileDir: '/tmp/',
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
-}));
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// MongoDB connection
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -37,6 +37,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date() });
 });
 
+// Routes
 app.use('/admin/products', productRoutes);
 app.use('/admin/categories', categoryRoutes);
 

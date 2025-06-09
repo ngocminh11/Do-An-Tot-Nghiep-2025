@@ -50,7 +50,6 @@ const ProductManagement = () => {
       const response = await productService.getAllProducts();
       // Assuming the backend returns an array of products directly or { products: [...], ...}
       const productsArray = response.data.products || response.data;
-      console.log('Fetched Products:', productsArray);
       setAllProducts(productsArray);
       // Update pagination if backend provides totalItems
       if (response.data.totalItems !== undefined) {
@@ -69,15 +68,16 @@ const ProductManagement = () => {
   const fetchCategories = async () => {
     setLoadingCategories(true);
     try {
-      // Use categoryService to fetch categories
-      const data = await categoryService.getAllCategories();
-      // Ensure _id is treated as string for consistent comparison
-      setCategories(data.map(cat => ({ ...cat, _id: String(cat._id) })));
-      console.log('Fetched Categories:', data);
+      // Tạm thời lấy tất cả danh mục để kiểm tra vấn đề 'Unknown'
+      const response = await categoryService.getAllCategories(); // Bỏ tham số { status: 'active' }
+      const categories = Array.isArray(response)
+        ? response.map(cat => ({ ...cat, _id: String(cat._id) }))
+        : [];
+      setCategories(categories);
     } catch (error) {
-      message.error('Không thể tải danh mục sản phẩm.');
       console.error('Error fetching categories:', error);
-      setCategories([]); // Set to empty array on error
+      message.error('Không thể tải danh mục sản phẩm.');
+      setCategories([]);
     } finally {
       setLoadingCategories(false);
     }
@@ -219,17 +219,38 @@ const ProductManagement = () => {
         <strong>Expiration:</strong>{' '}
         {record.description?.expiration || 'N/A'}
       </p>
-      {record.media?.videoUrl && (
+      {record.mediaFiles?.videos?.length > 0 && (
         <p>
-          <strong>Video: </strong>
-          <a
-            href={record.media.videoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Watch Demo <VideoCameraOutlined />
-          </a>
+          <strong>Videos: </strong>
+          {record.mediaFiles.videos.map((video, index) => (
+            <a
+              key={index}
+              href={video.path}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ marginRight: '10px' }}
+            >
+              Video {index + 1} <VideoCameraOutlined />
+            </a>
+          ))}
         </p>
+      )}
+      {record.mediaFiles?.images?.length > 1 && (
+        <div>
+          <strong>Additional Images: </strong>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+            {record.mediaFiles.images.slice(1).map((image, index) => (
+              <Image
+                key={index}
+                src={image.path}
+                alt={`Product ${index + 2}`}
+                width={100}
+                height={100}
+                style={{ objectFit: 'cover' }}
+              />
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -238,12 +259,13 @@ const ProductManagement = () => {
   const columns = [
     {
       title: 'Image',
-      dataIndex: 'media',
-      key: 'media',
-      render: (media) =>
-        media && media.mainImage ? (
+      dataIndex: 'mediaFiles',
+      key: 'mediaFiles',
+      render: (mediaFiles) => {
+        const mainImage = mediaFiles?.images?.[0];
+        return mainImage ? (
           <Image
-            src={media.mainImage}
+            src={mainImage.path}
             alt="Product"
             width={60}
             height={60}
@@ -266,7 +288,8 @@ const ProductManagement = () => {
           >
             No Image
           </div>
-        ),
+        );
+      },
       width: 80,
     },
     {
@@ -345,19 +368,14 @@ const ProductManagement = () => {
       dataIndex: ['basicInformation', 'categoryIds'],
       key: 'categories',
       render: (categoryIds) => {
-        console.log('Rendering Categories Column:');
-        console.log('Product Category IDs:', categoryIds);
-        console.log('Available Categories:', categories);
 
         if (!categoryIds || categoryIds.length === 0)
           return 'N/A';
         const names = categoryIds.map((id) => {
           // Ensure id from product is treated as string for consistent comparison
           const category = categories.find((cat) => {
-            console.log(`Comparing Product ID: ${String(id)} with Category ID: ${String(cat._id)}`);
             return String(cat._id) === String(id);
           });
-          console.log(`Found Category for ID ${id}:`, category);
           return category ? category.name : `Unknown (${id})`; // Display Unknown and ID if not found
         }).filter(name => name); // Filter out any null/undefined names just in case
         return names.join(', ');
@@ -450,9 +468,9 @@ const ProductManagement = () => {
           style={{ width: 200 }}
           onChange={handleCategoryChange}
           value={filters.category}
-          disabled={categories.length === 0}
+          disabled={!Array.isArray(categories) || categories.length === 0}
         >
-          {categories.length === 0 ? (
+          {!Array.isArray(categories) || categories.length === 0 ? (
             <Option disabled>No categories</Option>
           ) : (
             categories.map((category) => (

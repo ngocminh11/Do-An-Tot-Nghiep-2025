@@ -16,6 +16,7 @@ import {
 import { PlusOutlined } from '@ant-design/icons';
 import moment from 'moment';
 import productService from '../../../services/productService';
+import categoryService from '../../../services/categoryService';
 import './ProductManagement.scss';
 
 const { Option } = Select;
@@ -54,12 +55,12 @@ const AddProduct = () => {
     const fetchCategories = async () => {
       setLoadingCategories(true);
       try {
-        const response = await productService.getCategories();
-        const categoriesArray = Array.isArray(response)
-          ? response
-          : response.data || [];
-        setCategories(categoriesArray.filter((cat) => cat.status === 'active'));
+        const response = await categoryService.getAllCategories({ status: 'active' });
+        // Đảm bảo response là một mảng
+        const categories = Array.isArray(response) ? response : [];
+        setCategories(categories);
       } catch (error) {
+        console.error('Error fetching categories:', error);
         setCategories([]);
         message.error('Không thể tải danh mục sản phẩm');
       } finally {
@@ -87,114 +88,115 @@ const AddProduct = () => {
   };
 
   const handleFinish = async (values) => {
-    // Create FormData to handle files and other data
-    const formData = new FormData();
-
-    // Append product ID
-    const idProduct = values.idProduct ? String(values.idProduct) : 'P' + Math.floor(Math.random() * 1000000);
-    formData.append('idProduct', idProduct);
-
-    // Append basic information, converting categoryIds to a format backend expects (e.g., array of strings)
-    if (values.basicInformation) {
-      formData.append('basicInformation[productName]', values.basicInformation.productName);
-      formData.append('basicInformation[sku]', values.basicInformation.sku);
-      formData.append('basicInformation[brand]', values.basicInformation.brand);
-      // Append categoryIds as an array
-      if (Array.isArray(values.basicInformation.categoryIds)) {
-        values.basicInformation.categoryIds.forEach(id => formData.append('basicInformation[categoryIds][]', String(id)));
-      } else if (values.basicInformation.categoryIds) {
-        formData.append('basicInformation[categoryIds][]', String(values.basicInformation.categoryIds));
-      }
-    }
-
-    // Append pricing and inventory
-    if (values.pricingAndInventory) {
-      formData.append('pricingAndInventory[originalPrice]', values.pricingAndInventory.originalPrice);
-      formData.append('pricingAndInventory[salePrice]', values.pricingAndInventory.salePrice);
-      formData.append('pricingAndInventory[stockQuantity]', values.pricingAndInventory.stockQuantity);
-      formData.append('pricingAndInventory[unit]', values.pricingAndInventory.unit);
-      formData.append('pricingAndInventory[currency]', values.pricingAndInventory.currency || 'VND');
-    }
-
-    // Append description fields
-    if (values.description) {
-      formData.append('description[shortDescription]', values.description.shortDescription);
-      formData.append('description[detailedDescription]', values.description.detailedDescription);
-      formData.append('description[ingredients]', values.description.ingredients);
-      formData.append('description[usageInstructions]', values.description.usageInstructions);
-      formData.append('description[expiration]', values.description.expiration);
-    }
-
-    // Append technical details, converting arrays to comma-separated strings
-    if (values.technicalDetails) {
-      formData.append('technicalDetails[sizeOrWeight]', values.technicalDetails.sizeOrWeight);
-      formData.append('technicalDetails[colorOrVariant]', values.technicalDetails.colorOrVariant || '');
-      formData.append('technicalDetails[suitableSkinTypes]', Array.isArray(values.technicalDetails.suitableSkinTypes) ? values.technicalDetails.suitableSkinTypes.join(', ') : values.technicalDetails.suitableSkinTypes || '');
-      formData.append('technicalDetails[certifications]', Array.isArray(values.technicalDetails.certifications) ? values.technicalDetails.certifications.join(', ') : values.technicalDetails.certifications || '');
-      formData.append('technicalDetails[origin]', values.technicalDetails.origin);
-    }
-
-    // Append SEO fields, converting keywords array to comma-separated string
-    if (values.seo) {
-      formData.append('seo[keywords]', Array.isArray(values.seo.keywords) ? values.seo.keywords.join(', ') : values.seo.keywords || '');
-      formData.append('seo[metaTitle]', values.seo.metaTitle);
-      formData.append('seo[metaDescription]', values.seo.metaDescription);
-      formData.append('seo[urlSlug]', values.seo.urlSlug);
-    }
-
-    // Append policy fields
-    if (values.policy) {
-      formData.append('policy[shippingReturnWarranty]', values.policy.shippingReturnWarranty || '');
-      formData.append('policy[additionalOptions]', values.policy.additionalOptions || '');
-    }
-
-    // Append files (images and videos)
-    if (values.media) {
-      // Main Image
-      if (values.media.mainImage && values.media.mainImage.length > 0) {
-        // Assuming mainImage is a fileList from Ant Design Upload
-        const mainImageFile = values.media.mainImage[0].originFileObj;
-        if (mainImageFile) {
-          formData.append('images', mainImageFile);
-        }
-      }
-      // Image Gallery
-      if (values.media.imageGallery && values.media.imageGallery.length > 0) {
-        // Assuming imageGallery is a fileList
-        values.media.imageGallery.forEach(fileItem => {
-          const imageFile = fileItem.originFileObj;
-          if (imageFile) {
-            formData.append('images', imageFile);
-          }
-        });
-      }
-      // Video
-      if (values.media.videoUrl && values.media.videoUrl.length > 0) {
-        // Assuming videoUrl is a fileList
-        const videoFile = values.media.videoUrl[0].originFileObj;
-        if (videoFile) {
-          formData.append('videos', videoFile);
-        }
-      }
-    }
-
-    console.log('FormData to be sent:', formData); // Log FormData contents for debugging
-
     try {
-      // Send FormData instead of JSON
-      await productService.createProduct(formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const formData = new FormData();
+
+      // Append product ID
+      const idProduct = values.idProduct ? String(values.idProduct) : 'P' + Math.floor(Math.random() * 1000000);
+      formData.append('idProduct', idProduct);
+
+      // Append basic information
+      if (values.basicInformation) {
+        formData.append('basicInformation[productName]', values.basicInformation.productName);
+        formData.append('basicInformation[sku]', values.basicInformation.sku);
+        formData.append('basicInformation[brand]', values.basicInformation.brand);
+        if (Array.isArray(values.basicInformation.categoryIds)) {
+          values.basicInformation.categoryIds.forEach(id =>
+            formData.append('basicInformation[categoryIds][]', String(id))
+          );
+        }
+      }
+
+      // Append pricing and inventory
+      if (values.pricingAndInventory) {
+        formData.append('pricingAndInventory[originalPrice]', values.pricingAndInventory.originalPrice);
+        formData.append('pricingAndInventory[salePrice]', values.pricingAndInventory.salePrice);
+        formData.append('pricingAndInventory[stockQuantity]', values.pricingAndInventory.stockQuantity);
+        formData.append('pricingAndInventory[unit]', values.pricingAndInventory.unit);
+        formData.append('pricingAndInventory[currency]', values.pricingAndInventory.currency || 'VND');
+      }
+
+      // Append description
+      if (values.description) {
+        formData.append('description[shortDescription]', values.description.shortDescription);
+        formData.append('description[detailedDescription]', values.description.detailedDescription);
+        formData.append('description[ingredients]', values.description.ingredients);
+        formData.append('description[usageInstructions]', values.description.usageInstructions);
+        formData.append('description[expiration]', values.description.expiration);
+      }
+
+      // Append technical details
+      if (values.technicalDetails) {
+        formData.append('technicalDetails[sizeOrWeight]', values.technicalDetails.sizeOrWeight);
+        formData.append('technicalDetails[colorOrVariant]', values.technicalDetails.colorOrVariant || '');
+        if (Array.isArray(values.technicalDetails.suitableSkinTypes)) {
+          values.technicalDetails.suitableSkinTypes.forEach(type =>
+            formData.append('technicalDetails[suitableSkinTypes][]', type)
+          );
+        }
+        if (Array.isArray(values.technicalDetails.certifications)) {
+          values.technicalDetails.certifications.forEach(cert =>
+            formData.append('technicalDetails[certifications][]', cert)
+          );
+        }
+        formData.append('technicalDetails[origin]', values.technicalDetails.origin);
+      }
+
+      // Append SEO
+      if (values.seo) {
+        if (Array.isArray(values.seo.keywords)) {
+          values.seo.keywords.forEach(keyword =>
+            formData.append('seo[keywords][]', keyword)
+          );
+        }
+        formData.append('seo[metaTitle]', values.seo.metaTitle);
+        formData.append('seo[metaDescription]', values.seo.metaDescription);
+        formData.append('seo[urlSlug]', values.seo.urlSlug);
+      }
+
+      // Append policy
+      if (values.policy) {
+        formData.append('policy[shippingReturnWarranty]', values.policy.shippingReturnWarranty || '');
+        formData.append('policy[additionalOptions]', values.policy.additionalOptions || '');
+      }
+
+      // Append media files
+      if (values.media) {
+        // Main Image
+        if (values.media.mainImage && values.media.mainImage.length > 0) {
+          const mainImageFile = values.media.mainImage[0].originFileObj;
+          if (mainImageFile) {
+            formData.append('mediaFiles', mainImageFile);
+          }
+        }
+        // Image Gallery
+        if (values.media.imageGallery && values.media.imageGallery.length > 0) {
+          values.media.imageGallery.forEach(fileItem => {
+            const imageFile = fileItem.originFileObj;
+            if (imageFile) {
+              formData.append('mediaFiles', imageFile);
+            }
+          });
+        }
+        // Video
+        if (values.media.videoUrl && values.media.videoUrl.length > 0) {
+          const videoFile = values.media.videoUrl[0].originFileObj;
+          if (videoFile) {
+            formData.append('mediaFiles', videoFile);
+          }
+        }
+      }
+
+      // Send request with FormData
+      await productService.createProduct(formData);
       message.success('Thêm sản phẩm thành công!');
       form.resetFields();
       setTimeout(() => {
         window.location.href = '/admin/products';
       }, 800);
     } catch (error) {
-      console.log(error);
-      if (
-        error.response &&
-        error.response.data &&
-        error.response.data.message
-      ) {
+      console.error('Error creating product:', error);
+      if (error.response?.data?.message) {
         message.error('Lỗi: ' + error.response.data.message);
       } else {
         message.error('Thêm sản phẩm thất bại!');
@@ -259,9 +261,9 @@ const AddProduct = () => {
                 allowClear
                 loading={loadingCategories}
                 placeholder="Chọn danh mục"
-                disabled={categories.length === 0}
+                disabled={!Array.isArray(categories) || categories.length === 0}
               >
-                {categories.length === 0 ? (
+                {!Array.isArray(categories) || categories.length === 0 ? (
                   <Option disabled>Không có danh mục</Option>
                 ) : (
                   categories.map((category) => (

@@ -7,15 +7,20 @@ import {
     InputNumber,
     message,
     Spin,
-    Upload
+    Upload,
+    Row,
+    Col,
+    Card,
+    Divider
 } from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
-import { UploadOutlined } from '@ant-design/icons';
+import { UploadOutlined, PlusOutlined } from '@ant-design/icons';
 import productService from '../../../services/productService';
 import categoryService from '../../../services/categoryService';
 import './ProductManagement.scss';
 
 const { Option } = Select;
+const { TextArea } = Input;
 
 const EditProduct = () => {
     const { id } = useParams();
@@ -23,14 +28,13 @@ const EditProduct = () => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(true);
     const [categories, setCategories] = useState([]);
+    const [fileList, setFileList] = useState([]);
 
     // Hàm chuyển đổi giá trị lấy từ event của Upload thành mảng fileList
     const normFile = (e) => {
-        // Nếu e là mảng thì trả về nó
         if (Array.isArray(e)) {
             return e;
         }
-        // Nếu e tồn tại và có thuộc tính fileList, trả về nó; nếu không trả về mảng rỗng
         return e && e.fileList ? e.fileList : [];
     };
 
@@ -38,21 +42,46 @@ const EditProduct = () => {
         const fetchProduct = async () => {
             try {
                 const product = await productService.getProductById(id);
-                // Nếu có media.mainImage, đảm bảo rằng field "media" được set là mảng chứa đối tượng file
-                if (product.media && product.media.mainImage) {
-                    product.media = [
-                        {
-                            uid: '-1',
-                            name: 'mainImage',
-                            status: 'done',
-                            url: product.media.mainImage
-                        }
-                    ];
-                } else {
-                    product.media = [];
+
+                // Xử lý media files
+                if (product.mediaFiles) {
+                    const mediaFiles = [
+                        ...(product.mediaFiles.images || []),
+                        ...(product.mediaFiles.videos || [])
+                    ].map((file, index) => ({
+                        uid: `-${index}`,
+                        name: file.filename,
+                        status: 'done',
+                        url: file.path,
+                        type: file.mimetype.startsWith('image/') ? 'image' : 'video'
+                    }));
+                    setFileList(mediaFiles);
                 }
-                // Set giá trị vào form (nếu product có cấu trúc phức tạp, bạn cần chuyển đổi thêm)
-                form.setFieldsValue(product);
+
+                // Set giá trị vào form
+                form.setFieldsValue({
+                    ...product,
+                    media: {
+                        mainImage: product.mediaFiles?.images?.[0] ? [{
+                            uid: '-1',
+                            name: product.mediaFiles.images[0].filename,
+                            status: 'done',
+                            url: product.mediaFiles.images[0].path
+                        }] : [],
+                        imageGallery: product.mediaFiles?.images?.slice(1).map((img, index) => ({
+                            uid: `-${index + 2}`,
+                            name: img.filename,
+                            status: 'done',
+                            url: img.path
+                        })) || [],
+                        videoUrl: product.mediaFiles?.videos?.map((video, index) => ({
+                            uid: `-v${index}`,
+                            name: video.filename,
+                            status: 'done',
+                            url: video.path
+                        })) || []
+                    }
+                });
             } catch (error) {
                 message.error('Failed to fetch product for edit');
             } finally {
@@ -62,10 +91,14 @@ const EditProduct = () => {
 
         const fetchCategories = async () => {
             try {
-                const data = await categoryService.getAllCategories();
-                setCategories(data);
+                const response = await categoryService.getAllCategories({ status: 'active' });
+                // Đảm bảo response là một mảng
+                const categories = Array.isArray(response) ? response : [];
+                setCategories(categories);
             } catch (error) {
+                console.error('Error fetching categories:', error);
                 message.error('Failed to fetch categories');
+                setCategories([]);
             }
         };
 
@@ -77,23 +110,108 @@ const EditProduct = () => {
         try {
             const formData = new FormData();
 
-            // Nếu có trường media, lấy file đã được Upload (ở mảng fileList) và gắn với key mainImage
-            if (
-                values.media &&
-                values.media.length > 0 &&
-                values.media[0].originFileObj
-            ) {
-                formData.append('mainImage', values.media[0].originFileObj);
+            // Append basic information
+            if (values.basicInformation) {
+                formData.append('basicInformation[productName]', values.basicInformation.productName);
+                formData.append('basicInformation[sku]', values.basicInformation.sku);
+                formData.append('basicInformation[brand]', values.basicInformation.brand);
+                if (Array.isArray(values.basicInformation.categoryIds)) {
+                    values.basicInformation.categoryIds.forEach(id =>
+                        formData.append('basicInformation[categoryIds][]', String(id))
+                    );
+                }
             }
 
-            // Append các field còn lại dưới dạng JSON string (backend sẽ parse lại)
-            formData.append('data', JSON.stringify(values));
+            // Append pricing and inventory
+            if (values.pricingAndInventory) {
+                formData.append('pricingAndInventory[originalPrice]', values.pricingAndInventory.originalPrice);
+                formData.append('pricingAndInventory[salePrice]', values.pricingAndInventory.salePrice);
+                formData.append('pricingAndInventory[stockQuantity]', values.pricingAndInventory.stockQuantity);
+                formData.append('pricingAndInventory[unit]', values.pricingAndInventory.unit);
+                formData.append('pricingAndInventory[currency]', values.pricingAndInventory.currency || 'VND');
+            }
+
+            // Append description
+            if (values.description) {
+                formData.append('description[shortDescription]', values.description.shortDescription);
+                formData.append('description[detailedDescription]', values.description.detailedDescription);
+                formData.append('description[ingredients]', values.description.ingredients);
+                formData.append('description[usageInstructions]', values.description.usageInstructions);
+                formData.append('description[expiration]', values.description.expiration);
+            }
+
+            // Append technical details
+            if (values.technicalDetails) {
+                formData.append('technicalDetails[sizeOrWeight]', values.technicalDetails.sizeOrWeight);
+                formData.append('technicalDetails[colorOrVariant]', values.technicalDetails.colorOrVariant || '');
+                if (Array.isArray(values.technicalDetails.suitableSkinTypes)) {
+                    values.technicalDetails.suitableSkinTypes.forEach(type =>
+                        formData.append('technicalDetails[suitableSkinTypes][]', type)
+                    );
+                }
+                if (Array.isArray(values.technicalDetails.certifications)) {
+                    values.technicalDetails.certifications.forEach(cert =>
+                        formData.append('technicalDetails[certifications][]', cert)
+                    );
+                }
+                formData.append('technicalDetails[origin]', values.technicalDetails.origin);
+            }
+
+            // Append SEO
+            if (values.seo) {
+                if (Array.isArray(values.seo.keywords)) {
+                    values.seo.keywords.forEach(keyword =>
+                        formData.append('seo[keywords][]', keyword)
+                    );
+                }
+                formData.append('seo[metaTitle]', values.seo.metaTitle);
+                formData.append('seo[metaDescription]', values.seo.metaDescription);
+                formData.append('seo[urlSlug]', values.seo.urlSlug);
+            }
+
+            // Append policy
+            if (values.policy) {
+                formData.append('policy[shippingReturnWarranty]', values.policy.shippingReturnWarranty || '');
+                formData.append('policy[additionalOptions]', values.policy.additionalOptions || '');
+            }
+
+            // Append media files
+            if (values.media) {
+                // Main Image
+                if (values.media.mainImage && values.media.mainImage.length > 0) {
+                    const mainImageFile = values.media.mainImage[0].originFileObj;
+                    if (mainImageFile) {
+                        formData.append('mediaFiles', mainImageFile);
+                    }
+                }
+                // Image Gallery
+                if (values.media.imageGallery && values.media.imageGallery.length > 0) {
+                    values.media.imageGallery.forEach(fileItem => {
+                        const imageFile = fileItem.originFileObj;
+                        if (imageFile) {
+                            formData.append('mediaFiles', imageFile);
+                        }
+                    });
+                }
+                // Video
+                if (values.media.videoUrl && values.media.videoUrl.length > 0) {
+                    const videoFile = values.media.videoUrl[0].originFileObj;
+                    if (videoFile) {
+                        formData.append('mediaFiles', videoFile);
+                    }
+                }
+            }
 
             await productService.updateProduct(id, formData);
-            message.success('Product updated successfully');
+            message.success('Cập nhật sản phẩm thành công');
             navigate('/admin/products');
         } catch (error) {
-            message.error('Failed to update product');
+            console.error('Error updating product:', error);
+            if (error.response?.data?.message) {
+                message.error('Lỗi: ' + error.response.data.message);
+            } else {
+                message.error('Cập nhật sản phẩm thất bại');
+            }
         }
     };
 
@@ -103,120 +221,175 @@ const EditProduct = () => {
 
     return (
         <div className="edit-product">
-            <h1>Edit Product</h1>
+            <h1>Cập nhật sản phẩm</h1>
             <Form form={form} layout="vertical" onFinish={handleFinish}>
-                <Form.Item
-                    name={['basicInformation', 'productName']}
-                    label="Product Name"
-                    rules={[{ required: true }]}
-                >
-                    <Input />
-                </Form.Item>
+                {/* Basic Information */}
+                <Divider orientation="left">Thông tin cơ bản</Divider>
+                <Row gutter={24}>
+                    <Col span={12}>
+                        <Form.Item
+                            name={['basicInformation', 'productName']}
+                            label="Tên sản phẩm"
+                            rules={[{ required: true }]}
+                        >
+                            <Input />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                        <Form.Item
+                            name={['basicInformation', 'sku']}
+                            label="SKU"
+                            rules={[{ required: true }]}
+                        >
+                            <Input />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                        <Form.Item
+                            name={['basicInformation', 'brand']}
+                            label="Thương hiệu"
+                            rules={[{ required: true }]}
+                        >
+                            <Input />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                        <Form.Item
+                            name={['basicInformation', 'categoryIds']}
+                            label="Danh mục"
+                            rules={[{ required: true }]}
+                        >
+                            <Select mode="multiple">
+                                {Array.isArray(categories) && categories.map((category) => (
+                                    <Option key={category._id} value={category._id}>
+                                        {category.name}
+                                    </Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                    </Col>
+                </Row>
 
-                <Form.Item
-                    name={['basicInformation', 'sku']}
-                    label="SKU"
-                    rules={[{ required: true }]}
-                >
-                    <Input />
-                </Form.Item>
+                {/* Pricing and Inventory */}
+                <Divider orientation="left">Giá và tồn kho</Divider>
+                <Row gutter={24}>
+                    <Col span={8}>
+                        <Form.Item
+                            name={['pricingAndInventory', 'originalPrice']}
+                            label="Giá gốc"
+                            rules={[{ required: true }]}
+                        >
+                            <InputNumber min={0} style={{ width: '100%' }} />
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item
+                            name={['pricingAndInventory', 'salePrice']}
+                            label="Giá bán"
+                            rules={[{ required: true }]}
+                        >
+                            <InputNumber min={0} style={{ width: '100%' }} />
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item
+                            name={['pricingAndInventory', 'stockQuantity']}
+                            label="Số lượng tồn kho"
+                            rules={[{ required: true }]}
+                        >
+                            <InputNumber min={0} style={{ width: '100%' }} />
+                        </Form.Item>
+                    </Col>
+                </Row>
 
-                <Form.Item
-                    name={['basicInformation', 'brand']}
-                    label="Brand"
-                    rules={[{ required: true }]}
-                >
-                    <Input />
-                </Form.Item>
+                {/* Media */}
+                <Divider orientation="left">Hình ảnh & Video</Divider>
+                <Row gutter={24}>
+                    <Col span={8}>
+                        <Form.Item
+                            name={['media', 'mainImage']}
+                            label="Hình ảnh chính"
+                            valuePropName="fileList"
+                            getValueFromEvent={normFile}
+                        >
+                            <Upload
+                                listType="picture-card"
+                                maxCount={1}
+                                beforeUpload={() => false}
+                            >
+                                <div>
+                                    <PlusOutlined />
+                                    <div style={{ marginTop: 8 }}>Upload</div>
+                                </div>
+                            </Upload>
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item
+                            name={['media', 'imageGallery']}
+                            label="Thư viện ảnh"
+                            valuePropName="fileList"
+                            getValueFromEvent={normFile}
+                        >
+                            <Upload
+                                listType="picture-card"
+                                multiple
+                                beforeUpload={() => false}
+                            >
+                                <div>
+                                    <PlusOutlined />
+                                    <div style={{ marginTop: 8 }}>Upload</div>
+                                </div>
+                            </Upload>
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item
+                            name={['media', 'videoUrl']}
+                            label="Video"
+                            valuePropName="fileList"
+                            getValueFromEvent={normFile}
+                        >
+                            <Upload
+                                listType="picture-card"
+                                maxCount={1}
+                                beforeUpload={() => false}
+                            >
+                                <div>
+                                    <PlusOutlined />
+                                    <div style={{ marginTop: 8 }}>Upload</div>
+                                </div>
+                            </Upload>
+                        </Form.Item>
+                    </Col>
+                </Row>
 
-                <Form.Item
-                    name={['basicInformation', 'categoryIds']}
-                    label="Categories"
-                    rules={[{ required: true }]}
-                >
-                    <Select mode="multiple">
-                        {categories.map((category) => (
-                            <Option key={category._id} value={category._id}>
-                                {category.name}
-                            </Option>
-                        ))}
-                    </Select>
-                </Form.Item>
-
-                <Form.Item
-                    name={['pricingAndInventory', 'salePrice']}
-                    label="Sale Price"
-                    rules={[{ required: true }]}
-                >
-                    <InputNumber min={0} />
-                </Form.Item>
-
-                <Form.Item
-                    name={['pricingAndInventory', 'stockQuantity']}
-                    label="Stock Quantity"
-                    rules={[{ required: true }]}
-                >
-                    <InputNumber min={0} />
-                </Form.Item>
-
-                <Form.Item
-                    name={['pricingAndInventory', 'unit']}
-                    label="Unit"
-                    rules={[{ required: true }]}
-                >
-                    <Input />
-                </Form.Item>
-
-                <Form.Item
-                    name={['description', 'shortDescription']}
-                    label="Short Description"
-                    rules={[{ required: true }]}
-                >
-                    <Input.TextArea />
-                </Form.Item>
-
-                <Form.Item
-                    name={['description', 'detailedDescription']}
-                    label="Detailed Description"
-                >
-                    <Input.TextArea />
-                </Form.Item>
-
-                <Form.Item
-                    name={['description', 'ingredients']}
-                    label="Ingredients"
-                >
-                    <Input.TextArea />
-                </Form.Item>
-
-                <Form.Item
-                    name={['description', 'usageInstructions']}
-                    label="Usage Instructions"
-                >
-                    <Input.TextArea />
-                </Form.Item>
-
-                <Form.Item
-                    name={['description', 'expiration']}
-                    label="Expiration"
-                >
-                    <Input />
-                </Form.Item>
-
-                <Form.Item
-                    name="media"
-                    label="Main Image"
-                    valuePropName="fileList"
-                    getValueFromEvent={normFile}
-                >
-                    <Upload listType="picture" maxCount={1} beforeUpload={() => false}>
-                        <Button icon={<UploadOutlined />}>Upload Image</Button>
-                    </Upload>
-                </Form.Item>
+                {/* Description */}
+                <Divider orientation="left">Mô tả sản phẩm</Divider>
+                <Row gutter={24}>
+                    <Col span={12}>
+                        <Form.Item
+                            name={['description', 'shortDescription']}
+                            label="Mô tả ngắn"
+                            rules={[{ required: true }]}
+                        >
+                            <TextArea rows={3} />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                        <Form.Item
+                            name={['description', 'detailedDescription']}
+                            label="Mô tả chi tiết"
+                            rules={[{ required: true }]}
+                        >
+                            <TextArea rows={3} />
+                        </Form.Item>
+                    </Col>
+                </Row>
 
                 <Form.Item>
                     <Button type="primary" htmlType="submit">
-                        Update Product
+                        Cập nhật sản phẩm
                     </Button>
                 </Form.Item>
             </Form>
