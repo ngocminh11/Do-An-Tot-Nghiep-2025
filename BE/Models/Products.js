@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const stringValidator = {
   validator: function (v) {
-    return /^[\p{L}0-9\s,-]+$/u.test(v); 
+    return /^[\p{L}0-9\s,-]+$/u.test(v);
   },
   message: props => `${props.value} chứa ký tự không hợp lệ.`
 };
@@ -13,6 +13,12 @@ const wordCountValidator = (min, max) => ({
   message: props => `${props.path} phải có từ ${min} đến ${max} từ (hiện tại: ${props.value.trim().split(/\s+/).length})`
 });
 
+const mediaFileSchema = new mongoose.Schema({
+  path: String,
+  filename: String,
+  mimetype: String,
+  size: Number
+});
 
 const ProductSchema = new mongoose.Schema({
   idProduct: {
@@ -22,7 +28,7 @@ const ProductSchema = new mongoose.Schema({
     trim: true,
     validate: [
       stringValidator,
-      wordCountValidator(1, 10) 
+      wordCountValidator(1, 10)
     ]
   },
   basicInformation: {
@@ -32,8 +38,8 @@ const ProductSchema = new mongoose.Schema({
       trim: true,
       validate: [
         stringValidator,
-        wordCountValidator(1, 64) 
-    ]
+        wordCountValidator(1, 64)
+      ]
     },
      status: {
     type: String,
@@ -47,8 +53,9 @@ const ProductSchema = new mongoose.Schema({
       trim: true,
       validate: [
         stringValidator,
-        wordCountValidator(1, 10) 
-    ]    },
+        wordCountValidator(1, 10)
+      ]
+    },
     categoryIds: [{
       type: String,
       ref: 'Category',
@@ -60,9 +67,11 @@ const ProductSchema = new mongoose.Schema({
       trim: true,
       validate: [
         stringValidator,
-        wordCountValidator(1, 64) 
-    ]
-    }
+        wordCountValidator(1, 64)
+      ]
+    },
+    category: String,
+    description: String
   },
   pricingAndInventory: {
     originalPrice: { type: Number, required: true, min: 0 },
@@ -73,8 +82,8 @@ const ProductSchema = new mongoose.Schema({
       default: 'VND',
       validate: [
         stringValidator,
-        wordCountValidator(1, 999999999) 
-    ]
+        wordCountValidator(1, 999999999)
+      ]
     },
     stockQuantity: { type: Number, required: true, min: 0 },
     unit: {
@@ -82,9 +91,10 @@ const ProductSchema = new mongoose.Schema({
       required: true,
       validate: [
         stringValidator,
-        wordCountValidator(1, 9999) 
-    ]
-    }
+        wordCountValidator(1, 9999)
+      ]
+    },
+    regularPrice: Number
   },
   media: {
     mainImage: { type: String, required: true },
@@ -94,6 +104,10 @@ const ProductSchema = new mongoose.Schema({
       validate: [arr => arr.length > 0, 'Image gallery must not be empty']
     },
     videoUrl: { type: String, default: null }
+  },
+  mediaFiles: {
+    images: [mediaFileSchema],
+    videos: [mediaFileSchema]
   },
   description: {
     shortDescription: { type: String, required: true },
@@ -105,8 +119,8 @@ const ProductSchema = new mongoose.Schema({
       required: true,
       validate: [
         stringValidator,
-        wordCountValidator(1, 3000) 
-    ]
+        wordCountValidator(1, 3000)
+      ]
     }
   },
   technicalDetails: {
@@ -126,7 +140,8 @@ const ProductSchema = new mongoose.Schema({
     certifications: {
       type: [String],
       required: true
-    }
+    },
+    ingredients: [String]
   },
   seo: {
     keywords: {

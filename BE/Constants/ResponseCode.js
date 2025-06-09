@@ -4,7 +4,7 @@ module.exports = {
     SUCCESS_CREATED: 201,                 // Tạo mới thành công
     SUCCESS_ACCEPTED: 202,                // Yêu cầu đã được chấp nhận nhưng chưa hoàn thành
     SUCCESS_NO_CONTENT: 204,              // Không có dữ liệu để trả về
-  
+
     // Client error codes (4xx)
     ERROR_BAD_REQUEST: 400,               // Yêu cầu không hợp lệ
     ERROR_UNAUTHORIZED: 401,              // Không được xác thực
@@ -23,7 +23,7 @@ module.exports = {
     ERROR_UNSUPPORTED_MEDIA_TYPE: 415,    // Loại phương tiện không được hỗ trợ
     ERROR_RANGE_NOT_SATISFIABLE: 416,     // Khoảng giá trị không hợp lệ
     ERROR_EXPECTATION_FAILED: 417,        // Kỳ vọng không hợp lệ
-  
+
     // Server error codes (5xx)
     ERROR_INTERNAL_SERVER: 500,           // Lỗi máy chủ nội bộ
     ERROR_NOT_IMPLEMENTED: 501,           // Chức năng này chưa được triển khai
@@ -31,5 +31,4 @@ module.exports = {
     ERROR_SERVICE_UNAVAILABLE: 503,       // Dịch vụ không khả dụng
     ERROR_GATEWAY_TIMEOUT: 504,           // Hết thời gian yêu cầu từ máy chủ khác
     ERROR_HTTP_VERSION_NOT_SUPPORTED: 505, // Phiên bản HTTP không được hỗ trợ
-  };
-  
+};

@@ -35,14 +35,24 @@ const AdminLayout = ({ children }) => {
             label: 'Products',
         },
         {
+            key: '/admin/categories',
+            icon: <ShoppingOutlined />,
+            label: 'Category',
+        },
+        {
+            key: '/admin/tags',
+            icon: <ShoppingOutlined />,
+            label: 'Tags',
+        },
+        {
             key: '/admin/users',
             icon: <UserOutlined />,
             label: 'Users',
         },
         {
-            key: '/admin/content',
+            key: '/admin/posts',
             icon: <FileTextOutlined />,
-            label: 'Content',
+            label: 'Posts',
         },
         {
             key: '/admin/settings',
