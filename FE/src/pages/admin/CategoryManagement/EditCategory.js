@@ -1,40 +1,43 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Input, Button, message, Select, Spin, Collapse } from 'antd';
+import { Form, Input, Button, message, Select, Spin } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import categoryService from '../../../services/categoryService';
 
 const { Option } = Select;
-const { Panel } = Collapse;
 
 const EditCategory = () => {
     const [form] = Form.useForm();
     const navigate = useNavigate();
     const { id } = useParams();
     const [loading, setLoading] = useState(true);
-    const [categories, setCategories] = useState([]);
 
     useEffect(() => {
+        // Log để debug
+        console.log('EditCategory mounted with params:', { id });
+
+        // Kiểm tra id trước khi fetch data
+        if (!id) {
+            console.error('id is undefined or null');
+            message.error('Không tìm thấy ID danh mục!');
+            navigate('/admin/categories');
+            return;
+        }
+
         const fetchData = async () => {
             setLoading(true);
             try {
-                const [category, allCategories] = await Promise.all([
-                    categoryService.getCategoryById(id),
-                    categoryService.getAllCategories()
-                ]);
+                console.log('Fetching category with id:', id);
+                const category = await categoryService.getCategoryById(id);
+                console.log('Fetched category data:', category);
 
                 if (category) {
                     form.setFieldsValue({
                         name: category.name,
                         description: category.description,
-                        parentCategory: category.parentCategory || undefined,
-                        status: category.status,
-                        position: category.position,
-                        metaTitle: category.seo?.metaTitle || '',
-                        metaKeywords: category.seo?.metaKeywords || '',
-                        metaDescription: category.seo?.metaDescription || ''
+                        status: category.status
                     });
-                    setCategories(allCategories.filter(cat => cat._id !== id));
                 } else {
+                    console.error('Category not found for id:', id);
                     message.error('Không tìm thấy danh mục!');
                     navigate('/admin/categories');
                 }
@@ -55,15 +58,10 @@ const EditCategory = () => {
             const categoryData = {
                 name: values.name.trim(),
                 description: values.description.trim(),
-                parentCategory: values.parentCategory || null,
-                status: values.status,
-                position: values.position,
-                seo: {
-                    metaTitle: values.metaTitle?.trim() || '',
-                    metaKeywords: values.metaKeywords?.trim() || '',
-                    metaDescription: values.metaDescription?.trim() || ''
-                }
+                status: values.status
             };
+
+            console.log('Updating category with data:', { id, categoryData });
 
             const response = await categoryService.updateCategory(id, categoryData);
 
@@ -131,22 +129,6 @@ const EditCategory = () => {
                     </Form.Item>
 
                     <Form.Item
-                        name="parentCategory"
-                        label="Danh mục cha"
-                    >
-                        <Select
-                            placeholder="Chọn danh mục cha (không bắt buộc)"
-                            allowClear
-                        >
-                            {categories.map(category => (
-                                <Option key={category._id} value={category._id}>
-                                    {category.name}
-                                </Option>
-                            ))}
-                        </Select>
-                    </Form.Item>
-
-                    <Form.Item
                         name="status"
                         label="Trạng thái"
                         rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}
@@ -157,42 +139,6 @@ const EditCategory = () => {
                             <Option value="archived">Đã lưu trữ</Option>
                         </Select>
                     </Form.Item>
-
-                    <Form.Item
-                        name="position"
-                        label="Vị trí"
-                        rules={[{ required: true, message: 'Vui lòng nhập vị trí' }]}
-                    >
-                        <Input type="number" min={0} />
-                    </Form.Item>
-
-                    <Collapse>
-                        <Panel header="Thông tin SEO" key="1">
-                            <Form.Item
-                                name="metaTitle"
-                                label="Meta Title"
-                            >
-                                <Input placeholder="Nhập meta title" />
-                            </Form.Item>
-
-                            <Form.Item
-                                name="metaKeywords"
-                                label="Meta Keywords"
-                            >
-                                <Input placeholder="Nhập meta keywords" />
-                            </Form.Item>
-
-                            <Form.Item
-                                name="metaDescription"
-                                label="Meta Description"
-                            >
-                                <Input.TextArea
-                                    rows={3}
-                                    placeholder="Nhập meta description"
-                                />
-                            </Form.Item>
-                        </Panel>
-                    </Collapse>
 
                     <Form.Item>
                         <Button type="primary" htmlType="submit" loading={loading}>

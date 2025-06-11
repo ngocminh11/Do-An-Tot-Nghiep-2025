@@ -1,5 +1,5 @@
 import React, { useEffect, Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { startTokenRefresh } from './components/common/TokenService';
 import Cookies from 'js-cookie';
 import AdminLayout from './layouts/admin/AdminLayout';
@@ -18,13 +18,13 @@ import EditCategory from './pages/admin/CategoryManagement/EditCategory';
 import AddTag from './pages/admin/TagManagement/AddTag';
 import EditTag from './pages/admin/TagManagement/EditTag';
 import EditProduct from './pages/admin/ProductManagement/EditProduct';
+import AppFooter from './components/common/AppFooter/AppFooter';
+import AppHeader from './components/common/AppHeader/AppHeader';
 
 // Lazy load user components
 const Home = lazy(() => import('./pages/user/Home/Home'));
 const AllProducts = lazy(() => import('./pages/user/AllProducts/AllProducts'));
 const ProductDetail = lazy(() => import('./pages/user/ProductDetail/ProductDetail'));
-const Cart = lazy(() => import('./pages/user/Cart/Cart'));
-const Checkout = lazy(() => import('./pages/user/Checkout/Checkout'));
 const Profile = lazy(() => import('./pages/user/Profile/Profile'));
 const About = lazy(() => import('./pages/user/About/About'));
 const Contact = lazy(() => import('./pages/user/Contact/Contact'));
@@ -32,6 +32,10 @@ const Privacy = lazy(() => import('./pages/user/Privacy/Privacy'));
 const TermsOfService = lazy(() => import('./pages/user/Terms/Terms'));
 const FAQ = lazy(() => import('./pages/user/FAQ/FAQ'));
 const Login = lazy(() => import('./pages/user/Login/Login'));
+
+// Import Cart and Checkout directly
+import Cart from './pages/user/Cart/Cart';
+import Checkout from './pages/user/Checkout/Checkout';
 
 // Lazy load admin components
 const Dashboard = lazy(() => import('./pages/admin/Dashboard/Dashboard'));
@@ -66,6 +70,8 @@ import './pages/admin/OrderManagement/OrderManagement.scss';
 import './pages/admin/UserManagement/UserManagement.scss';
 import './pages/admin/CategoryManagement/CategoryManagement.scss';
 import './pages/admin/TagManagement/TagManagement.scss';
+import './pages/user/Cart/Cart.scss';
+import './pages/user/Checkout/Checkout.scss';
 
 const App = () => {
   useEffect(() => {
@@ -75,6 +81,18 @@ const App = () => {
   if (token) {
     startTokenRefresh();
   }
+
+  return (
+    <Router>
+      <AppContent />
+    </Router>
+  );
+};
+
+// New component to handle conditional header rendering
+const AppContent = () => {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   const userRoutes = [
     { path: '/', element: <Home /> },
@@ -113,7 +131,8 @@ const App = () => {
   ];
 
   return (
-    <Router>
+    <>
+      {!isAdminRoute && <AppHeader />}
       <Suspense fallback={<Loading />}>
         <Routes>
           {/* User Routes */}
@@ -153,7 +172,8 @@ const App = () => {
           ))}
         </Routes>
       </Suspense>
-    </Router>
+      {!isAdminRoute && <AppFooter />}
+    </>
   );
 };
 

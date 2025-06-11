@@ -196,17 +196,39 @@ export const mockProducts = [
         status: "published",
         createdAt: "2025-05-20T10:00:00Z",
         updatedAt: "2025-05-21T11:00:00Z"
+    },
+    {
+        _id: "5",
+        name: "Sữa Rửa Mặt Tạo Bọt Dịu Nhẹ",
+        description: "Sữa rửa mặt tạo bọt làm sạch sâu nhưng vẫn dịu nhẹ cho da nhạy cảm.",
+        brand: "Cerave",
+        categoryId: "1",
+        price: 200000,
+        stockQuantity: 60,
+        attributes: {
+            volume: "150ml",
+            skinType: ["da nhạy cảm", "da khô", "da thường"]
+        },
+        imageUrls: [
+            "https://images.unsplash.com/photo-1629851082531-ad9428577c22?q=80&w=1964&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1888&q=80",
+            "https://images.unsplash.com/photo-1629851082531-ad9428577c22?q=80&w=1964&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1888&q=80"
+        ],
+        viewCount: 1000,
+        purchaseCount: 250,
+        averageRating: 4.6,
+        tags: ["sữa rửa mặt", "làm sạch", "dịu nhẹ"],
+        status: "published",
+        createdAt: "2025-05-20T10:00:00Z",
+        updatedAt: "2025-05-21T11:00:00Z"
     }
 ];
 
 export const mockCategories = [
-    {
-        _id: "1",
-        name: "Serum Dưỡng Da",
-        description: "Các loại serum chuyên sâu cho việc chăm sóc da mặt.",
-        parentId: null,
-        imageUrl: "https://example.com/category_serum.jpg"
-    }
+    { _id: "1", name: "Trang điểm", slug: "trang-diem" },
+    { _id: "2", name: "Chăm sóc da", slug: "cham-soc-da" },
+    { _id: "3", name: "Dưỡng ẩm", slug: "duong-am" },
+    { _id: "4", name: "Chống lão hóa", slug: "chong-lao-hoa" },
+    { _id: "5", name: "Phụ kiện làm đẹp", slug: "phu-kien-lam-dep" }
 ];
 
 export const mockCarts = [
@@ -287,21 +309,21 @@ export const mockDiscounts = [
 export const mockCampaigns = [
     {
         _id: "1",
-        title: "Summer Sale",
-        description: "Giảm giá lên đến 50% cho tất cả sản phẩm",
-        imageUrl: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80",
-        startDate: "2025-06-01T00:00:00Z",
-        endDate: "2025-06-30T23:59:59Z",
-        status: "active"
+        title: "Ưu đãi mùa hè",
+        description: "Giảm giá 20% cho tất cả sản phẩm dưỡng da.",
+        imageUrl: "https://images.unsplash.com/photo-1620247605963-c79b9d311910?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1888&q=80"
     },
     {
         _id: "2",
-        title: "New Arrivals",
-        description: "Khám phá bộ sưu tập mới nhất của chúng tôi",
-        imageUrl: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1880&q=80",
-        startDate: "2025-05-01T00:00:00Z",
-        endDate: "2025-12-31T23:59:59Z",
-        status: "active"
+        title: "Flash Sale cuối tuần",
+        description: "Giảm 30% cho các sản phẩm hot nhất.",
+        imageUrl: "https://images.unsplash.com/photo-1590439474130-ab0881907722?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1888&q=80"
+    },
+    {
+        _id: "3",
+        title: "Quà tặng đặc biệt",
+        description: "Tặng kèm minisize với hóa đơn trên 500k.",
+        imageUrl: "https://images.unsplash.com/photo-1558509890-4a87c125a2a2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1888&q=80"
     }
 ];
 
@@ -413,4 +435,28 @@ export const mockTags = [
     { _id: '2', name: 'Makeup', description: 'Cosmetic products for face, eyes, lips' },
     { _id: '3', name: 'Hair', description: 'Hair care treatments and products' },
     { _id: '4', name: 'Fragrance', description: 'Perfumes and scented products' },
+];
+
+export const mockPosts = [
+    {
+        _id: "1",
+        title: "Bí quyết dưỡng da căng bóng chuẩn Hàn",
+        excerpt: "Khám phá các bước chăm sóc da đỉnh cao giúp làn da căng mịn như sao Hàn.",
+        imageUrl: "https://images.unsplash.com/photo-1600861118671-55694a6136d8?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        createdAt: "2024-05-20"
+    },
+    {
+        _id: "2",
+        title: "Review chi tiết các loại serum Vitamin C tốt nhất",
+        excerpt: "Đánh giá chuyên sâu về các sản phẩm serum Vitamin C đang hot trên thị trường.",
+        imageUrl: "https://images.unsplash.com/photo-1621614002611-cf0b9a629b36?q=80&w=1964&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        createdAt: "2024-05-18"
+    },
+    {
+        _id: "3",
+        title: "Hướng dẫn trang điểm tự nhiên cho mùa hè",
+        excerpt: "Bắt kịp xu hướng trang điểm nhẹ nhàng, tự nhiên phù hợp cho những ngày nắng nóng.",
+        imageUrl: "https://images.unsplash.com/photo-1616428751307-e028b18d7f70?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        createdAt: "2024-05-15"
+    }
 ]; 
