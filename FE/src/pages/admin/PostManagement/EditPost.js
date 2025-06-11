@@ -1,117 +1,179 @@
-import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Select, Upload, message, Radio } from 'antd';
+import React, { useState } from 'react';
+import { Form, Input, Button, Select, Upload, message, Card } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 const { Option } = Select;
-const { TextArea } = Input;
 
-const mockCategories = ['Chăm sóc da', 'Dưỡng da', 'Chống nắng', 'Trang điểm'];
-const mockSkinProblems = ['Mụn', 'Da khô', 'Lão hoá', 'Thâm nám', 'Nhạy cảm'];
-const mockPosts = [
-    {
-        _id: '1',
-        title: 'Cách trị mụn hiệu quả',
-        content: 'Nội dung bài viết về trị mụn...',
-        mediaUrl: 'https://via.placeholder.com/100',
-        mediaType: 'image',
-        tag: 'Chăm sóc da',
-        skinProblem: 'Mụn',
-        likes: 5,
-    },
-    {
-        _id: '2',
-        title: 'Video hướng dẫn dưỡng da',
-        content: 'Video hướng dẫn...',
-        mediaUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        mediaType: 'video',
-        tag: 'Dưỡng da',
-        skinProblem: 'Da khô',
-        likes: 2,
-    },
-    {
-        _id: '3',
-        title: 'Bí quyết chống nắng mùa hè',
-        content: 'Chia sẻ về chống nắng...',
-        mediaUrl: 'https://via.placeholder.com/100',
-        mediaType: 'image',
-        tag: 'Chống nắng',
-        skinProblem: 'Nhạy cảm',
-        likes: 7,
-    },
-    {
-        _id: '4',
-        title: 'Trang điểm tự nhiên cho da dầu',
-        content: 'Hướng dẫn trang điểm...',
-        mediaUrl: 'https://www.w3schools.com/html/movie.mp4',
-        mediaType: 'video',
-        tag: 'Trang điểm',
-        skinProblem: 'Da dầu',
-        likes: 3,
-    },
-];
+// Dữ liệu mẫu
+const mockPost = {
+    title: 'Cách chăm sóc da mụn hiệu quả',
+    slug: 'cach-cham-soc-da-mun',
+    excerpt: 'Hướng dẫn chi tiết cách chăm sóc da mụn tại nhà...',
+    content: '<p>Nội dung chi tiết về cách chăm sóc da mụn...</p>',
+    status: 'published',
+    category: 'skincare',
+    tags: ['skincare', 'acne'],
+    thumbnail: 'https://via.placeholder.com/300x200'
+};
 
 const EditPost = () => {
     const [form] = Form.useForm();
-    const [mediaType, setMediaType] = useState('image');
-    const [fileList, setFileList] = useState([]);
     const navigate = useNavigate();
     const { id } = useParams();
+    const [content, setContent] = useState(mockPost.content);
+    const [thumbnail, setThumbnail] = useState(mockPost.thumbnail);
 
-    useEffect(() => {
-        const post = mockPosts.find(p => p._id === id);
-        if (post) {
-            form.setFieldsValue({
-                title: post.title,
-                content: post.content,
-                tag: post.tag,
-                skinProblem: post.skinProblem,
-            });
-            setMediaType(post.mediaType);
-            setFileList(post.mediaUrl ? [{ uid: '-1', name: 'media', url: post.mediaUrl }] : []);
-        }
-    }, [id, form]);
+    // Thiết lập giá trị mặc định cho form
+    React.useEffect(() => {
+        form.setFieldsValue({
+            title: mockPost.title,
+            slug: mockPost.slug,
+            excerpt: mockPost.excerpt,
+            status: mockPost.status,
+            category: mockPost.category,
+            tags: mockPost.tags
+        });
+    }, [form]);
 
     const handleFinish = (values) => {
-        message.success('Đã cập nhật bài viết (mock)');
-        console.log({ ...values, mediaType, fileList });
+        console.log('Form values:', values);
+        console.log('Content:', content);
+        console.log('Thumbnail:', thumbnail);
+        message.success('Cập nhật bài viết thành công!');
         navigate('/admin/posts');
     };
 
+    const handleImageUpload = (info) => {
+        if (info.file.status === 'done') {
+            message.success('Tải ảnh lên thành công!');
+            setThumbnail(URL.createObjectURL(info.file.originFileObj));
+        } else if (info.file.status === 'error') {
+            message.error('Tải ảnh lên thất bại!');
+        }
+    };
+
     return (
-        <div className="edit-post-page" style={{ maxWidth: 700, margin: '0 auto' }}>
-            <h2>Chỉnh sửa bài viết</h2>
-            <Form form={form} layout="vertical" onFinish={handleFinish}>
-                <Form.Item name="title" label="Tiêu đề" rules={[{ required: true, message: 'Nhập tiêu đề' }]}> <Input /> </Form.Item>
-                <Form.Item name="content" label="Nội dung" rules={[{ required: true, message: 'Nhập nội dung' }]}> <TextArea rows={5} /> </Form.Item>
-                <Form.Item name="tag" label="Tag (Danh mục)" rules={[{ required: true, message: 'Chọn tag' }]}> <Select>{mockCategories.map(tag => <Option key={tag} value={tag}>{tag}</Option>)}</Select> </Form.Item>
-                <Form.Item name="skinProblem" label="Vấn đề da" rules={[{ required: true, message: 'Chọn vấn đề da' }]}> <Select>{mockSkinProblems.map(sp => <Option key={sp} value={sp}>{sp}</Option>)}</Select> </Form.Item>
-                <Form.Item label="Loại media" required>
-                    <Radio.Group value={mediaType} onChange={e => setMediaType(e.target.value)}>
-                        <Radio value="image">Hình ảnh</Radio>
-                        <Radio value="video">Video</Radio>
-                    </Radio.Group>
-                </Form.Item>
-                <Form.Item label={mediaType === 'image' ? 'Hình ảnh' : 'Video'} required>
-                    <Upload
-                        listType="picture-card"
-                        fileList={fileList}
-                        beforeUpload={() => false}
-                        onChange={({ fileList }) => setFileList(fileList)}
-                        accept={mediaType === 'image' ? 'image/*' : 'video/*'}
-                        maxCount={1}
+        <div className="edit-post">
+            <Card title="Chỉnh sửa bài viết" style={{ marginBottom: 20 }}>
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleFinish}
+                    initialValues={mockPost}
+                >
+                    <Form.Item
+                        name="title"
+                        label="Tiêu đề"
+                        rules={[{ required: true, message: 'Vui lòng nhập tiêu đề!' }]}
                     >
-                        {fileList.length < 1 && (
-                            <div>
-                                <UploadOutlined /> <div style={{ marginTop: 8 }}>Tải lên</div>
+                        <Input placeholder="Nhập tiêu đề bài viết" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="slug"
+                        label="Slug"
+                        rules={[{ required: true, message: 'Vui lòng nhập slug!' }]}
+                    >
+                        <Input placeholder="Nhập slug bài viết" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="excerpt"
+                        label="Tóm tắt"
+                        rules={[{ required: true, message: 'Vui lòng nhập tóm tắt!' }]}
+                    >
+                        <Input.TextArea rows={4} placeholder="Nhập tóm tắt bài viết" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="content"
+                        label="Nội dung"
+                        rules={[{ required: true, message: 'Vui lòng nhập nội dung!' }]}
+                    >
+                        <ReactQuill
+                            value={content}
+                            onChange={setContent}
+                            style={{ height: '300px', marginBottom: '50px' }}
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="category"
+                        label="Danh mục"
+                        rules={[{ required: true, message: 'Vui lòng chọn danh mục!' }]}
+                    >
+                        <Select placeholder="Chọn danh mục">
+                            <Option value="skincare">Chăm sóc da</Option>
+                            <Option value="makeup">Trang điểm</Option>
+                            <Option value="reviews">Đánh giá sản phẩm</Option>
+                        </Select>
+                    </Form.Item>
+
+                    <Form.Item
+                        name="tags"
+                        label="Tags"
+                        rules={[{ required: true, message: 'Vui lòng chọn tags!' }]}
+                    >
+                        <Select mode="tags" placeholder="Nhập tags">
+                            <Option value="skincare">Skincare</Option>
+                            <Option value="makeup">Makeup</Option>
+                            <Option value="acne">Acne</Option>
+                            <Option value="tutorial">Tutorial</Option>
+                        </Select>
+                    </Form.Item>
+
+                    <Form.Item
+                        name="status"
+                        label="Trạng thái"
+                        rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
+                    >
+                        <Select placeholder="Chọn trạng thái">
+                            <Option value="published">Đã xuất bản</Option>
+                            <Option value="draft">Bản nháp</Option>
+                            <Option value="archived">Đã lưu trữ</Option>
+                        </Select>
+                    </Form.Item>
+
+                    <Form.Item
+                        label="Ảnh đại diện"
+                        name="thumbnail"
+                    >
+                        <Upload
+                            name="thumbnail"
+                            listType="picture"
+                            maxCount={1}
+                            beforeUpload={() => false}
+                            onChange={handleImageUpload}
+                        >
+                            <Button icon={<UploadOutlined />}>Tải ảnh lên</Button>
+                        </Upload>
+                        {thumbnail && (
+                            <div style={{ marginTop: 10 }}>
+                                <img
+                                    src={thumbnail}
+                                    alt="Thumbnail"
+                                    style={{ maxWidth: '200px', maxHeight: '200px' }}
+                                />
                             </div>
                         )}
-                    </Upload>
-                </Form.Item>
-                <Form.Item>
-                    <Button type="primary" htmlType="submit">Cập nhật bài viết</Button>
-                </Form.Item>
-            </Form>
+                    </Form.Item>
+
+                    <Form.Item>
+                        <Button type="primary" htmlType="submit">
+                            Cập nhật bài viết
+                        </Button>
+                        <Button
+                            style={{ marginLeft: 8 }}
+                            onClick={() => navigate('/admin/posts')}
+                        >
+                            Hủy
+                        </Button>
+                    </Form.Item>
+                </Form>
+            </Card>
         </div>
     );
 };

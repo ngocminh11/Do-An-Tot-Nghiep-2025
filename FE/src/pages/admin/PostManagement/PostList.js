@@ -1,83 +1,130 @@
 import React, { useState } from 'react';
-import { Table, Button, Space, Tag, Image, Tooltip, Popconfirm, message } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, LikeOutlined, VideoCameraOutlined, PictureOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Popconfirm, Tooltip, message } from 'antd';
+import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
-// Mock data for posts
+// Dữ liệu mẫu
 const mockPosts = [
     {
         _id: '1',
-        title: 'Cách trị mụn hiệu quả',
-        content: 'Nội dung bài viết về trị mụn...',
-        mediaUrl: 'https://via.placeholder.com/100',
-        mediaType: 'image',
-        tag: 'Chăm sóc da',
-        skinProblem: 'Mụn',
-        likes: 5,
+        title: 'Cách chăm sóc da mụn hiệu quả',
+        slug: 'cach-cham-soc-da-mun',
+        excerpt: 'Hướng dẫn chi tiết cách chăm sóc da mụn tại nhà...',
+        status: 'published',
+        category: 'skincare',
+        tags: ['skincare', 'acne'],
+        createdAt: '2024-03-15'
     },
     {
         _id: '2',
-        title: 'Video hướng dẫn dưỡng da',
-        content: 'Video hướng dẫn...',
-        mediaUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        mediaType: 'video',
-        tag: 'Dưỡng da',
-        skinProblem: 'Da khô',
-        likes: 2,
+        title: 'Top 10 sản phẩm dưỡng da tốt nhất 2024',
+        slug: 'top-10-san-pham-duong-da',
+        excerpt: 'Danh sách các sản phẩm dưỡng da được đánh giá cao...',
+        status: 'published',
+        category: 'reviews',
+        tags: ['skincare', 'reviews'],
+        createdAt: '2024-03-14'
     },
+    {
+        _id: '3',
+        title: 'Hướng dẫn trang điểm cơ bản',
+        slug: 'huong-dan-trang-diem-co-ban',
+        excerpt: 'Các bước trang điểm cơ bản cho người mới bắt đầu...',
+        status: 'draft',
+        category: 'makeup',
+        tags: ['makeup', 'tutorial'],
+        createdAt: '2024-03-13'
+    }
 ];
 
 const PostList = () => {
-    const [posts, setPosts] = useState(mockPosts);
     const navigate = useNavigate();
+    const [posts, setPosts] = useState(mockPosts);
 
     const handleDelete = (id) => {
         setPosts(posts.filter(post => post._id !== id));
-        message.success('Đã xoá bài viết (mock)');
+        message.success('Xóa bài viết thành công!');
     };
 
-    const handleLike = (id) => {
-        setPosts(posts.map(post => post._id === id ? { ...post, likes: post.likes + 1 } : post));
+    const handleEdit = (id) => {
+        const postId = id.trim();
+        console.log('Navigating to edit post:', postId);
+        navigate(`/admin/posts/edit/${postId}`);
+    };
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'published':
+                return 'success';
+            case 'draft':
+                return 'warning';
+            case 'archived':
+                return 'error';
+            default:
+                return 'default';
+        }
+    };
+
+    const getStatusText = (status) => {
+        switch (status) {
+            case 'published':
+                return 'Đã xuất bản';
+            case 'draft':
+                return 'Bản nháp';
+            case 'archived':
+                return 'Đã lưu trữ';
+            default:
+                return status;
+        }
     };
 
     const columns = [
         {
-            title: 'Media',
-            dataIndex: 'mediaUrl',
-            key: 'mediaUrl',
-            render: (url, record) =>
-                record.mediaType === 'image' ? (
-                    <Image src={url} width={60} height={60} alt="post" style={{ objectFit: 'cover' }} preview={false} />
-                ) : (
-                    <video width={60} height={60} controls>
-                        <source src={url} type="video/mp4" />
-                        Your browser does not support the video tag.
-                    </video>
-                ),
-        },
-        {
             title: 'Tiêu đề',
             dataIndex: 'title',
             key: 'title',
+            render: (text) => <span style={{ fontWeight: 'bold' }}>{text}</span>
         },
         {
-            title: 'Tag',
-            dataIndex: 'tag',
-            key: 'tag',
-            render: tag => <Tag color="blue">{tag}</Tag>,
+            title: 'Slug',
+            dataIndex: 'slug',
+            key: 'slug'
         },
         {
-            title: 'Vấn đề da',
-            dataIndex: 'skinProblem',
-            key: 'skinProblem',
+            title: 'Tóm tắt',
+            dataIndex: 'excerpt',
+            key: 'excerpt',
+            ellipsis: true
         },
         {
-            title: 'Lượt thích',
-            dataIndex: 'likes',
-            key: 'likes',
-            render: (likes, record) => (
-                <Button icon={<LikeOutlined />} onClick={() => handleLike(record._id)}>{likes}</Button>
-            ),
+            title: 'Danh mục',
+            dataIndex: 'category',
+            key: 'category',
+            render: (text) => text.charAt(0).toUpperCase() + text.slice(1)
+        },
+        {
+            title: 'Tags',
+            dataIndex: 'tags',
+            key: 'tags',
+            render: (tags) => tags.join(', ')
+        },
+        {
+            title: 'Trạng thái',
+            dataIndex: 'status',
+            key: 'status',
+            render: (status) => (
+                <span style={{
+                    color: getStatusColor(status),
+                    fontWeight: 'bold'
+                }}>
+                    {getStatusText(status)}
+                </span>
+            )
+        },
+        {
+            title: 'Ngày tạo',
+            dataIndex: 'createdAt',
+            key: 'createdAt'
         },
         {
             title: 'Hành động',
@@ -85,7 +132,10 @@ const PostList = () => {
             render: (_, record) => (
                 <Space>
                     <Tooltip title="Chỉnh sửa">
-                        <Button icon={<EditOutlined />} onClick={() => navigate(`   /admin/posts/edit/${record._id}`)} />
+                        <Button
+                            icon={<EditOutlined />}
+                            onClick={() => handleEdit(record._id)}
+                        />
                     </Tooltip>
                     <Popconfirm
                         title="Bạn có chắc muốn xoá bài viết này?"
@@ -104,13 +154,26 @@ const PostList = () => {
 
     return (
         <div className="post-management">
-            <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <h1>Quản lý bài viết</h1>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/admin/posts/add')}>
+                <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => navigate('/admin/posts/add')}
+                >
                     Thêm bài viết
                 </Button>
             </div>
-            <Table columns={columns} dataSource={posts} rowKey="_id" />
+            <Table
+                columns={columns}
+                dataSource={posts}
+                rowKey="_id"
+                pagination={{
+                    pageSize: 10,
+                    showSizeChanger: true,
+                    showTotal: (total) => `Tổng số ${total} bài viết`
+                }}
+            />
         </div>
     );
 };

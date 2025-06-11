@@ -1,44 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { Form, Input, Button, message, Select, Spin, Collapse } from 'antd';
+import React, { useState } from 'react';
+import { Form, Input, Button, message, Select } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import categoryService from '../../../services/categoryService';
 
 const { Option } = Select;
-const { Panel } = Collapse;
 
 const AddCategory = () => {
     const [form] = Form.useForm();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
-    const [categories, setCategories] = useState([]);
-
-    useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                const response = await categoryService.getAllCategories();
-                setCategories(response);
-            } catch (error) {
-                console.error('Failed to fetch categories:', error);
-                message.error('Không thể tải danh sách danh mục');
-            }
-        };
-        fetchCategories();
-    }, []);
 
     const handleFinish = async (values) => {
         try {
             setLoading(true);
             const categoryData = {
+                idCategory: values.idCategory.trim(),
                 name: values.name.trim(),
                 description: values.description.trim(),
-                parentCategory: values.parentCategory || null,
-                status: values.status || 'active',
-                position: values.position || 0,
-                seo: {
-                    metaTitle: values.metaTitle?.trim() || '',
-                    metaKeywords: values.metaKeywords?.trim() || '',
-                    metaDescription: values.metaDescription?.trim() || ''
-                }
+                status: values.status || 'active'
             };
 
             const response = await categoryService.createCategory(categoryData);
@@ -77,6 +56,18 @@ const AddCategory = () => {
                 validateTrigger={['onChange', 'onBlur']}
             >
                 <Form.Item
+                    name="idCategory"
+                    label="ID Danh mục"
+                    rules={[
+                        { required: true, message: 'Vui lòng nhập ID danh mục' },
+                        { min: 1, message: 'ID danh mục phải có ít nhất 2 ký tự' },
+                        { max: 50, message: 'ID danh mục không được vượt quá 50 ký tự' }
+                    ]}
+                >
+                    <Input placeholder="Nhập ID danh mục" />
+                </Form.Item>
+
+                <Form.Item
                     name="name"
                     label="Tên danh mục"
                     rules={[
@@ -104,22 +95,6 @@ const AddCategory = () => {
                 </Form.Item>
 
                 <Form.Item
-                    name="parentCategory"
-                    label="Danh mục cha"
-                >
-                    <Select
-                        placeholder="Chọn danh mục cha (không bắt buộc)"
-                        allowClear
-                    >
-                        {categories.map(category => (
-                            <Option key={category._id} value={category._id}>
-                                {category.name}
-                            </Option>
-                        ))}
-                    </Select>
-                </Form.Item>
-
-                <Form.Item
                     name="status"
                     label="Trạng thái"
                     initialValue="active"
@@ -130,42 +105,6 @@ const AddCategory = () => {
                         <Option value="archived">Đã lưu trữ</Option>
                     </Select>
                 </Form.Item>
-
-                <Form.Item
-                    name="position"
-                    label="Vị trí"
-                    initialValue={0}
-                >
-                    <Input type="number" min={0} />
-                </Form.Item>
-
-                <Collapse>
-                    <Panel header="Thông tin SEO" key="1">
-                        <Form.Item
-                            name="metaTitle"
-                            label="Meta Title"
-                        >
-                            <Input placeholder="Nhập meta title" />
-                        </Form.Item>
-
-                        <Form.Item
-                            name="metaKeywords"
-                            label="Meta Keywords"
-                        >
-                            <Input placeholder="Nhập meta keywords" />
-                        </Form.Item>
-
-                        <Form.Item
-                            name="metaDescription"
-                            label="Meta Description"
-                        >
-                            <Input.TextArea
-                                rows={3}
-                                placeholder="Nhập meta description"
-                            />
-                        </Form.Item>
-                    </Panel>
-                </Collapse>
 
                 <Form.Item>
                     <Button type="primary" htmlType="submit" loading={loading}>
