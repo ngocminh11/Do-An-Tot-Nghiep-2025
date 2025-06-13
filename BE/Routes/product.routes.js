@@ -4,10 +4,11 @@ const productController = require('../Controllers/product.controller');
 const upload = require('../Middlewares/upload');
 
 // Routes
-router.get('/', productController.getAllProducts);
-router.get('/:id', productController.getProduct);
-router.post('/', upload.array('images', 10), productController.createProduct);
-router.put('/:id', upload.array('images', 10), productController.updateProduct);
-router.delete('/:id', productController.deleteProduct);
+router.get('/products', productController.getAllProducts);
+router.get('/products/:id', productController.getProductById);
+router.post('/products', upload.array('files'), productController.createProduct);
+router.put('/products/:id', upload.array('files'), productController.updateProduct);
+router.delete('/products/:id', productController.deleteProduct);
+
 
 module.exports = router;

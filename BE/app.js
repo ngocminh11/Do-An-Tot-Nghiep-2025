@@ -33,8 +33,8 @@ mongoose.connect(process.env.MONGODB_URI, {
   .catch(err => console.error('Lỗi kết nối MongoDB:', err));
 
 //app.use(logToCSV); bi loi log
-app.use('/admin/products', productRoutes);
-app.use('/admin/categories', categoryRoutes);
+app.use('/admin/', productRoutes);
+app.use('/admin/', categoryRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server chạy trên cổng ${PORT}`);

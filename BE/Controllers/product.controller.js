@@ -1,9 +1,13 @@
 const Product = require('../Models/Products');
+const Category = require('../Models/Categories');
 const slugify = require('slugify');
 const fs = require('fs').promises;
-const path = require('path');
+const mongoose = require('mongoose');
 
-// Hàm xử lý lỗi upload
+const { sendSuccess, sendError } = require('../Utils/responseHelper');
+const StatusCodes = require('../Constants/ResponseCode');
+const Messages = require('../Constants/ResponseMessage');
+
 const handleUploadError = (error, res) => {
   if (error.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({ message: 'File vượt quá kích thước cho phép (30MB)' });
@@ -11,295 +15,182 @@ const handleUploadError = (error, res) => {
   return res.status(400).json({ message: error.message });
 };
 
-// Hàm xóa file cũ
 const deleteOldFiles = async (files) => {
   if (!files) return;
-
-  const deletePromises = files.map(async (file) => {
-    try {
-      await fs.unlink(file.path);
-    } catch (error) {
-      console.error(`Error deleting file ${file.path}:`, error);
-    }
-  });
-
-  await Promise.all(deletePromises);
+  await Promise.all(files.map(file =>
+    fs.unlink(file.path).catch(err =>
+      console.error(`Error deleting file ${file.path}:`, err)
+    )
+  ));
 };
 
-// Lấy tất cả sản phẩm
 exports.getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find();
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Lấy sản phẩm theo ID
-exports.getProduct = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-    if (!product) {
-      return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
-    }
-    res.json(product);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Tạo sản phẩm mới
-exports.createProduct = async (req, res) => {
-  try {
-    const { basicInformation, idProduct, seo } = req.body;
-    const files = req.files;
-
-    // Kiểm tra trùng idProduct
-    const existIdProduct = await Product.findOne({ idProduct });
-    if (existIdProduct) {
-      await deleteOldFiles(files);
-      return res.status(400).json({ message: 'Id sản phẩm đã được sử dụng bởi sản phẩm khác' });
-    }
-
-    // Kiểm tra trùng SKU
-    if (basicInformation?.sku) {
-      const existSku = await Product.findOne({ 'basicInformation.sku': basicInformation.sku });
-      if (existSku) {
-        await deleteOldFiles(files);
-        return res.status(400).json({ message: 'SKU đã được sử dụng bởi sản phẩm khác' });
-      }
-    }
-
-    // Kiểm tra trùng tên sản phẩm
-    if (basicInformation?.productName) {
-      const existName = await Product.findOne({ 'basicInformation.productName': basicInformation.productName });
-      if (existName) {
-        await deleteOldFiles(files);
-        return res.status(400).json({ message: 'Tên sản phẩm đã được sử dụng bởi sản phẩm khác' });
-      }
-    }
-
-    // Sinh urlSlug từ productName nếu chưa có
-    let urlSlug = seo?.urlSlug;
-    if (!urlSlug && basicInformation?.productName) {
-      urlSlug = slugify(basicInformation.productName, {
-        lower: true,
-        strict: true,
-        locale: 'vi'
-      });
-    }
-
-    // Kiểm tra trùng urlSlug
-    if (urlSlug) {
-      const existSlug = await Product.findOne({ 'seo.urlSlug': urlSlug });
-      if (existSlug) {
-        await deleteOldFiles(files);
-        return res.status(400).json({ message: 'urlSlug đã được sử dụng bởi sản phẩm khác' });
-      }
-    }
-
-    // Xử lý files
-    const mediaFiles = {
-      images: [],
-      videos: []
-    };
-
-    if (files) {
-      files.forEach(file => {
-        const fileType = file.mimetype.startsWith('image/') ? 'images' : 'videos';
-        mediaFiles[fileType].push({
-          path: file.path,
-          filename: file.filename,
-          mimetype: file.mimetype,
-          size: file.size
-        });
-      });
-    }
-
-    // Chuẩn bị dữ liệu lưu
-    const productData = {
-      ...req.body,
-      mediaFiles,
-      seo: {
-        ...req.body.seo,
-        urlSlug
-      },
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    const product = new Product(productData);
-    const savedProduct = await product.save();
-
-    res.status(201).json({
-      message: 'Thêm sản phẩm thành công',
-      product: savedProduct
-    });
-  } catch (error) {
-    if (req.files) {
-      await deleteOldFiles(req.files);
-    }
-    handleUploadError(error, res);
-  }
-};
-
-// Cập nhật sản phẩm
-exports.updateProduct = async (req, res) => {
-  try {
-    const { basicInformation, idProduct } = req.body;
-    const { idProduct: paramIdProduct } = req.params;
-    const files = req.files;
-
-    // Tìm sản phẩm cần cập nhật
-    const currentProduct = await Product.findOne({ idProduct: paramIdProduct });
-    if (!currentProduct) {
-      if (files) await deleteOldFiles(files);
-      return res.status(404).json({ message: 'Không tìm thấy sản phẩm để cập nhật' });
-    }
-
-    // Kiểm tra trùng SKU nếu có
-    if (basicInformation?.sku) {
-      const existSku = await Product.findOne({
-        'basicInformation.sku': basicInformation.sku,
-        _id: { $ne: currentProduct._id }
-      });
-      if (existSku) {
-        if (files) await deleteOldFiles(files);
-        return res.status(400).json({ message: 'SKU đã được sử dụng bởi sản phẩm khác' });
-      }
-    }
-
-    // Kiểm tra trùng tên sản phẩm nếu có
-    if (basicInformation?.productName) {
-      const existName = await Product.findOne({
-        'basicInformation.productName': basicInformation.productName,
-        _id: { $ne: currentProduct._id }
-      });
-      if (existName) {
-        if (files) await deleteOldFiles(files);
-        return res.status(400).json({ message: 'Tên sản phẩm đã được sử dụng bởi sản phẩm khác' });
-      }
-    }
-
-    // Kiểm tra trùng idProduct nếu có
-    if (idProduct && idProduct !== paramIdProduct) {
-      const existIdProduct = await Product.findOne({
-        idProduct: idProduct,
-        _id: { $ne: currentProduct._id }
-      });
-      if (existIdProduct) {
-        if (files) await deleteOldFiles(files);
-        return res.status(400).json({ message: 'idProduct đã được sử dụng bởi sản phẩm khác' });
-      }
-    }
-
-    // Xử lý files mới
-    const mediaFiles = {
-      images: [...(currentProduct.mediaFiles?.images || [])],
-      videos: [...(currentProduct.mediaFiles?.videos || [])]
-    };
-
-    if (files) {
-      files.forEach(file => {
-        const fileType = file.mimetype.startsWith('image/') ? 'images' : 'videos';
-        mediaFiles[fileType].push({
-          path: file.path,
-          filename: file.filename,
-          mimetype: file.mimetype,
-          size: file.size
-        });
-      });
-    }
-
-    // Cập nhật sản phẩm
-    const updateData = {
-      ...req.body,
-      mediaFiles,
-      updatedAt: new Date()
-    };
-
-    const updatedProduct = await Product.findOneAndUpdate(
-      { idProduct: paramIdProduct },
-      updateData,
-      { new: true }
-    );
-
-    res.json(updatedProduct);
-  } catch (error) {
-    if (req.files) {
-      await deleteOldFiles(req.files);
-    }
-    handleUploadError(error, res);
-  }
-};
-
-// Xóa sản phẩm
-exports.deleteProduct = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-
-    if (!product) {
-      return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
-    }
-
-    // Xóa các file hình ảnh
-    if (product.mediaFiles && product.mediaFiles.images) {
-      await Promise.all(product.mediaFiles.images.map(img =>
-        fs.unlink(img.path).catch(err => console.error('Error deleting file:', err))
-      ));
-    }
-
-    await Product.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Đã xóa sản phẩm thành công' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Lấy danh sách sản phẩm có phân trang và tìm kiếm
-exports.getAllProducts = async (req, res) => {
-  try {
-    const {
-      productName,
-      minPrice,
-      maxPrice,
-      skinType,
-      idProduct,
-      page = 1,
-      limit = 10
-    } = req.query;
+    const { name, status, page = 1, limit = 10 } = req.query;
     const query = {};
-    if (idProduct) {
-      query.idProduct = idProduct;
-    }
-    if (productName) {
-      query['basicInformation.productName'] = {
-        $regex: productName,
-        $options: 'i'
+
+    if (name) {
+      query['basicInformation.name'] = {
+        $regex: new RegExp(`^${name}`, 'i')
       };
     }
-    if (minPrice || maxPrice) {
-      query['pricingAndInventory.salePrice'] = {};
-      if (minPrice) query['pricingAndInventory.salePrice'].$gte = Number(minPrice);
-      if (maxPrice) query['pricingAndInventory.salePrice'].$lte = Number(maxPrice);
-    }
-    if (skinType) {
-      query['technicalDetails.suitableSkinTypes'] = skinType;
-    }
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    if (status) query['basicInformation.status'] = status;
+
+    const skip = (page - 1) * limit;
+
     const [products, totalItems] = await Promise.all([
-      Product.find(query).skip(skip).limit(Number(limit)),
-      Product.countDocuments(query)
+      Product.find(query)
+        .sort({ createdAt: -1 })
+        .skip(Number(skip))
+        .limit(Number(limit))
+        .populate('basicInformation.categoryIds'),
+      Product.countDocuments(query),
     ]);
-    res.json({
-      totalItems,
-      totalPages: Math.ceil(totalItems / limit),
+
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, {
+      data: products,
       currentPage: Number(page),
-      pageSize: products.length,
-      products
+      totalPages: Math.ceil(totalItems / limit),
+      totalItems,
+      perPage: Number(limit),
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, error.message);
+  }
+};
+
+exports.getProductById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+    }
+
+    const product = await Product.findById(id).populate('basicInformation.categoryIds');
+    if (!product) {
+      return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.PRODUCT_NOT_FOUND);
+    }
+
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, product);
+  } catch (error) {
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, error.message);
+  }
+};
+
+exports.createProduct = async (req, res) => {
+  try {
+    const {
+      name,
+      sku,
+      urlSlug,
+      shortDescription,
+      fullDescription,
+      brand,
+      origin,
+      ingredients,
+      status,
+      categoryIds,
+      price,
+      originalPrice,
+      stockQuantity,
+    } = req.body;
+
+    if (!name) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.PRODUCT_NAME_REQUIRED);
+    }
+
+    const [nameExists, skuExists, slugExists] = await Promise.all([
+      Product.findOne({ 'basicInformation.name': name }),
+      Product.findOne({ 'basicInformation.sku': sku }),
+      Product.findOne({ 'basicInformation.urlSlug': urlSlug }),
+    ]);
+
+    if (nameExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.PRODUCT_NAME_EXISTS);
+    if (skuExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.SKU_EXISTS);
+    if (slugExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.URLSLUG_EXISTS);
+
+    const slug = slugify(urlSlug, { lower: true, strict: true, locale: 'vi' });
+
+    const product = new Product({
+      basicInformation: {
+        name,
+        sku,
+        urlSlug: slug,
+        shortDescription,
+        fullDescription,
+        brand,
+        origin,
+        ingredients,
+        status,
+        categoryIds,
+      },
+      pricing: {
+        price,
+        originalPrice,
+        stockQuantity,
+      },
+    });
+
+    const saved = await product.save();
+    return sendSuccess(res, StatusCodes.SUCCESS_CREATED, { product: saved }, Messages.PRODUCT_CREATED);
+  } catch (error) {
+    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, error.message);
+  }
+};
+
+exports.updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+    }
+
+    const product = await Product.findById(id);
+    if (!product) {
+      return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.PRODUCT_NOT_FOUND);
+    }
+
+    const { name, sku, urlSlug, categoryIds, ...rest } = req.body;
+
+    const [nameExists, skuExists, slugExists] = await Promise.all([
+      name ? Product.findOne({ 'basicInformation.name': name, _id: { $ne: id } }) : null,
+      sku ? Product.findOne({ 'basicInformation.sku': sku, _id: { $ne: id } }) : null,
+      urlSlug ? Product.findOne({ 'basicInformation.urlSlug': urlSlug, _id: { $ne: id } }) : null,
+    ]);
+
+    if (nameExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.PRODUCT_NAME_EXISTS);
+    if (skuExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.SKU_EXISTS);
+    if (slugExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.URLSLUG_EXISTS);
+
+    if (name) product.basicInformation.name = name;
+    if (sku) product.basicInformation.sku = sku;
+    if (urlSlug) product.basicInformation.urlSlug = slugify(urlSlug, { lower: true, strict: true, locale: 'vi' });
+    if (categoryIds) product.basicInformation.categoryIds = categoryIds;
+
+    Object.assign(product.basicInformation, rest.basicInformation || {});
+    Object.assign(product.pricing, rest.pricing || {});
+
+    const updated = await product.save();
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, updated, Messages.PRODUCT_UPDATED);
+  } catch (error) {
+    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, error.message);
+  }
+};
+
+exports.deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+    }
+
+    const deleted = await Product.findByIdAndDelete(id);
+    if (!deleted) {
+      return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.PRODUCT_NOT_FOUND);
+    }
+
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, null, Messages.PRODUCT_DELETED);
+  } catch (error) {
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, error.message);
   }
 };
