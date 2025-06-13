@@ -1,60 +1,69 @@
+const winston = require('winston');
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 
+// Create logs directory if it doesn't exist
 const logsDir = path.join(__dirname, '../Logs');
-
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir);
 }
 
-const getCurrentLogFile = () => {
-  const files = fs.readdirSync(logsDir).filter(file => /^log_week_\d+\.csv$/.test(file));
-  if (files.length === 0) return `log_week_1.csv`;
+// Create Winston logger
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({
+      filename: path.join(logsDir, 'error.log'),
+      level: 'error'
+    }),
+    new winston.transports.File({
+      filename: path.join(logsDir, 'combined.log')
+    })
+  ]
+});
 
-  const lastFile = files.sort((a, b) => {
-    const aNum = parseInt(a.match(/\d+/)[0]);
-    const bNum = parseInt(b.match(/\d+/)[0]);
-    return bNum - aNum;
-  })[0];
+// Add console transport in development
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple()
+  }));
+}
 
-  const lastFilePath = path.join(logsDir, lastFile);
-  const stats = fs.statSync(lastFilePath);
-  const lastModified = new Date(stats.mtime);
-  const now = new Date();
+// Function to log chat interactions to CSV
+const logToCSV = (type, data) => {
+  try {
+    const timestamp = new Date().toISOString();
+    const csvLine = [
+      timestamp,
+      type,
+      data.chatId || '',
+      data.message || '',
+      data.response || '',
+      data.intent || '',
+      data.score || ''
+    ].join(',') + '\n';
 
-  const diffDays = Math.floor((now - lastModified) / (1000 * 60 * 60 * 24));
-  if (diffDays >= 7) {
-    const nextWeek = parseInt(lastFile.match(/\d+/)[0]) + 1;
-    return `log_week_${nextWeek}.csv`;
+    const csvPath = path.join(logsDir, 'chat_logs.csv');
+
+    // Create file with headers if it doesn't exist
+    if (!fs.existsSync(csvPath)) {
+      const headers = 'timestamp,type,chatId,message,response,intent,score\n';
+      fs.writeFileSync(csvPath, headers);
+    }
+
+    // Append the new log entry
+    fs.appendFileSync(csvPath, csvLine);
+  } catch (error) {
+    console.error('Error logging to CSV:', error);
+    logger.error('Error logging to CSV', { error: error.message });
   }
-
-  return lastFile;
 };
 
-const logToCSV = (logData) => {
-  const fileName = getCurrentLogFile();
-  const filePath = path.join(logsDir, fileName);
-
-  const isNewFile = !fs.existsSync(filePath);
-  const headers = ['action_datetime', 'path_name', 'method', 'ip', 'status_response', 'request_query', 'duration'];
-
-  const logRow = [
-    new Date().toISOString(),
-    logData.path_name || '',
-    logData.method || '',
-    logData.ip || '',
-    logData.status_response || '',
-    JSON.stringify(logData.request_query || ''),
-    logData.duration || 0
-  ].join(',');
-
-  const logEntry = (isNewFile ? `${headers.join(',')}${os.EOL}` : '') + logRow + os.EOL;
-
-  // Ghi file async, không block event loop
-  fs.appendFile(filePath, logEntry, 'utf8', (err) => {
-    if (err) console.error('Lỗi ghi log:', err);
-  });
+module.exports = {
+  logger,
+  logToCSV
 };
-
-module.exports = logToCSV;

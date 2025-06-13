@@ -20,6 +20,7 @@ import EditTag from './pages/admin/TagManagement/EditTag';
 import EditProduct from './pages/admin/ProductManagement/EditProduct';
 import AppFooter from './components/common/AppFooter/AppFooter';
 import AppHeader from './components/common/AppHeader/AppHeader';
+import ChatBot from './components/ChatBot/ChatBot';
 
 // Lazy load user components
 const Home = lazy(() => import('./pages/user/Home/Home'));
@@ -173,6 +174,8 @@ const AppContent = () => {
         </Routes>
       </Suspense>
       {!isAdminRoute && <AppFooter />}
+      {/* Show ChatBot for all non-admin routes */}
+      {!isAdminRoute && <ChatBot />}
     </>
   );
 };

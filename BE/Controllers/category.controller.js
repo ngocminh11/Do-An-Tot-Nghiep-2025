@@ -1,165 +1,140 @@
 const Category = require('../Models/Categories');
 const Product = require('../Models/Products');
 const slugify = require('slugify');
+const mongoose = require('mongoose');
 
-// GET all
+const { sendSuccess, sendError } = require('../Utils/responseHelper');
+const StatusCodes = require('../Constants/ResponseCode');
+const Messages = require('../Constants/ResponseMessage');
+
 exports.getAllCategories = async (req, res) => {
   try {
-    const { id, name, slug, page = 1, limit = 10 } = req.query;
-
+    const { name, slug, page = 1, limit = 10 } = req.query;
     const query = {};
 
-    if (id) {
-      query.idCategory = { $regex: id, $options: 'i' };
-    }
-
-    if (name) {
-      query.name = { $regex: name, $options: 'i' };
-    }
-
-    if (slug) {
-      query.slug = { $regex: slug, $options: 'i' };
-    }
+    if (name) query.name = { $regex: new RegExp(`^${name}`, 'i') };
+    if (slug) query.slug = { $regex: new RegExp(slug, 'i') };
 
     const skip = (page - 1) * limit;
 
     const [categories, totalItems] = await Promise.all([
-      Category.find(query)
-        .sort({ createdAt: -1 }) // Sắp xếp mới nhất
-        .skip(Number(skip))
-        .limit(Number(limit)),
+      Category.find(query).sort({ createdAt: -1 }).skip(Number(skip)).limit(Number(limit)),
       Category.countDocuments(query)
     ]);
 
-    const totalPages = Math.ceil(totalItems / limit);
-
-    res.json({
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, {
       data: categories,
       currentPage: Number(page),
-      totalPages,
+      totalPages: Math.ceil(totalItems / limit),
       totalItems,
       perPage: Number(limit)
-    });
+    }, Messages.CATEGORY_FETCH_SUCCESS);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
 
+exports.getCategoryById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+    }
 
+    const category = await Category.findById(id);
+    if (!category) {
+      return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CATEGORY_NOT_FOUND);
+    }
+
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, category, Messages.CATEGORY_FETCH_SUCCESS);
+  } catch (error) {
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
+  }
+};
 
 exports.createCategory = async (req, res) => {
   try {
-    let { idCategory, name, description, slug, status } = req.body;
+    const { name, description, status } = req.body;
 
-    // Tự động tạo slug từ name nếu không có
-    if (!slug && name) {
-      slug = slugify(name, { lower: true, strict: true });
-    }
+    if (!name) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_NAME_REQUIRED);
 
-    // Kiểm tra trùng từng trường
-    const [idExists, nameExists, slugExists] = await Promise.all([
-      Category.findOne({ idCategory }),
+    const slug = slugify(name, { lower: true, strict: true, locale: 'vi' });
+
+    const [nameExists, slugExists] = await Promise.all([
       Category.findOne({ name }),
       Category.findOne({ slug })
     ]);
 
-    if (idExists) {
-      return res.status(400).json({ message: 'ID danh mục đã được sử dụng.' });
-    }
+    if (nameExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_NAME_EXISTS);
+    if (slugExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_SLUG_EXISTS);
 
-    if (nameExists) {
-      return res.status(400).json({ message: 'Tên danh mục đã được sử dụng.' });
-    }
+    const newCategory = new Category({ name, slug, description, status });
+    const saved = await newCategory.save();
 
-    if (slugExists) {
-      return res.status(400).json({ message: 'Slug danh mục đã được sử dụng.' });
-    }
-
-    const newCategory = new Category({
-      idCategory,
-      name,
-      description,
-      slug,
-      status
-    });
-
-    const savedCategory = await newCategory.save();
-    res.status(201).json(savedCategory);
+    return sendSuccess(res, StatusCodes.SUCCESS_CREATED, saved, Messages.CATEGORY_CREATED);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
 
-// Cập nhật danh mục
 exports.updateCategory = async (req, res) => {
   try {
-    const { idCategory } = req.params;
+    const { id } = req.params;
     const { name, slug, description, status } = req.body;
 
-    // Tìm danh mục cần cập nhật
-    const category = await Category.findOne({ idCategory });
-    if (!category) {
-      return res.status(404).json({ message: 'Không tìm thấy danh mục.' });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
     }
 
-    // Kiểm tra trùng name hoặc slug với danh mục khác
+    const category = await Category.findById(id);
+    if (!category) {
+      return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CATEGORY_NOT_FOUND);
+    }
+
     const [nameConflict, slugConflict] = await Promise.all([
-      name ? Category.findOne({ name, idCategory: { $ne: idCategory } }) : null,
-      slug ? Category.findOne({ slug, idCategory: { $ne: idCategory } }) : null
+      name ? Category.findOne({ name, _id: { $ne: id } }) : null,
+      slug ? Category.findOne({ slug, _id: { $ne: id } }) : null
     ]);
 
-    if (nameConflict) {
-      return res.status(400).json({ message: 'Tên danh mục đã được sử dụng.' });
-    }
+    if (nameConflict) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_NAME_EXISTS);
+    if (slugConflict) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_SLUG_EXISTS);
 
-    if (slugConflict) {
-      return res.status(400).json({ message: 'Slug danh mục đã được sử dụng.' });
-    }
-
-    // Cập nhật
     category.name = name || category.name;
-    category.slug = slug || category.slug;
-    category.description = description || category.description;
-    category.status = status || category.status;
+    category.slug = slug ? slugify(slug, { lower: true, strict: true, locale: 'vi' }) : category.slug;
+    category.description = description ?? category.description;
+    category.status = status ?? category.status;
     category.updatedAt = new Date();
 
-    const updatedCategory = await category.save();
-    res.json(updatedCategory);
+    const updated = await category.save();
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, updated, Messages.CATEGORY_UPDATED);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
 
-
-
-// Xóa danh mục
 exports.deleteCategory = async (req, res) => {
   try {
-    const { idCategory } = req.params;
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+    }
 
-    // Tìm tất cả sản phẩm chứa category này
-    const affectedProducts = await Product.find({ categories: idCategory });
-
+    const affectedProducts = await Product.find({ 'basicInformation.categoryIds': id });
     for (const product of affectedProducts) {
-      // Xóa category khỏi danh sách
-      product.categories = product.categories.filter(catId => catId !== idCategory);
-
-      // Nếu không còn category nào thì set status = 'inactive'
-      if (product.categories.length === 0) {
-        product.status = 'inactive';
+      product.basicInformation.categoryIds = product.basicInformation.categoryIds.filter(
+        catId => catId.toString() !== id
+      );
+      if (product.basicInformation.categoryIds.length === 0) {
+        product.basicInformation.status = 'inactive';
       }
-
       await product.save();
     }
 
-    const deleted = await Category.findOneAndDelete({ idCategory });
+    const deleted = await Category.findByIdAndDelete(id);
+    if (!deleted) return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CATEGORY_NOT_FOUND);
 
-    if (!deleted) {
-      return res.status(404).json({ message: 'Danh mục không tìm thấy' });
-    }
-
-    res.json({ message: 'Xóa danh mục thành công' });
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, null, Messages.CATEGORY_DELETED);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
