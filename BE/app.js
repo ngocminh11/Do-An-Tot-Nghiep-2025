@@ -7,35 +7,114 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const path = require('path');
-const categoryRoutes = require('./Routes/category.routes');
-const productRoutes = require('./Routes/product.routes');
-const logToCSV = require('./Utils/logger');
+const http = require('http');
+const socketIo = require('socket.io');
+const chatRoutes = require('./Routes/chat.routes');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+const hpp = require('hpp');
+const cookieParser = require('cookie-parser');
+const fs = require('fs');
 
 const app = express();
-const PORT = process.env.PORT;
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
 
-// Middleware
-app.use(cors());
+const PORT = process.env.PORT || 5000;
+
+// CORS configuration
+app.use(cors({
+  origin: 'http://localhost:3000',
+  credentials: true
+}));
+
+// Basic security headers
 app.use(helmet());
-app.use(morgan('dev'));
+
+// Development logging
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
+
+// Sanitize data
+app.use(mongoSanitize());
+
+// Prevent XSS attacks
+app.use(xss());
+
+// Prevent parameter pollution
+app.use(hpp());
+
 app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Cookie parser
+app.use(cookieParser());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use('/api/', limiter);
+
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// MongoDB connection
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => console.log('Đã kết nối MongoDB'))
-  .catch(err => console.error('Lỗi kết nối MongoDB:', err));
+// Chat routes
+app.use('/api/chat', chatRoutes);
 
-//app.use(logToCSV); bi loi log
-app.use('/admin/products', productRoutes);
-app.use('/admin/categories', categoryRoutes);
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('New client connected');
 
-app.listen(PORT, () => {
-  console.log(`Server chạy trên cổng ${PORT}`);
+  socket.on('chat message', (msg) => {
+    // Broadcast to all clients
+    io.emit('chat message', msg);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
 });
+
+// Make io accessible to our router
+app.set('io', io);
+
+// Error handling middleware
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`
+  });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal server error'
+  });
+});
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('Connected to MongoDB');
+    // Start server after successful database connection
+    server.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });

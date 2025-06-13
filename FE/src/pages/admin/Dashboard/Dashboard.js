@@ -1,32 +1,37 @@
 import React from 'react';
-import { Row, Col, Card, Statistic, Table } from 'antd';
+import { Row, Col, Card, Statistic, Table, Progress } from 'antd';
 import {
   UserOutlined,
   ShoppingCartOutlined,
   DollarOutlined,
   ShoppingOutlined,
+  RiseOutlined,
+  FallOutlined,
 } from '@ant-design/icons';
-import { Line } from '@ant-design/plots';
+import { Line, Pie } from '@ant-design/plots';
 import './Dashboard.scss';
 
 const Dashboard = () => {
-  // Expanded statistics
+  // Enhanced statistics with growth rates
   const statistics = [
     {
       title: 'Total Users',
       value: 1234,
+      growth: 12.5,
       icon: <UserOutlined />,
       color: '#1890ff',
     },
     {
       title: 'Total Products',
       value: 567,
+      growth: 8.3,
       icon: <ShoppingOutlined />,
       color: '#52c41a',
     },
     {
       title: 'Total Orders',
       value: 890,
+      growth: -2.1,
       icon: <ShoppingCartOutlined />,
       color: '#faad14',
     },
@@ -34,6 +39,7 @@ const Dashboard = () => {
       title: 'Total Revenue',
       value: 45678,
       prefix: '$',
+      growth: 15.7,
       icon: <DollarOutlined />,
       color: '#f5222d',
     },
@@ -55,6 +61,23 @@ const Dashboard = () => {
     { month: 'Dec', revenue: 9000 },
   ];
 
+  // Category distribution data
+  const categoryData = [
+    { type: 'Skincare', value: 35 },
+    { type: 'Makeup', value: 25 },
+    { type: 'Fragrance', value: 20 },
+    { type: 'Haircare', value: 15 },
+    { type: 'Others', value: 5 },
+  ];
+
+  // Order status distribution
+  const orderStatusData = [
+    { status: 'Completed', count: 450 },
+    { status: 'Processing', count: 200 },
+    { status: 'Pending', count: 150 },
+    { status: 'Cancelled', count: 50 },
+  ];
+
   const lineConfig = {
     data: revenueData,
     xField: 'month',
@@ -71,9 +94,25 @@ const Dashboard = () => {
         lineWidth: 2,
       },
     },
+    area: {
+      style: {
+        fill: 'l(270) 0:#ffffff 0.5:#7ec2f3 1:#1890ff',
+      },
+    },
   };
 
-  // Updated mock recent orders specifically for cosmetics
+  const pieConfig = {
+    data: categoryData,
+    angleField: 'value',
+    colorField: 'type',
+    radius: 0.8,
+    legend: {
+      position: 'bottom',
+    },
+    interactions: [{ type: 'element-active' }],
+  };
+
+  // Updated mock recent orders
   const recentOrders = [
     {
       key: '1',
@@ -126,25 +165,70 @@ const Dashboard = () => {
       <Row gutter={[16, 16]}>
         {statistics.map((stat, index) => (
           <Col xs={24} sm={12} md={6} key={index}>
-            <Card>
+            <Card hoverable className="stat-card">
               <Statistic
                 title={stat.title}
                 value={stat.value}
                 prefix={stat.prefix || stat.icon}
                 valueStyle={{ color: stat.color }}
               />
+              <div className="growth-rate">
+                {stat.growth > 0 ? (
+                  <RiseOutlined style={{ color: '#52c41a' }} />
+                ) : (
+                  <FallOutlined style={{ color: '#f5222d' }} />
+                )}
+                <span style={{ color: stat.growth > 0 ? '#52c41a' : '#f5222d' }}>
+                  {Math.abs(stat.growth)}%
+                </span>
+                <span className="growth-label">vs last month</span>
+              </div>
             </Card>
           </Col>
         ))}
       </Row>
+
       <Row gutter={[16, 16]} style={{ marginTop: '24px' }}>
         <Col xs={24} md={12}>
-          <Card title="Monthly Revenue">
+          <Card title="Monthly Revenue" className="chart-card">
             <Line {...lineConfig} />
           </Card>
         </Col>
         <Col xs={24} md={12}>
-          <Card title="Recent Orders">
+          <Card title="Category Distribution" className="chart-card">
+            <Pie {...pieConfig} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginTop: '24px' }}>
+        <Col xs={24} md={12}>
+          <Card title="Order Status Distribution" className="chart-card">
+            {orderStatusData.map((item) => (
+              <div key={item.status} className="status-progress">
+                <div className="status-header">
+                  <span>{item.status}</span>
+                  <span>{item.count} orders</span>
+                </div>
+                <Progress
+                  percent={Math.round((item.count / 850) * 100)}
+                  showInfo={false}
+                  strokeColor={
+                    item.status === 'Completed'
+                      ? '#52c41a'
+                      : item.status === 'Processing'
+                        ? '#1890ff'
+                        : item.status === 'Pending'
+                          ? '#faad14'
+                          : '#f5222d'
+                  }
+                />
+              </div>
+            ))}
+          </Card>
+        </Col>
+        <Col xs={24} md={12}>
+          <Card title="Recent Orders" className="table-card">
             <Table
               columns={orderColumns}
               dataSource={recentOrders}
