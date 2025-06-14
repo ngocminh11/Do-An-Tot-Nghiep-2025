@@ -3,6 +3,8 @@ const router = express.Router();
 const categoryController = require('../Controllers/category.controller');
 const productController = require('../Controllers/product.controller');
 const userController = require('../Controllers/account.controller');
+const commentController = require('../Controllers/comment.controller');
+
 
 const upload = require('../Middlewares/upload');
 
@@ -26,5 +28,12 @@ router.get('/accounts/:id', userController.getUserById);
 router.post('/accounts', userController.createUser);
 router.put('/accounts/:id', userController.updateUser);
 router.delete('/accounts/:id', userController.deleteUser);
+router.get('/', commentController.getAllComments);
+
+//Routes for Comment
+router.get('/comments', commentController.getAllComments);                
+router.get('/comments/:id', commentController.getCommentById);           
+router.delete('/comments/:id', commentController.deleteComment);           
+router.post('/comments/reply/:id', commentController.replyToComment);  
 
 module.exports = router;

@@ -105,13 +105,13 @@ module.exports = {
     CATEGORY_UPDATED: 'Cập nhật danh mục thành công.',
     CATEGORY_DELETED: 'Xóa danh mục thành công.',
     CATEGORY_NOT_FOUND: 'Không tìm thấy danh mục.',
-    // User
+    //Account
     USER_FETCH_SUCCESS: 'Lấy danh sách người dùng thành công.',
     USER_CREATED: 'Tạo người dùng thành công.',
     USER_UPDATED: 'Cập nhật người dùng thành công.',
     USER_DELETED: 'Xóa người dùng thành công.',
     USER_NOT_FOUND: 'Không tìm thấy người dùng.',
-
+    //Product
     PRODUCT_NAME_REQUIRED: 'Tên sản phẩm là bắt buộc',
     PRODUCT_NAME_EXISTS: 'Tên sản phẩm đã được sử dụng',
     SKU_EXISTS: 'SKU đã được sử dụng',
@@ -119,4 +119,11 @@ module.exports = {
     PRODUCT_CREATED: 'Thêm sản phẩm thành công',
     PRODUCT_NOT_FOUND: 'Không tìm thấy sản phẩm',
     PRODUCT_DELETED: 'Đã xóa sản phẩm thành công',
+    //Comment
+    COMMENT_FETCH_SUCCESS: 'Lấy bình luận thành công.',
+    COMMENT_CREATED: 'Bình luận đã được tạo.',
+    COMMENT_UPDATED: 'Bình luận đã được cập nhật.',
+    COMMENT_DELETED: 'Bình luận đã được xóa.',
+    COMMENT_NOT_FOUND: 'Không tìm thấy bình luận.'
+
 };
