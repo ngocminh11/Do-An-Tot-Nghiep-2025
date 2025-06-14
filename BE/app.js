@@ -72,6 +72,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Chat routes
 app.use('/api/chat', chatRoutes);
 
+//app.use(logToCSV); bi loi log
+app.use('/admin/', productRoutes);
+app.use('/admin/', categoryRoutes);
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('New client connected');

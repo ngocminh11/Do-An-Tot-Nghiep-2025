@@ -92,4 +92,25 @@ module.exports = {
     ERROR_SERVICE_UNAVAILABLE: 'Dịch vụ không khả dụng',
     ERROR_GATEWAY_TIMEOUT: 'Hết thời gian yêu cầu từ máy chủ khác',
     ERROR_HTTP_VERSION_NOT_SUPPORTED: 'Phiên bản HTTP không được hỗ trợ',
+
+     //  === Custom entity-related messages === 
+
+    //Category
+    INVALID_ID: 'ID không hợp lệ.',
+    CATEGORY_FETCH_SUCCESS: 'Lấy danh sách danh mục thành công.',
+    CATEGORY_NAME_REQUIRED: 'Tên danh mục là bắt buộc.',
+    CATEGORY_NAME_EXISTS: 'Tên danh mục đã tồn tại.',
+    CATEGORY_SLUG_EXISTS: 'Slug danh mục đã tồn tại.',
+    CATEGORY_CREATED: 'Tạo danh mục thành công.',
+    CATEGORY_UPDATED: 'Cập nhật danh mục thành công.',
+    CATEGORY_DELETED: 'Xóa danh mục thành công.',
+    CATEGORY_NOT_FOUND: 'Không tìm thấy danh mục.',
+
+    PRODUCT_NAME_REQUIRED: 'Tên sản phẩm là bắt buộc',
+    PRODUCT_NAME_EXISTS: 'Tên sản phẩm đã được sử dụng',
+    SKU_EXISTS: 'SKU đã được sử dụng',
+    URLSLUG_EXISTS: 'urlSlug đã tồn tại',
+    PRODUCT_CREATED: 'Thêm sản phẩm thành công',
+    PRODUCT_NOT_FOUND: 'Không tìm thấy sản phẩm',
+    PRODUCT_DELETED: 'Đã xóa sản phẩm thành công',
 };
