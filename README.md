@@ -192,7 +192,10 @@ Lưu ý: Cần cài cors trong Node.js để cho phép gọi API từ React.
 
 ```bash
 cd ../client
-npm install
+npm install nodejs
+npm install slugify
+npm install mongo
+npm install cors
 npm start
 ```
 

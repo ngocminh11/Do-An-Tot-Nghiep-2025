@@ -1,0 +1,18 @@
+timestamp,type,chatId,message,response,intent,score
+2025-06-13T11:02:59.085Z,start,1749812579085,Chat started,,,
+2025-06-13T11:03:10.522Z,start,1749812590521,Chat started,,,
+2025-06-13T11:03:10.544Z,start,1749812590543,Chat started,,,
+2025-06-13T11:06:07.308Z,start,1749812767308,Chat started,,,
+2025-06-13T11:06:11.891Z,message,,hi,Xin lỗi, tôi không hiểu câu hỏi của bạn. Bạn có thể hỏi lại không?,None,1
+2025-06-13T11:06:18.343Z,start,1749812778342,Chat started,,,
+2025-06-13T11:06:19.332Z,start,1749812779332,Chat started,,,
+2025-06-13T11:06:19.342Z,start,1749812779341,Chat started,,,
+2025-06-13T11:14:08.490Z,start,1749813248489,Chat started,,,
+2025-06-13T11:14:13.353Z,message,,serum là gì,Tôi là trợ lý ảo của cửa hàng mỹ phẩm. Tôi có thể giúp bạn tìm hiểu về sản phẩm, đặt hàng và giải đáp thắc mắc.,bot.introduction,1
+2025-06-13T11:14:19.421Z,message,,cách đặt hành,Bạn có thể đặt hàng bằng cách: 1. Thêm sản phẩm vào giỏ hàng 2. Điền thông tin giao hàng 3. Chọn phương thức thanh toán 4. Xác nhận đơn hàng,order.how,1
+2025-06-13T11:14:26.480Z,message,,cách bôi kem ,Bạn có thể đặt hàng bằng cách: 1. Thêm sản phẩm vào giỏ hàng 2. Điền thông tin giao hàng 3. Chọn phương thức thanh toán 4. Xác nhận đơn hàng,order.how,1
+2025-06-13T11:14:32.653Z,message,,chào bạn,Xin chào! Tôi có thể giúp gì cho bạn?,greeting.hello,1
+2025-06-13T11:22:35.486Z,start,1749813755486,Chat started,,,
+2025-06-13T11:22:37.512Z,message,,chào,,unknown,0.2333333333333333
+2025-06-13T11:22:42.179Z,start,1749813762179,Chat started,,,
+2025-06-13T11:22:56.942Z,start,1749813776942,Chat started,,,

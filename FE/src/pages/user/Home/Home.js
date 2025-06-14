@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Carousel, Card, Row, Col, Button, Space, Input, Form, message, Typography, Layout, Rate } from 'antd';
+import { Carousel, Card, Row, Col, Button, Space, Input, Form, message, Typography, Layout, Rate, Avatar, Badge, Modal, Tooltip } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { UpOutlined, MailOutlined, CheckCircleOutlined, StarOutlined, HeartOutlined } from '@ant-design/icons';
-import { mockProducts, mockCampaigns, mockCategories, mockPosts } from '../../../services/mockData';
+import { UpOutlined, MailOutlined, CheckCircleOutlined, StarOutlined, HeartOutlined, MessageOutlined, SendOutlined, CloseOutlined, CustomerServiceOutlined, ShoppingOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import ChatBot from '../../../components/ChatBot/ChatBot';
 import './Home.scss';
 
 const { Title, Text } = Typography;
@@ -48,6 +48,104 @@ const Home = () => {
     const handleViewPost = (postId) => {
         navigate(`/posts/${postId}`); // Giả định có route /posts/:id
     };
+
+    const mockProducts = [
+        {
+            _id: '1',
+            name: 'Kem dưỡng da',
+            price: 250000,
+            imageUrls: ['/images/products/product1.jpg'],
+            averageRating: 4.5
+        },
+        {
+            _id: '2',
+            name: 'Sữa rửa mặt',
+            price: 180000,
+            imageUrls: ['/images/products/product2.jpg'],
+            averageRating: 4.2
+        },
+        {
+            _id: '3',
+            name: 'Toner cân bằng da',
+            price: 200000,
+            imageUrls: ['/images/products/product3.jpg'],
+            averageRating: 4.7
+        },
+        {
+            _id: '4',
+            name: 'Serum dưỡng trắng',
+            price: 350000,
+            imageUrls: ['/images/products/product4.jpg'],
+            averageRating: 4.8
+        },
+        {
+            _id: '5',
+            name: 'Mặt nạ dưỡng da',
+            price: 150000,
+            imageUrls: ['/images/products/product5.jpg'],
+            averageRating: 4.3
+        }
+    ];
+
+    const mockCampaigns = [
+        {
+            _id: '1',
+            title: 'Khuyến mãi mùa hè',
+            imageUrl: '/images/campaigns/campaign1.jpg'
+        },
+        {
+            _id: '2',
+            title: 'Ưu đãi tháng 6',
+            imageUrl: '/images/campaigns/campaign2.jpg'
+        }
+    ];
+
+    const mockCategories = [
+        {
+            _id: '1',
+            name: 'Chăm sóc da mặt',
+            slug: 'cham-soc-da-mat'
+        },
+        {
+            _id: '2',
+            name: 'Trang điểm',
+            slug: 'trang-diem'
+        },
+        {
+            _id: '3',
+            name: 'Chăm sóc tóc',
+            slug: 'cham-soc-toc'
+        },
+        {
+            _id: '4',
+            name: 'Nước hoa',
+            slug: 'nuoc-hoa'
+        }
+    ];
+
+    const mockPosts = [
+        {
+            _id: '1',
+            title: 'Cách chăm sóc da mùa hè',
+            excerpt: 'Những bí quyết giúp làn da luôn tươi sáng trong mùa hè nóng bức...',
+            imageUrl: '/images/posts/post1.jpg',
+            createdAt: '2024-03-15'
+        },
+        {
+            _id: '2',
+            title: 'Top 5 sản phẩm dưỡng da bán chạy nhất',
+            excerpt: 'Khám phá những sản phẩm được yêu thích nhất trong tháng...',
+            imageUrl: '/images/posts/post2.jpg',
+            createdAt: '2024-03-10'
+        },
+        {
+            _id: '3',
+            title: 'Xu hướng làm đẹp 2024',
+            excerpt: 'Cập nhật những xu hướng làm đẹp mới nhất trong năm 2024...',
+            imageUrl: '/images/posts/post3.jpg',
+            createdAt: '2024-03-05'
+        }
+    ];
 
     return (
         <Layout className="home-page">
@@ -219,6 +317,8 @@ const Home = () => {
                     onClick={scrollToTop}
                 />
             )}
+
+            <ChatBot />
         </Layout>
     );
 };
