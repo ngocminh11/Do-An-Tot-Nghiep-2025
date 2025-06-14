@@ -105,6 +105,12 @@ module.exports = {
     CATEGORY_UPDATED: 'Cập nhật danh mục thành công.',
     CATEGORY_DELETED: 'Xóa danh mục thành công.',
     CATEGORY_NOT_FOUND: 'Không tìm thấy danh mục.',
+    // User
+    USER_FETCH_SUCCESS: 'Lấy danh sách người dùng thành công.',
+    USER_CREATED: 'Tạo người dùng thành công.',
+    USER_UPDATED: 'Cập nhật người dùng thành công.',
+    USER_DELETED: 'Xóa người dùng thành công.',
+    USER_NOT_FOUND: 'Không tìm thấy người dùng.',
 
     PRODUCT_NAME_REQUIRED: 'Tên sản phẩm là bắt buộc',
     PRODUCT_NAME_EXISTS: 'Tên sản phẩm đã được sử dụng',
