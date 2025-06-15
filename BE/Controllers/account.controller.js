@@ -1,10 +1,10 @@
 const User = require('../Models/Accounts');
 const mongoose = require('mongoose');
+
 const { sendSuccess, sendError } = require('../Utils/responseHelper');
 const StatusCodes = require('../Constants/ResponseCode');
 const Messages = require('../Constants/ResponseMessage');
 
-// Lấy tất cả user có lọc, phân trang, tìm kiếm
 exports.getAllUsers = async (req, res) => {
   try {
     const {
@@ -21,13 +21,7 @@ exports.getAllUsers = async (req, res) => {
 
     const query = {};
 
-    if (id) {
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
-      }
-      query._id = id;
-    }
-
+    if (id && mongoose.Types.ObjectId.isValid(id)) query._id = id;
     if (fullName) query.fullName = new RegExp(fullName, 'i');
     if (email) query.email = new RegExp(email, 'i');
     if (phone) query.phone = new RegExp(phone, 'i');
@@ -36,27 +30,26 @@ exports.getAllUsers = async (req, res) => {
     const sortField = ['createdAt', 'updatedAt'].includes(sortBy) ? sortBy : 'createdAt';
     const sortDirection = sortOrder === 'asc' ? 1 : -1;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (page - 1) * limit;
     const users = await User.find(query)
       .sort({ [sortField]: sortDirection })
-      .skip(skip)
-      .limit(parseInt(limit));
+      .skip(Number(skip))
+      .limit(Number(limit));
 
     const total = await User.countDocuments(query);
 
     return sendSuccess(res, StatusCodes.SUCCESS_OK, {
       data: users,
       total,
-      currentPage: parseInt(page),
+      currentPage: Number(page),
       totalPages: Math.ceil(total / limit),
-      perPage: parseInt(limit)
+      perPage: Number(limit)
     }, Messages.USER_FETCH_SUCCESS);
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
 
-// Lấy chi tiết user theo _id
 exports.getUserById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -75,7 +68,6 @@ exports.getUserById = async (req, res) => {
   }
 };
 
-// Tạo mới user
 exports.createUser = async (req, res) => {
   try {
     const user = new User(req.body);
@@ -86,7 +78,6 @@ exports.createUser = async (req, res) => {
   }
 };
 
-// Cập nhật user theo _id
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -95,7 +86,7 @@ exports.updateUser = async (req, res) => {
     }
 
     const updates = { ...req.body };
-    if (updates._id) delete updates._id;
+    delete updates._id;
 
     const updatedUser = await User.findByIdAndUpdate(id, updates, {
       new: true,
@@ -112,7 +103,6 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-// Xóa user theo _id
 exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -130,4 +120,3 @@ exports.deleteUser = async (req, res) => {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
-

@@ -7,19 +7,26 @@ const { sendSuccess, sendError } = require('../Utils/responseHelper');
 const StatusCodes = require('../Constants/ResponseCode');
 const Messages = require('../Constants/ResponseMessage');
 
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+const buildRegexSearch = (value) =>
+  new RegExp(`${value}`, 'i');
+
 exports.getAllCategories = async (req, res) => {
   try {
-    const { name, slug, page = 1, limit = 10 } = req.query;
+    const { name, status, page = 1, limit = 10 } = req.query;
     const query = {};
 
-    if (name) query.name = { $regex: new RegExp(`^${name}`, 'i') };
-    if (slug) query.slug = { $regex: new RegExp(slug, 'i') };
+    if (name) query.name = buildRegexSearch(name);
+    if (status) query.status = status;
 
     const skip = (page - 1) * limit;
-
     const [categories, totalItems] = await Promise.all([
-      Category.find(query).sort({ createdAt: -1 }).skip(Number(skip)).limit(Number(limit)),
-      Category.countDocuments(query)
+      Category.find(query)
+        .sort({ updatedAt: -1, createdAt: -1 }) // Sort newest update first
+        .skip(Number(skip))
+        .limit(Number(limit)),
+      Category.countDocuments(query),
     ]);
 
     return sendSuccess(res, StatusCodes.SUCCESS_OK, {
@@ -27,35 +34,33 @@ exports.getAllCategories = async (req, res) => {
       currentPage: Number(page),
       totalPages: Math.ceil(totalItems / limit),
       totalItems,
-      perPage: Number(limit)
-    }, Messages.CATEGORY_FETCH_SUCCESS);
-  } catch (error) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
+      perPage: Number(limit),
+    });
+  } catch (err) {
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
   }
 };
 
 exports.getCategoryById = async (req, res) => {
+  const { id } = req.params;
+  if (!isValidId(id))
+    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+
   try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
-    }
-
     const category = await Category.findById(id);
-    if (!category) {
+    if (!category)
       return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CATEGORY_NOT_FOUND);
-    }
 
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, category, Messages.CATEGORY_FETCH_SUCCESS);
-  } catch (error) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, category);
+  } catch (err) {
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
   }
 };
+
 
 exports.createCategory = async (req, res) => {
   try {
     const { name, description, status } = req.body;
-
     if (!name) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_NAME_REQUIRED);
 
     const slug = slugify(name, { lower: true, strict: true, locale: 'vi' });

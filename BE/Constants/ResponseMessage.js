@@ -94,9 +94,10 @@ module.exports = {
     ERROR_HTTP_VERSION_NOT_SUPPORTED: 'Phiên bản HTTP không được hỗ trợ',
 
      //  === Custom entity-related messages === 
+    INVALID_PRODUCT_REFERENCES: 'Danh sách sản phẩm chứa ID không hợp lệ.',
+    INVALID_ID: 'ID không hợp lệ.',
 
     //Category
-    INVALID_ID: 'ID không hợp lệ.',
     CATEGORY_FETCH_SUCCESS: 'Lấy danh sách danh mục thành công.',
     CATEGORY_NAME_REQUIRED: 'Tên danh mục là bắt buộc.',
     CATEGORY_NAME_EXISTS: 'Tên danh mục đã tồn tại.',
@@ -121,9 +122,17 @@ module.exports = {
     PRODUCT_DELETED: 'Đã xóa sản phẩm thành công',
     //Comment
     COMMENT_FETCH_SUCCESS: 'Lấy bình luận thành công.',
-    COMMENT_CREATED: 'Bình luận đã được tạo.',
-    COMMENT_UPDATED: 'Bình luận đã được cập nhật.',
+    COMMENT_UPDATED: 'Cập nhật bình luận thành công.',
+    COMMENT_CREATED: 'Tạo bình luận thành công.',
+    COMMENT_EXISTS: 'Bạn đã bình luận sản phẩm này rồi.',
     COMMENT_DELETED: 'Bình luận đã được xóa.',
-    COMMENT_NOT_FOUND: 'Không tìm thấy bình luận.'
+    COMMENT_NOT_FOUND: 'Không tìm thấy bình luận.',
+    //Tag
+    TAG_NAME_REQUIRED: 'Tên thẻ là bắt buộc.',
+    TAG_NAME_EXISTS: 'Tên thẻ đã tồn tại.',
+    TAG_NOT_FOUND: 'Không tìm thấy thẻ.',
+    TAG_CREATED: 'Tạo thẻ thành công.',
+    TAG_UPDATED: 'Cập nhật thẻ thành công.',
+    TAG_DELETED: 'Xóa thẻ thành công.',
 
 };
