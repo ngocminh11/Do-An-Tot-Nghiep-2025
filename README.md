@@ -168,7 +168,7 @@ cd project_mypham
 ### 2. Backend Setup
 
 ```bash
-cd server
+cd Do-An-Tot-Nghiep-2025
 npm install express mongoose exceljs moment json2csv slugify cors
 ```
 
