@@ -15,6 +15,7 @@ router.get('/products/:id', productController.getProductById);
 router.post('/products', upload.array('files'), productController.createProduct);
 router.put('/products/:id', upload.array('files'), productController.updateProduct);
 router.delete('/products/:id', productController.deleteProduct);
+router.get('/products/export/csv', productController.exportProductsToExcel);
 
 //Routes for Category
 router.get('/categories', categoryController.getAllCategories);
@@ -43,5 +44,7 @@ router.get('/tags/:id', TagController.getTagById);
 router.post('/tags', TagController.createTag);
 router.put('/tags/:id', TagController.updateTag);
 router.delete('/tags/:id', TagController.deleteTag);
+
+//Routes for 
 
 module.exports = router;

@@ -1,5 +1,9 @@
 const Product = require('../Models/Products');
 const Category = require('../Models/Categories');
+const path = require('path');
+const ExcelJS = require('exceljs');
+const moment = require('moment')
+const { Parser } = require('json2csv');
 const slugify = require('slugify');
 const mongoose = require('mongoose');
 const fs = require('fs').promises;
@@ -24,6 +28,9 @@ const deleteFilesIfExist = async (files) => {
     )
   );
 };
+
+const formatDate = (date) =>
+  new Date(date).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 
 exports.getAllProducts = async (req, res) => {
   try {
@@ -55,40 +62,7 @@ exports.getAllProducts = async (req, res) => {
   }
 };
 
-exports.getProductById = async (req, res) => {
-  const { id } = req.params;
-  if (!isValidId(id))
-    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
-
-  try {
-    const product = await Product.findById(id).populate('basicInformation.categoryIds', 'name');
-    if (!product)
-      return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.PRODUCT_NOT_FOUND);
-
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, product);
-  } catch (err) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
-  }
-};
-
-exports.getProductById = async (req, res) => {
-  const { id } = req.params;
-  if (!isValidId(id))
-    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
-
-  try {
-    const product = await Product.findById(id).populate('basicInformation.categoryIds', 'name');
-    if (!product)
-      return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.PRODUCT_NOT_FOUND);
-
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, product);
-  } catch (err) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
-  }
-};
-
-
-// GET /products/:id
+// GET by ID
 exports.getProductById = async (req, res) => {
   const { id } = req.params;
   if (!isValidId(id))
@@ -106,7 +80,7 @@ exports.getProductById = async (req, res) => {
   }
 };
 
-// POST /products
+// POST
 exports.createProduct = async (req, res) => {
   try {
     const {
@@ -155,7 +129,7 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// PUT /products/:id
+// PUT
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
   if (!isValidId(id))
@@ -196,7 +170,7 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-// DELETE /products/:id
+// DELETE
 exports.deleteProduct = async (req, res) => {
   const { id } = req.params;
   if (!isValidId(id))
@@ -210,5 +184,108 @@ exports.deleteProduct = async (req, res) => {
     return sendSuccess(res, StatusCodes.SUCCESS_OK, null, Messages.PRODUCT_DELETED);
   } catch (error) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, error.message);
+  }
+};
+
+function helperGetFilterFromQuery(query) {
+  const { name, status, brand, categoryId, all } = query;
+  const filter = {};
+  if (!all) {
+    if (name) filter['basicInformation.productName'] = new RegExp(name, 'i');
+    if (status) filter['basicInformation.status'] = status;
+    if (brand) filter['basicInformation.brand'] = brand;
+    if (categoryId) filter['basicInformation.categoryIds'] = categoryId;
+  }
+  return filter;
+}
+
+exports.exportProductsToExcel = async (req, res) => {
+  try {
+    const filter = helperGetFilterFromQuery(req.query);
+
+    const products = await Product.find(filter)
+      .populate('basicInformation.categoryIds', 'name')
+      .sort({ updatedAt: -1, createdAt: -1 });
+
+    if (!products.length) {
+      return sendError(res, StatusCodes.ERROR_NOT_FOUND, 'Không có sản phẩm nào để xuất.');
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Danh sách sản phẩm');
+
+    // Định nghĩa tiêu đề cột
+    const columns = [
+      { header: 'Product Name', key: 'productName' },
+      { header: 'SKU', key: 'sku' },
+      { header: 'Brand', key: 'brand' },
+      { header: 'Status', key: 'status' },
+      { header: 'Origin', key: 'origin' },
+      { header: 'Price (VND)', key: 'price' },
+      { header: 'Original Price (VND)', key: 'originalPrice' },
+      { header: 'Stock', key: 'stock' },
+      { header: 'Unit', key: 'unit' },
+      { header: 'Short Description', key: 'shortDescription' },
+      { header: 'Category Names', key: 'categories' },
+      { header: 'Created At', key: 'createdAt' },
+      { header: 'Updated At', key: 'updatedAt' },
+    ];
+
+    worksheet.columns = columns;
+
+    // Ghi dữ liệu
+    for (const p of products) {
+      worksheet.addRow({
+        productName: p.basicInformation?.productName || '',
+        sku: p.basicInformation?.sku || '',
+        brand: p.basicInformation?.brand || '',
+        status: p.basicInformation?.status || '',
+        origin: p.technicalDetails?.origin || '',
+        price: p.pricingAndInventory?.salePrice ?? '',
+        originalPrice: p.pricingAndInventory?.originalPrice ?? '',
+        stock: p.pricingAndInventory?.stockQuantity ?? '',
+        unit: p.pricingAndInventory?.unit || '',
+        shortDescription: p.description?.shortDescription || '',
+        categories: (p.basicInformation?.categoryIds || []).map(c => c?.name).join(', '),
+        createdAt: moment(p.createdAt).format('DD/MM/YYYY HH:mm'),
+        updatedAt: moment(p.updatedAt).format('DD/MM/YYYY HH:mm')
+      });
+    }
+
+    // Format tiêu đề
+    worksheet.getRow(1).eachCell(cell => {
+      cell.font = { bold: true, name: 'Calibri', color: { argb: 'FFFFFFFF' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF4F81BD' }  // xanh đậm
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.border = {
+        top: { style: 'thin' }, bottom: { style: 'thin' },
+        left: { style: 'thin' }, right: { style: 'thin' }
+      };
+    });
+
+    // Auto width cho từng cột
+    worksheet.columns.forEach(col => {
+      let maxLength = col.header.length;
+      col.eachCell?.({ includeEmpty: true }, cell => {
+        const value = cell.value ? cell.value.toString() : '';
+        maxLength = Math.max(maxLength, value.length);
+      });
+      col.width = maxLength + 2;
+    });
+
+    const fileName = `products-${Date.now()}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('[Excel Export Error]', error);
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, 'Xuất Excel thất bại. Vui lòng thử lại.');
   }
 };

@@ -15,7 +15,6 @@ const wordCountValidator = (min, max) => ({
     `${props.path} phải có từ ${min} đến ${max} từ (hiện tại: ${props.value.trim().split(/\s+/).length})`
 });
 
-// === Sub-Schema for Files ===
 const mediaFileSchema = new mongoose.Schema({
   path: String,
   filename: String,
@@ -23,7 +22,6 @@ const mediaFileSchema = new mongoose.Schema({
   size: Number
 }, { _id: false });
 
-// === Main Product Schema ===
 const ProductSchema = new mongoose.Schema({
   basicInformation: {
     productName: {
