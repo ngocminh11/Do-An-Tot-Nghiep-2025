@@ -2,7 +2,7 @@ const Product = require('../Models/Products');
 const Category = require('../Models/Categories');
 const path = require('path');
 const ExcelJS = require('exceljs');
-const moment = require('moment')
+const moment = require('moment');
 const { Parser } = require('json2csv');
 const slugify = require('slugify');
 const mongoose = require('mongoose');
@@ -12,25 +12,22 @@ const { sendSuccess, sendError } = require('../Utils/responseHelper');
 const StatusCodes = require('../Constants/ResponseCode');
 const Messages = require('../Constants/ResponseMessage');
 
-/** ========== COMMON UTILITIES ========== **/
-const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+const isValidId = id => mongoose.Types.ObjectId.isValid(id);
+const formatDate = date => new Date(date).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 
-const buildRegexSearch = (value) =>
-  new RegExp(`^${value}`, 'i');
+const buildRegexSearch = value => new RegExp(`^${value}`, 'i');
 
-const deleteFilesIfExist = async (files) => {
-  if (!files?.length) return;
-  await Promise.all(
-    files.map(file =>
-      fs.unlink(file.path).catch(err =>
-        console.error(`Error deleting file ${file.path}:`, err)
-      )
-    )
-  );
+const helperGetFilterFromQuery = query => {
+  const { name, status, brand, categoryId, all } = query;
+  const filter = {};
+  if (!all) {
+    if (name) filter['basicInformation.productName'] = new RegExp(name, 'i');
+    if (status) filter['basicInformation.status'] = status;
+    if (brand) filter['basicInformation.brand'] = brand;
+    if (categoryId) filter['basicInformation.categoryIds'] = categoryId;
+  }
+  return filter;
 };
-
-const formatDate = (date) =>
-  new Date(date).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 
 exports.getAllProducts = async (req, res) => {
   try {
@@ -43,7 +40,7 @@ exports.getAllProducts = async (req, res) => {
     const skip = (page - 1) * limit;
     const [products, totalItems] = await Promise.all([
       Product.find(query)
-        .sort({ updatedAt: -1, createdAt: -1 }) // Sort by updatedAt, then createdAt
+        .sort({ updatedAt: -1, createdAt: -1 })
         .skip(Number(skip))
         .limit(Number(limit))
         .populate('basicInformation.categoryIds', 'name'),
@@ -62,7 +59,6 @@ exports.getAllProducts = async (req, res) => {
   }
 };
 
-// GET by ID
 exports.getProductById = async (req, res) => {
   const { id } = req.params;
   if (!isValidId(id))
@@ -80,7 +76,6 @@ exports.getProductById = async (req, res) => {
   }
 };
 
-// POST
 exports.createProduct = async (req, res) => {
   try {
     const {
@@ -129,7 +124,6 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// PUT
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
   if (!isValidId(id))
@@ -170,7 +164,6 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-// DELETE
 exports.deleteProduct = async (req, res) => {
   const { id } = req.params;
   if (!isValidId(id))
@@ -187,18 +180,6 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
-function helperGetFilterFromQuery(query) {
-  const { name, status, brand, categoryId, all } = query;
-  const filter = {};
-  if (!all) {
-    if (name) filter['basicInformation.productName'] = new RegExp(name, 'i');
-    if (status) filter['basicInformation.status'] = status;
-    if (brand) filter['basicInformation.brand'] = brand;
-    if (categoryId) filter['basicInformation.categoryIds'] = categoryId;
-  }
-  return filter;
-}
-
 exports.exportProductsToExcel = async (req, res) => {
   try {
     const filter = helperGetFilterFromQuery(req.query);
@@ -214,27 +195,36 @@ exports.exportProductsToExcel = async (req, res) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Danh sách sản phẩm');
 
-    // Định nghĩa tiêu đề cột
-    const columns = [
-      { header: 'Product Name', key: 'productName' },
-      { header: 'SKU', key: 'sku' },
-      { header: 'Brand', key: 'brand' },
-      { header: 'Status', key: 'status' },
-      { header: 'Origin', key: 'origin' },
-      { header: 'Price (VND)', key: 'price' },
-      { header: 'Original Price (VND)', key: 'originalPrice' },
-      { header: 'Stock', key: 'stock' },
-      { header: 'Unit', key: 'unit' },
-      { header: 'Short Description', key: 'shortDescription' },
-      { header: 'Category Names', key: 'categories' },
-      { header: 'Created At', key: 'createdAt' },
-      { header: 'Updated At', key: 'updatedAt' },
+    worksheet.columns = [
+      { header: 'ProductName', key: 'productName', width: 30 },
+      { header: 'SKU', key: 'sku', width: 20 },
+      { header: 'Brand', key: 'brand', width: 20 },
+      { header: 'Status', key: 'status', width: 12 },
+      { header: 'Origin', key: 'origin', width: 15 },
+      { header: 'Price', key: 'price', width: 15 },
+      { header: 'OriginalPrice', key: 'originalPrice', width: 15 },
+      { header: 'Stock', key: 'stock', width: 10 },
+      { header: 'Unit', key: 'unit', width: 10 },
+      { header: 'ShortDescription', key: 'shortDescription', width: 40 },
+      { header: 'CategoryNames', key: 'categoryNames', width: 25 },
+      { header: 'CreatedAt', key: 'createdAt', width: 20 },
+      { header: 'UpdatedAt', key: 'updatedAt', width: 20 }
     ];
 
-    worksheet.columns = columns;
+    worksheet.getRow(1).font = { name: 'Times New Roman', bold: true };
 
-    // Ghi dữ liệu
-    for (const p of products) {
+    ['price', 'originalPrice', 'stock'].forEach(key => {
+      worksheet.getColumn(key).numFmt = '#,##0';
+      worksheet.getColumn(key).alignment = { horizontal: 'center' };
+    });
+
+    ['createdAt', 'updatedAt'].forEach(key => {
+      worksheet.getColumn(key).alignment = { horizontal: 'center' };
+    });
+
+    worksheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+    products.forEach(p => {
       worksheet.addRow({
         productName: p.basicInformation?.productName || '',
         sku: p.basicInformation?.sku || '',
@@ -246,44 +236,28 @@ exports.exportProductsToExcel = async (req, res) => {
         stock: p.pricingAndInventory?.stockQuantity ?? '',
         unit: p.pricingAndInventory?.unit || '',
         shortDescription: p.description?.shortDescription || '',
-        categories: (p.basicInformation?.categoryIds || []).map(c => c?.name).join(', '),
-        createdAt: moment(p.createdAt).format('DD/MM/YYYY HH:mm'),
-        updatedAt: moment(p.updatedAt).format('DD/MM/YYYY HH:mm')
+        categoryNames: (p.basicInformation?.categoryIds || []).map(c => c?.name).join(', '),
+        createdAt: formatDate(p.createdAt),
+        updatedAt: formatDate(p.updatedAt)
       });
-    }
-
-    // Format tiêu đề
-    worksheet.getRow(1).eachCell(cell => {
-      cell.font = { bold: true, name: 'Calibri', color: { argb: 'FFFFFFFF' } };
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF4F81BD' }  // xanh đậm
-      };
-      cell.alignment = { vertical: 'middle', horizontal: 'center' };
-      cell.border = {
-        top: { style: 'thin' }, bottom: { style: 'thin' },
-        left: { style: 'thin' }, right: { style: 'thin' }
-      };
     });
 
-    // Auto width cho từng cột
-    worksheet.columns.forEach(col => {
-      let maxLength = col.header.length;
-      col.eachCell?.({ includeEmpty: true }, cell => {
-        const value = cell.value ? cell.value.toString() : '';
-        maxLength = Math.max(maxLength, value.length);
-      });
-      col.width = maxLength + 2;
+    worksheet.eachRow((row, i) => {
+      row.font = { name: 'Times New Roman', size: 12 };
+      if (i !== 1) {
+        row.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: i % 2 === 0 ? 'FFF9F9F9' : 'FFFFFFFF' }
+        };
+      }
     });
 
+    const buffer = await workbook.xlsx.writeBuffer();
     const fileName = `products-${Date.now()}.xlsx`;
-
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-
-    await workbook.xlsx.write(res);
-    res.end();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    return res.status(200).send(buffer);
   } catch (error) {
     console.error('[Excel Export Error]', error);
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, 'Xuất Excel thất bại. Vui lòng thử lại.');
