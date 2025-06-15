@@ -169,7 +169,7 @@ cd project_mypham
 
 ```bash
 cd server
-npm install
+npm install express mongoose exceljs moment json2csv slugify cors
 ```
 
 Create `.env` file:
