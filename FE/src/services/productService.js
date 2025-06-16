@@ -1,65 +1,107 @@
 import axios from 'axios';
 import config from '../config/index';
 
+const API = axios.create({
+  baseURL: config.API_BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Accept': 'application/json',
+  },
+});
+
+// Optional: Interceptor để log hoặc xử lý lỗi tập trung (nếu dùng trong dự án lớn)
+// API.interceptors.response.use(...);
+
 const productService = {
-  // Lấy tất cả sản phẩm với phân trang và bộ lọc
-  getAllProducts: async (params) => {
+  /**
+   * Get all products with optional pagination, search, category, and sorting
+   * @param {Object} params - { page, limit, search, category, sortBy, sortOrder }
+   * @returns {Promise<{ data: [], meta: { total, currentPage, pageSize } }>}
+   */
+  async getAllProducts(params = {}) {
     try {
-      const response = await axios.get(`${config.API_BASE_URL}/admin/products`, { params });
+      const res = await API.get('/admin/products', { params });
+
+      // Chuẩn hóa kết quả trả về theo kiểu { data, meta }
+      const { products, totalItems, currentPage, pageSize } = res.data;
+
       return {
-        data: response.data.products || response.data,
-        total: response.data.totalItems || response.data.length // Backend might not support pagination yet
+        data: products || res.data,
+        meta: {
+          total: totalItems ?? res.data.length ?? 0,
+          currentPage: currentPage ?? params.page ?? 1,
+          pageSize: pageSize ?? params.limit ?? 10,
+        },
       };
-    } catch (error) {
-      throw error.response?.data || error.message;
+    } catch (err) {
+      handleError(err, 'getAllProducts');
     }
   },
 
-  // Lấy một sản phẩm theo ID
-  getProductById: async (id) => {
+  /**
+   * Get product details by ID
+   */
+  async getProductById(id) {
     try {
-      const response = await axios.get(`${config.API_BASE_URL}/admin/products/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
+      const res = await API.get(`/admin/products/${id}`);
+      return res.data;
+    } catch (err) {
+      handleError(err, 'getProductById');
     }
   },
 
-  // Tạo sản phẩm mới (sử dụng FormData cho file uploads)
-  createProduct: async (formData) => {
+  /**
+   * Create new product using FormData
+   */
+  async createProduct(formData) {
     try {
-      const response = await axios.post(`${config.API_BASE_URL}/admin/products`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      const res = await API.post('/admin/products', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
-      console.log('Create product response:', response.data);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
+      return res.data;
+    } catch (err) {
+      handleError(err, 'createProduct');
     }
   },
 
-  // Cập nhật sản phẩm (sử dụng FormData cho file uploads)
-  updateProduct: async (id, formData) => {
+  /**
+   * Update a product by ID
+   */
+  async updateProduct(id, formData) {
     try {
-      const response = await axios.put(`${config.API_BASE_URL}/admin/products/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      const res = await API.put(`/admin/products/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
+      return res.data;
+    } catch (err) {
+      handleError(err, 'updateProduct');
     }
   },
 
-  // Xóa sản phẩm
-  deleteProduct: async (id) => {
+  /**
+   * Delete a product by ID
+   */
+  async deleteProduct(id) {
     try {
-      const response = await axios.delete(`${config.API_BASE_URL}/admin/products/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
+      const res = await API.delete(`/admin/products/${id}`);
+      return res.data;
+    } catch (err) {
+      handleError(err, 'deleteProduct');
     }
   },
-
 };
+
+/**
+ * Centralized error handler
+ */
+function handleError(error, fnName = '') {
+  const errMsg = error?.response?.data?.message || error.message || 'Unknown error';
+  console.error(`productService.${fnName} →`, errMsg);
+  throw new Error(errMsg);
+}
 
 export default productService;
