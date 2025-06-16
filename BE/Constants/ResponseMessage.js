@@ -95,4 +95,52 @@ const Messages = {
     ERROR_SERVICE_UNAVAILABLE: 'Dịch vụ không khả dụng',
     ERROR_GATEWAY_TIMEOUT: 'Hết thời gian yêu cầu từ máy chủ khác',
     ERROR_HTTP_VERSION_NOT_SUPPORTED: 'Phiên bản HTTP không được hỗ trợ',
+    //  === Custom entity-related messages === 
+    INVALID_PRODUCT_REFERENCES: 'Danh sách sản phẩm chứa ID không hợp lệ.',
+    INVALID_ID: 'ID không hợp lệ.',
+    INVALID_INPUT: 'Dữ liệu đầu vào không hợp lệ.',
+
+    //Category
+    CATEGORY_FETCH_SUCCESS: 'Lấy danh sách danh mục thành công.',
+    CATEGORY_NAME_REQUIRED: 'Tên danh mục là bắt buộc.',
+    CATEGORY_NAME_EXISTS: 'Tên danh mục đã tồn tại.',
+    CATEGORY_SLUG_EXISTS: 'Slug danh mục đã tồn tại.',
+    CATEGORY_CREATED: 'Tạo danh mục thành công.',
+    CATEGORY_UPDATED: 'Cập nhật danh mục thành công.',
+    CATEGORY_DELETED: 'Xóa danh mục thành công.',
+    CATEGORY_NOT_FOUND: 'Không tìm thấy danh mục.',
+    //Account
+    USER_FETCH_SUCCESS: 'Lấy danh sách người dùng thành công.',
+    USER_CREATED: 'Tạo người dùng thành công.',
+    USER_UPDATED: 'Cập nhật người dùng thành công.',
+    USER_DELETED: 'Xóa người dùng thành công.',
+    USER_NOT_FOUND: 'Không tìm thấy người dùng.',
+    //Product
+    PRODUCT_NAME_REQUIRED: 'Tên sản phẩm là bắt buộc',
+    PRODUCT_NAME_EXISTS: 'Tên sản phẩm đã được sử dụng',
+    SKU_EXISTS: 'SKU đã được sử dụng',
+    URLSLUG_EXISTS: 'urlSlug đã tồn tại',
+    PRODUCT_CREATED: 'Thêm sản phẩm thành công',
+    PRODUCT_NOT_FOUND: 'Không tìm thấy sản phẩm',
+    PRODUCT_DELETED: 'Đã xóa sản phẩm thành công',
+    //Comment
+    COMMENT_FETCH_SUCCESS: 'Lấy bình luận thành công.',
+    COMMENT_UPDATED: 'Cập nhật bình luận thành công.',
+    COMMENT_CREATED: 'Tạo bình luận thành công.',
+    COMMENT_EXISTS: 'Bạn đã bình luận sản phẩm này rồi.',
+    COMMENT_DELETED: 'Bình luận đã được xóa.',
+    COMMENT_NOT_FOUND: 'Không tìm thấy bình luận.',
+    //Tag
+    TAG_NAME_REQUIRED: 'Tên thẻ là bắt buộc.',
+    TAG_NAME_EXISTS: 'Tên thẻ đã tồn tại.',
+    TAG_NOT_FOUND: 'Không tìm thấy thẻ.',
+    TAG_CREATED: 'Tạo thẻ thành công.',
+    TAG_UPDATED: 'Cập nhật thẻ thành công.',
+    TAG_DELETED: 'Xóa thẻ thành công.',
+    //Cart
+    CART_UPDATED: 'Giỏ hàng đã được cập nhật.',
+    CART_NOT_FOUND: 'Không tìm thấy giỏ hàng.',
+    PRODUCT_NOT_IN_CART: 'Sản phẩm không có trong giỏ hàng.',
+    CART_EMPTY: 'Giỏ hàng hiện đang trống.',
+    CART_CLEARED: 'Đã xoá toàn bộ sản phẩm trong giỏ hàng.',
 };
