@@ -4,7 +4,8 @@ const categoryController = require('../Controllers/category.controller');
 const productController = require('../Controllers/product.controller');
 const userController = require('../Controllers/account.controller');
 const commentController = require('../Controllers/comment.controller');
-const TagController = require('../Controllers/tag.controller');
+const tagController = require('../Controllers/tag.controller');
+const cartController = require('../Controllers/cart.controller');
 
 
 const upload = require('../Middlewares/upload');
@@ -39,12 +40,21 @@ router.delete('/comments/:id', commentController.deleteComment);
 router.post('/comments/reply/:id', commentController.replyToComment);  
 
 //Routes for Tag
-router.get('/tags', TagController.getAllTags);
-router.get('/tags/:id', TagController.getTagById);
-router.post('/tags', TagController.createTag);
-router.put('/tags/:id', TagController.updateTag);
-router.delete('/tags/:id', TagController.deleteTag);
+router.get('/tags', tagController.getAllTags);
+router.get('/tags/:id', tagController.getTagById);
+router.post('/tags', tagController.createTag);
+router.put('/tags/:id', tagController.updateTag);
+router.delete('/tags/:id', tagController.deleteTag);
 
-//Routes for 
+//Routes for Cart
+router.post('/cart/add', cartController.addToCart);
+router.put('/cart/update', cartController.updateQuantity);
+router.delete('/cart/remove', cartController.removeFromCart);
+router.get('/my-cart', cartController.getMyCart);
+router.delete('/cart/clear', cartController.clearMyCart);
+router.get('/cart', cartController.getAllCarts);
+router.get('/cart/:userId', cartController.getCartByUserId);
+router.delete('/cart/:userId', cartController.clearCartByUserId);
+
 
 module.exports = router;
