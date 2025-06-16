@@ -95,25 +95,4 @@ const Messages = {
     ERROR_SERVICE_UNAVAILABLE: 'Dịch vụ không khả dụng',
     ERROR_GATEWAY_TIMEOUT: 'Hết thời gian yêu cầu từ máy chủ khác',
     ERROR_HTTP_VERSION_NOT_SUPPORTED: 'Phiên bản HTTP không được hỗ trợ',
-
-    // Category Messages
-    CATEGORY_FETCH_SUCCESS: 'Lấy danh sách danh mục thành công',
-    CATEGORY_CREATED: 'Tạo danh mục thành công',
-    CATEGORY_UPDATED: 'Cập nhật danh mục thành công',
-    CATEGORY_DELETED: 'Xóa danh mục thành công',
-    CATEGORY_NOT_FOUND: 'Không tìm thấy danh mục',
-    CATEGORY_NAME_REQUIRED: 'Tên danh mục là bắt buộc',
-    CATEGORY_NAME_EXISTS: 'Tên danh mục đã tồn tại',
-    CATEGORY_SLUG_EXISTS: 'Slug danh mục đã tồn tại',
-
-    // Common Messages
-    INVALID_ID: 'ID không hợp lệ',
-    INTERNAL_SERVER_ERROR: 'Lỗi máy chủ nội bộ',
-    UNAUTHORIZED: 'Không được phép truy cập',
-    FORBIDDEN: 'Truy cập bị cấm',
-    NOT_FOUND: 'Không tìm thấy tài nguyên',
-    BAD_REQUEST: 'Yêu cầu không hợp lệ',
-    VALIDATION_ERROR: 'Dữ liệu không hợp lệ'
 };
-
-module.exports = Messages;

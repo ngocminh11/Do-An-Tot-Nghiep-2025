@@ -7,19 +7,26 @@ const { sendSuccess, sendError } = require('../Utils/responseHelper');
 const StatusCodes = require('../Constants/ResponseCode');
 const Messages = require('../Constants/ResponseMessage');
 
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+const buildRegexSearch = (value) =>
+  new RegExp(`${value}`, 'i');
+
 exports.getAllCategories = async (req, res) => {
   try {
-    const { name, slug, page = 1, limit = 10 } = req.query;
+    const { name, status, page = 1, limit = 10 } = req.query;
     const query = {};
 
-    if (name) query.name = { $regex: new RegExp(`^${name}`, 'i') };
-    if (slug) query.slug = { $regex: new RegExp(slug, 'i') };
+    if (name) query.name = buildRegexSearch(name);
+    if (status) query.status = status;
 
     const skip = (page - 1) * limit;
-
     const [categories, totalItems] = await Promise.all([
-      Category.find(query).sort({ createdAt: -1 }).skip(Number(skip)).limit(Number(limit)),
-      Category.countDocuments(query)
+      Category.find(query)
+        .sort({ updatedAt: -1, createdAt: -1 }) // Sort newest update first
+        .skip(Number(skip))
+        .limit(Number(limit)),
+      Category.countDocuments(query),
     ]);
 
     return sendSuccess(res, StatusCodes.SUCCESS_OK, {
@@ -30,29 +37,26 @@ exports.getAllCategories = async (req, res) => {
       perPage: Number(limit)
     }, Messages.CATEGORY_FETCH_SUCCESS);
   } catch (error) {
-    console.error('Error in getAllCategories:', error);
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
 
 exports.getCategoryById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
-    }
+  const { id } = req.params;
+  if (!isValidId(id))
+    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
 
+  try {
     const category = await Category.findById(id);
-    if (!category) {
+    if (!category)
       return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CATEGORY_NOT_FOUND);
-    }
 
     return sendSuccess(res, StatusCodes.SUCCESS_OK, category, Messages.CATEGORY_FETCH_SUCCESS);
   } catch (error) {
-    console.error('Error in getCategoryById:', error);
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
+
 
 exports.createCategory = async (req, res) => {
   try {
@@ -60,17 +64,10 @@ exports.createCategory = async (req, res) => {
 
     const { name, description, status } = req.body;
 
-    // Validate input
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      console.log('Invalid name:', name);
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_NAME_REQUIRED);
-    }
+    if (!name) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_NAME_REQUIRED);
 
-    // Tạo slug từ tên
-    const slug = slugify(name.trim(), { lower: true, strict: true, locale: 'vi' });
-    console.log('Generated slug:', slug);
+    const slug = slugify(name, { lower: true, strict: true, locale: 'vi' });
 
-    // Kiểm tra trùng lặp
     const [nameExists, slugExists] = await Promise.all([
       Category.findOne({ name: name.trim() }),
       Category.findOne({ slug })

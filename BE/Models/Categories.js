@@ -1,25 +1,25 @@
 const mongoose = require('mongoose');
 
+// === Common Validators ===
+const stringValidator = {
+  validator: v => /^[\p{L}0-9\s,-]+$/u.test(v),
+  message: props => `${props.value} chứa ký tự không hợp lệ.`
+};
+
+const wordCountValidator = (min, max) => ({
+  validator: function (v) {
+    const wordCount = v.trim().split(/\s+/).length;
+    return wordCount >= min && wordCount <= max;
+  },
+  message: props =>
+    `${props.path} phải có từ ${min} đến ${max} từ (hiện tại: ${props.value.trim().split(/\s+/).length})`
+});
+
 const CategorySchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, 'Tên danh mục là bắt buộc'],
-    unique: true,
-    trim: true,
-    minlength: [2, 'Tên danh mục phải có ít nhất 2 ký tự'],
-    maxlength: [50, 'Tên danh mục không được vượt quá 50 ký tự']
-  },
-  description: {
-    type: String,
-    default: '',
-    maxlength: [500, 'Mô tả không được vượt quá 500 ký tự']
-  },
-  slug: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true
-  },
+  idCategory: { type: String, required: true, unique: true, trim: true },
+  name: { type: String, required: true, unique: true, trim: true },
+  description: { type: String, default: '' },
+  slug: { type: String, required: true, unique: true, trim: true },
   status: {
     type: String,
     enum: {
@@ -42,8 +42,7 @@ const CategorySchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Middleware để tự động cập nhật updatedAt
-CategorySchema.pre('save', function (next) {
+CategorySchema.pre('save', function(next) {
   this.updatedAt = new Date();
   next();
 });

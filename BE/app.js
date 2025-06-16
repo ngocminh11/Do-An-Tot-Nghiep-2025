@@ -10,7 +10,6 @@ const path = require('path');
 const http = require('http');
 const socketIo = require('socket.io');
 const chatRoutes = require('./Routes/chat.routes');
-const categoryRoutes = require('./Routes/category.routes');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
@@ -82,8 +81,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/admin/categories', categoryRoutes);
-app.use('/admin/products', productRoutes);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
