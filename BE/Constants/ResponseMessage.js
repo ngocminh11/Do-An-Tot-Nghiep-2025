@@ -96,6 +96,7 @@ module.exports = {
      //  === Custom entity-related messages === 
     INVALID_PRODUCT_REFERENCES: 'Danh sách sản phẩm chứa ID không hợp lệ.',
     INVALID_ID: 'ID không hợp lệ.',
+    INVALID_INPUT: 'Dữ liệu đầu vào không hợp lệ.',
 
     //Category
     CATEGORY_FETCH_SUCCESS: 'Lấy danh sách danh mục thành công.',
@@ -134,5 +135,11 @@ module.exports = {
     TAG_CREATED: 'Tạo thẻ thành công.',
     TAG_UPDATED: 'Cập nhật thẻ thành công.',
     TAG_DELETED: 'Xóa thẻ thành công.',
+    //Cart
+    CART_UPDATED: 'Giỏ hàng đã được cập nhật.',
+    CART_NOT_FOUND: 'Không tìm thấy giỏ hàng.',
+    PRODUCT_NOT_IN_CART: 'Sản phẩm không có trong giỏ hàng.',
+    CART_EMPTY: 'Giỏ hàng hiện đang trống.',
+    CART_CLEARED: 'Đã xoá toàn bộ sản phẩm trong giỏ hàng.',
 
 };
