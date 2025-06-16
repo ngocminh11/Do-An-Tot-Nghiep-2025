@@ -10,17 +10,13 @@ const path = require('path');
 const http = require('http');
 const socketIo = require('socket.io');
 const chatRoutes = require('./Routes/chat.routes');
+const adminRoutes = require('./Routes/admin.routes')
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
-
-// Import routes
-const authRoutes = require('./Routes/auth.routes');
-const userRoutes = require('./Routes/user.routes');
-const productRoutes = require('./Routes/product.routes');
 
 const app = express();
 const server = http.createServer(app);
@@ -48,13 +44,6 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Body parser middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Cookie parser
-app.use(cookieParser());
-
 // Sanitize data
 app.use(mongoSanitize());
 
@@ -64,8 +53,12 @@ app.use(xss());
 // Prevent parameter pollution
 app.use(hpp());
 
-// Compression
 app.use(compression());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Cookie parser
+app.use(cookieParser());
 
 // Rate limiting
 const limiter = rateLimit({
@@ -77,10 +70,11 @@ app.use('/api/', limiter);
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+// Chat routes
 app.use('/api/chat', chatRoutes);
+
+//app.use(logToCSV); bi loi log
+app.use('/admin/', adminRoutes);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
@@ -100,20 +94,18 @@ io.on('connection', (socket) => {
 app.set('io', io);
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    message: 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
-
-// 404 handler - must be after all routes
-app.use((req, res) => {
+app.use((req, res, next) => {
   res.status(404).json({
     success: false,
     message: `Route ${req.originalUrl} not found`
+  });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal server error'
   });
 });
 
@@ -130,5 +122,3 @@ mongoose.connect(process.env.MONGODB_URI)
     console.error('MongoDB connection error:', err);
     process.exit(1);
   });
-
-module.exports = app;
