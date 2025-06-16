@@ -12,12 +12,7 @@ const EditCategory = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Log để debug
-        console.log('EditCategory mounted with params:', { id });
-
-        // Kiểm tra id trước khi fetch data
         if (!id) {
-            console.error('id is undefined or null');
             message.error('Không tìm thấy ID danh mục!');
             navigate('/admin/categories');
             return;
@@ -26,24 +21,15 @@ const EditCategory = () => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                console.log('Fetching category with id:', id);
-                const category = await categoryService.getCategoryById(id);
-                console.log('Fetched category data:', category);
-
-                if (category) {
-                    form.setFieldsValue({
-                        name: category.name,
-                        description: category.description,
-                        status: category.status
-                    });
-                } else {
-                    console.error('Category not found for id:', id);
-                    message.error('Không tìm thấy danh mục!');
-                    navigate('/admin/categories');
-                }
+                const category = await categoryService.getById(id);
+                form.setFieldsValue({
+                    name: category.name,
+                    description: category.description,
+                    status: category.status
+                });
             } catch (error) {
                 console.error('Failed to fetch category data:', error);
-                message.error('Không thể tải thông tin danh mục.');
+                message.error(error.message || 'Không thể tải thông tin danh mục.');
                 navigate('/admin/categories');
             } finally {
                 setLoading(false);
@@ -55,34 +41,27 @@ const EditCategory = () => {
     const handleFinish = async (values) => {
         try {
             setLoading(true);
-            const categoryData = {
+            await categoryService.update(id, {
                 name: values.name.trim(),
                 description: values.description.trim(),
                 status: values.status
-            };
+            });
 
-            console.log('Updating category with data:', { id, categoryData });
-
-            const response = await categoryService.updateCategory(id, categoryData);
-
-            if (response) {
-                message.success({
-                    content: 'Cập nhật danh mục thành công!',
-                    duration: 2,
-                    onClose: () => {
-                        navigate('/admin/categories', {
-                            state: {
-                                message: 'Cập nhật danh mục thành công!',
-                                type: 'success'
-                            }
-                        });
-                    }
-                });
-            }
+            message.success({
+                content: 'Cập nhật danh mục thành công!',
+                duration: 2,
+                onClose: () => {
+                    navigate('/admin/categories', {
+                        state: {
+                            message: 'Cập nhật danh mục thành công!',
+                            type: 'success'
+                        }
+                    });
+                }
+            });
         } catch (error) {
             console.error('Failed to update category:', error);
-            const errorMessage = error.message || 'Cập nhật danh mục thất bại!';
-            message.error(errorMessage);
+            message.error(error.message || 'Cập nhật danh mục thất bại!');
         } finally {
             setLoading(false);
         }
