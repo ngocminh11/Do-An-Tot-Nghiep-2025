@@ -30,6 +30,7 @@ exports.getAllCategories = async (req, res) => {
       perPage: Number(limit)
     }, Messages.CATEGORY_FETCH_SUCCESS);
   } catch (error) {
+    console.error('Error in getAllCategories:', error);
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
@@ -48,66 +49,138 @@ exports.getCategoryById = async (req, res) => {
 
     return sendSuccess(res, StatusCodes.SUCCESS_OK, category, Messages.CATEGORY_FETCH_SUCCESS);
   } catch (error) {
+    console.error('Error in getCategoryById:', error);
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
 
 exports.createCategory = async (req, res) => {
   try {
+    console.log('Request body:', req.body);
+
     const { name, description, status } = req.body;
 
-    if (!name) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_NAME_REQUIRED);
+    // Validate input
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      console.log('Invalid name:', name);
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_NAME_REQUIRED);
+    }
 
-    const slug = slugify(name, { lower: true, strict: true, locale: 'vi' });
+    // Tạo slug từ tên
+    const slug = slugify(name.trim(), { lower: true, strict: true, locale: 'vi' });
+    console.log('Generated slug:', slug);
 
+    // Kiểm tra trùng lặp
     const [nameExists, slugExists] = await Promise.all([
-      Category.findOne({ name }),
+      Category.findOne({ name: name.trim() }),
       Category.findOne({ slug })
     ]);
 
-    if (nameExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_NAME_EXISTS);
-    if (slugExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_SLUG_EXISTS);
+    if (nameExists) {
+      console.log('Name already exists:', name);
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_NAME_EXISTS);
+    }
+    if (slugExists) {
+      console.log('Slug already exists:', slug);
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_SLUG_EXISTS);
+    }
 
-    const newCategory = new Category({ name, slug, description, status });
+    // Tạo danh mục mới
+    const newCategory = new Category({
+      name: name.trim(),
+      slug,
+      description: description ? description.trim() : '',
+      status: status || 'active'
+    });
+
+    console.log('New category object:', newCategory);
+
     const saved = await newCategory.save();
+    console.log('Saved category:', saved);
 
     return sendSuccess(res, StatusCodes.SUCCESS_CREATED, saved, Messages.CATEGORY_CREATED);
   } catch (error) {
+    console.error('Error in createCategory:', error);
+    if (error.name === 'ValidationError') {
+      console.error('Validation errors:', error.errors);
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Object.values(error.errors).map(err => err.message).join(', '));
+    }
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
 
 exports.updateCategory = async (req, res) => {
   try {
+    console.log('Update request body:', req.body);
     const { id } = req.params;
-    const { name, slug, description, status } = req.body;
+    const { name, description, status } = req.body;
 
+    // Validate ID
     if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.log('Invalid ID:', id);
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
     }
 
+    // Tìm danh mục cần cập nhật
     const category = await Category.findById(id);
     if (!category) {
+      console.log('Category not found:', id);
       return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CATEGORY_NOT_FOUND);
     }
 
-    const [nameConflict, slugConflict] = await Promise.all([
-      name ? Category.findOne({ name, _id: { $ne: id } }) : null,
-      slug ? Category.findOne({ slug, _id: { $ne: id } }) : null
-    ]);
+    // Validate và xử lý tên mới nếu có
+    if (name) {
+      if (typeof name !== 'string' || name.trim().length === 0) {
+        console.log('Invalid name:', name);
+        return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_NAME_REQUIRED);
+      }
 
-    if (nameConflict) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_NAME_EXISTS);
-    if (slugConflict) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_SLUG_EXISTS);
+      const trimmedName = name.trim();
+      if (trimmedName !== category.name) {
+        // Kiểm tra trùng tên
+        const nameExists = await Category.findOne({
+          name: trimmedName,
+          _id: { $ne: id }
+        });
 
-    category.name = name || category.name;
-    category.slug = slug ? slugify(slug, { lower: true, strict: true, locale: 'vi' }) : category.slug;
-    category.description = description ?? category.description;
-    category.status = status ?? category.status;
-    category.updatedAt = new Date();
+        if (nameExists) {
+          console.log('Name already exists:', trimmedName);
+          return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.CATEGORY_NAME_EXISTS);
+        }
 
+        // Cập nhật tên và slug
+        category.name = trimmedName;
+        category.slug = slugify(trimmedName, { lower: true, strict: true, locale: 'vi' });
+        console.log('Updated name and slug:', { name: category.name, slug: category.slug });
+      }
+    }
+
+    // Cập nhật mô tả nếu có
+    if (description !== undefined) {
+      category.description = description ? description.trim() : '';
+    }
+
+    // Cập nhật trạng thái nếu có
+    if (status !== undefined) {
+      if (!['active', 'inactive', 'archived'].includes(status)) {
+        console.log('Invalid status:', status);
+        return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Trạng thái không hợp lệ');
+      }
+      category.status = status;
+    }
+
+    // Lưu thay đổi
+    console.log('Saving category updates:', category);
     const updated = await category.save();
+    console.log('Category updated successfully:', updated);
+
     return sendSuccess(res, StatusCodes.SUCCESS_OK, updated, Messages.CATEGORY_UPDATED);
   } catch (error) {
+    console.error('Error in updateCategory:', error);
+    if (error.name === 'ValidationError') {
+      console.error('Validation errors:', error.errors);
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Object.values(error.errors).map(err => err.message).join(', '));
+    }
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
@@ -131,10 +204,13 @@ exports.deleteCategory = async (req, res) => {
     }
 
     const deleted = await Category.findByIdAndDelete(id);
-    if (!deleted) return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CATEGORY_NOT_FOUND);
+    if (!deleted) {
+      return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CATEGORY_NOT_FOUND);
+    }
 
     return sendSuccess(res, StatusCodes.SUCCESS_OK, null, Messages.CATEGORY_DELETED);
   } catch (error) {
+    console.error('Error in deleteCategory:', error);
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };

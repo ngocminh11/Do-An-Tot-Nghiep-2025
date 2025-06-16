@@ -13,33 +13,27 @@ const AddCategory = () => {
     const handleFinish = async (values) => {
         try {
             setLoading(true);
-            const categoryData = {
-                idCategory: values.idCategory.trim(),
+            const response = await categoryService.create({
                 name: values.name.trim(),
                 description: values.description.trim(),
                 status: values.status || 'active'
-            };
+            });
 
-            const response = await categoryService.createCategory(categoryData);
-
-            if (response) {
-                message.success({
-                    content: 'Thêm danh mục thành công!',
-                    duration: 2,
-                    onClose: () => {
-                        navigate('/admin/categories', {
-                            state: {
-                                message: 'Thêm danh mục thành công!',
-                                type: 'success'
-                            }
-                        });
-                    }
-                });
-            }
+            message.success({
+                content: 'Thêm danh mục thành công!',
+                duration: 2,
+                onClose: () => {
+                    navigate('/admin/categories', {
+                        state: {
+                            message: 'Thêm danh mục thành công!',
+                            type: 'success'
+                        }
+                    });
+                }
+            });
         } catch (error) {
             console.error('Failed to add category:', error);
-            const errorMessage = error.message || 'Thêm danh mục thất bại!';
-            message.error(errorMessage);
+            message.error(error.message || 'Thêm danh mục thất bại!');
         } finally {
             setLoading(false);
         }
@@ -55,18 +49,6 @@ const AddCategory = () => {
                 style={{ maxWidth: 500 }}
                 validateTrigger={['onChange', 'onBlur']}
             >
-                <Form.Item
-                    name="idCategory"
-                    label="ID Danh mục"
-                    rules={[
-                        { required: true, message: 'Vui lòng nhập ID danh mục' },
-                        { min: 1, message: 'ID danh mục phải có ít nhất 2 ký tự' },
-                        { max: 50, message: 'ID danh mục không được vượt quá 50 ký tự' }
-                    ]}
-                >
-                    <Input placeholder="Nhập ID danh mục" />
-                </Form.Item>
-
                 <Form.Item
                     name="name"
                     label="Tên danh mục"
