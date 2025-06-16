@@ -18,27 +18,28 @@ const CategoryManagement = () => {
         total: 0
     });
     const [searchParams, setSearchParams] = useState({
-        name: '',
-        id: '',
-        slug: ''
+        name: ''
     });
 
     const fetchCategories = async (params = {}) => {
         setLoading(true);
         try {
-            const response = await categoryService.getAllCategories({
+            const response = await categoryService.getAll({
                 ...params,
                 page: pagination.current,
                 limit: pagination.pageSize
             });
-            setCategories(response.data);
+
+            setCategories(response.items);
             setPagination({
                 ...pagination,
-                total: response.totalItems
+                total: response.pagination.totalItems,
+                current: response.pagination.currentPage,
+                pageSize: response.pagination.perPage
             });
         } catch (error) {
             console.error('Error fetching categories:', error);
-            message.error('Không thể tải danh mục sản phẩm');
+            message.error(error.message || 'Không thể tải danh mục sản phẩm');
             setCategories([]);
         } finally {
             setLoading(false);
@@ -103,14 +104,7 @@ const CategoryManagement = () => {
                     <Button
                         type="primary"
                         icon={<EditOutlined />}
-                        onClick={() => {
-                            console.log('Category to edit:', record);
-                            if (!record._id) {
-                                message.error('Không tìm thấy ID danh mục!');
-                                return;
-                            }
-                            navigate(`/admin/categories/edit/${record._id}`);
-                        }}
+                        onClick={() => navigate(`/admin/categories/edit/${record._id}`)}
                     >
                         Sửa
                     </Button>
@@ -133,21 +127,20 @@ const CategoryManagement = () => {
         },
     ];
 
-    const handleDelete = async (_id) => {
+    const handleDelete = async (id) => {
         try {
-            await categoryService.deleteCategory(_id);
+            await categoryService.delete(id);
             message.success('Xóa danh mục thành công.');
             fetchCategories(searchParams);
         } catch (error) {
-            const errorMessage = error.message || 'Xóa danh mục thất bại.';
-            message.error(errorMessage);
+            message.error(error.message || 'Xóa danh mục thất bại.');
         }
     };
 
     const handleSearch = (value) => {
-        setSearchParams({ ...searchParams, name: value });
+        setSearchParams({ name: value });
         setPagination({ ...pagination, current: 1 });
-        fetchCategories({ ...searchParams, name: value });
+        fetchCategories({ name: value });
     };
 
     const handleTableChange = (pagination) => {
@@ -177,7 +170,7 @@ const CategoryManagement = () => {
                 <Table
                     columns={columns}
                     dataSource={categories}
-                    rowKey="idCategory"
+                    rowKey="_id"
                     pagination={pagination}
                     onChange={handleTableChange}
                 />

@@ -1,5 +1,6 @@
 import axios from 'axios';
-import config from '../config/index';
+
+const API_URL = 'http://localhost:5000';
 
 const API = axios.create({
   baseURL: config.API_BASE_URL,
@@ -13,6 +14,7 @@ const API = axios.create({
 // API.interceptors.response.use(...);
 
 const productService = {
+<<<<<<< HEAD
   /**
    * Get all products with optional pagination, search, category, and sorting
    * @param {Object} params - { page, limit, search, category, sortBy, sortOrder }
@@ -35,6 +37,23 @@ const productService = {
       };
     } catch (err) {
       handleError(err, 'getAllProducts');
+=======
+  // Lấy tất cả sản phẩm với phân trang và bộ lọc
+  getAllProducts: async (params = {}) => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/products`, {
+        params: {
+          name: params.name || '',
+          status: params.status || '',
+          page: params.page || 1,
+          limit: params.limit || 10
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      throw error;
+>>>>>>> bc8aecf12629517adc9561412c589bbba5b24af6
     }
   },
 
@@ -43,6 +62,7 @@ const productService = {
    */
   async getProductById(id) {
     try {
+<<<<<<< HEAD
       const res = await API.get(`/admin/products/${id}`);
       return res.data;
     } catch (err) {
@@ -79,6 +99,45 @@ const productService = {
       return res.data;
     } catch (err) {
       handleError(err, 'updateProduct');
+=======
+      const response = await axios.get(`${API_URL}/admin/products/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      throw error;
+    }
+  },
+
+  // Tạo sản phẩm mới
+  createProduct: async (formData) => {
+    try {
+      const response = await axios.post(`${API_URL}/admin/products`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating product:', error);
+      throw error;
+    }
+  },
+
+  // Cập nhật sản phẩm
+  updateProduct: async (id, formData) => {
+    try {
+      const response = await axios.put(`${API_URL}/admin/products/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating product:', error);
+      throw error;
+>>>>>>> bc8aecf12629517adc9561412c589bbba5b24af6
     }
   },
 
@@ -87,12 +146,22 @@ const productService = {
    */
   async deleteProduct(id) {
     try {
+<<<<<<< HEAD
       const res = await API.delete(`/admin/products/${id}`);
       return res.data;
     } catch (err) {
       handleError(err, 'deleteProduct');
     }
   },
+=======
+      const response = await axios.delete(`${API_URL}/admin/products/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      throw error;
+    }
+  }
+>>>>>>> bc8aecf12629517adc9561412c589bbba5b24af6
 };
 
 /**
