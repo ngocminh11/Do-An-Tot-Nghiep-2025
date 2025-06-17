@@ -19,8 +19,7 @@ const CategoryManagement = () => {
     });
     const [searchParams, setSearchParams] = useState({
         name: '',
-        id: '',
-        slug: ''
+        status: ''
     });
 
     const fetchCategories = async (params = {}) => {
@@ -31,11 +30,24 @@ const CategoryManagement = () => {
                 page: pagination.current,
                 limit: pagination.pageSize
             });
-            setCategories(response.data);
-            setPagination({
-                ...pagination,
-                total: response.totalItems
-            });
+
+            // Kiểm tra và xử lý dữ liệu trả về theo cấu trúc API
+            if (response && response.data && response.data.data) {
+                setCategories(response.data.data);
+                setPagination({
+                    ...pagination,
+                    current: response.data.currentPage,
+                    total: response.data.totalItems,
+                    pageSize: response.data.perPage
+                });
+            } else {
+                console.error('Invalid response format:', response);
+                setCategories([]);
+                setPagination({
+                    ...pagination,
+                    total: 0
+                });
+            }
         } catch (error) {
             console.error('Error fetching categories:', error);
             message.error('Không thể tải danh mục sản phẩm');
@@ -45,13 +57,23 @@ const CategoryManagement = () => {
         }
     };
 
+    // Fetch categories khi component mount
+    useEffect(() => {
+        fetchCategories();
+    }, []);
+
+    // Fetch categories khi có thay đổi về pagination hoặc search params
+    useEffect(() => {
+        fetchCategories(searchParams);
+    }, [pagination.current, pagination.pageSize, searchParams]);
+
+    // Xử lý message từ navigation
     useEffect(() => {
         if (location.state?.message) {
             message[location.state.type || 'success'](location.state.message);
             window.history.replaceState({}, document.title);
         }
-        fetchCategories(searchParams);
-    }, [location, pagination.current, pagination.pageSize]);
+    }, [location]);
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -71,18 +93,20 @@ const CategoryManagement = () => {
             title: 'Tên danh mục',
             dataIndex: 'name',
             key: 'name',
-            render: (text) => <span style={{ fontWeight: 'bold' }}>{text}</span>
+            render: (text) => <span style={{ fontWeight: 'bold' }}>{text || 'N/A'}</span>
         },
         {
             title: 'Mô tả',
             dataIndex: 'description',
             key: 'description',
-            ellipsis: true
+            ellipsis: true,
+            render: (text) => text || 'N/A'
         },
         {
             title: 'Slug',
             dataIndex: 'slug',
-            key: 'slug'
+            key: 'slug',
+            render: (text) => text || 'N/A'
         },
         {
             title: 'Trạng thái',
@@ -96,6 +120,18 @@ const CategoryManagement = () => {
             )
         },
         {
+            title: 'Ngày tạo',
+            dataIndex: 'createdAt',
+            key: 'createdAt',
+            render: (date) => new Date(date).toLocaleDateString('vi-VN')
+        },
+        {
+            title: 'Ngày cập nhật',
+            dataIndex: 'updatedAt',
+            key: 'updatedAt',
+            render: (date) => new Date(date).toLocaleDateString('vi-VN')
+        },
+        {
             title: 'Thao tác',
             key: 'action',
             render: (_, record) => (
@@ -104,7 +140,6 @@ const CategoryManagement = () => {
                         type="primary"
                         icon={<EditOutlined />}
                         onClick={() => {
-                            console.log('Category to edit:', record);
                             if (!record._id) {
                                 message.error('Không tìm thấy ID danh mục!');
                                 return;
@@ -115,7 +150,7 @@ const CategoryManagement = () => {
                         Sửa
                     </Button>
                     <Popconfirm
-                        title={`Bạn có chắc chắn muốn xóa danh mục ${record.name}?`}
+                        title={`Bạn có chắc chắn muốn xóa danh mục ${record.name || 'này'}?`}
                         onConfirm={() => handleDelete(record._id)}
                         okText="Xóa"
                         okType="danger"
@@ -134,6 +169,10 @@ const CategoryManagement = () => {
     ];
 
     const handleDelete = async (_id) => {
+        if (!_id) {
+            message.error('Không tìm thấy ID danh mục!');
+            return;
+        }
         try {
             await categoryService.deleteCategory(_id);
             message.success('Xóa danh mục thành công.');
@@ -147,7 +186,6 @@ const CategoryManagement = () => {
     const handleSearch = (value) => {
         setSearchParams({ ...searchParams, name: value });
         setPagination({ ...pagination, current: 1 });
-        fetchCategories({ ...searchParams, name: value });
     };
 
     const handleTableChange = (pagination) => {
@@ -177,7 +215,7 @@ const CategoryManagement = () => {
                 <Table
                     columns={columns}
                     dataSource={categories}
-                    rowKey="idCategory"
+                    rowKey="_id"
                     pagination={pagination}
                     onChange={handleTableChange}
                 />

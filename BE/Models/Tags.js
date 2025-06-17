@@ -6,6 +6,11 @@ const stringValidator = {
   message: props => `${props.value} chứa ký tự không hợp lệ.`
 };
 
+const seoStringValidator = {
+  validator: v => !v || /^[\p{L}0-9\s,.-]+$/u.test(v),
+  message: props => `${props.value} chứa ký tự không hợp lệ.`
+};
+
 const wordCountValidator = (min, max) => ({
   validator: function (v) {
     const wordCount = v.trim().split(/\s+/).length;
@@ -46,20 +51,34 @@ const TagSchema = new mongoose.Schema({
   seo: {
     keywords: {
       type: String,
-      validate: stringValidator
+      validate: seoStringValidator,
+      default: ''
     },
     metaTitle: {
       type: String,
-      validate: stringValidator
+      validate: seoStringValidator,
+      default: ''
     },
     metaDescription: {
-      type: String
+      type: String,
+      default: ''
     },
     urlSlug: {
       type: String,
+      required: true,
       unique: true,
       trim: true,
-      validate: stringValidator
+      validate: stringValidator,
+      default: function () {
+        // Tạo urlSlug từ tên tag nếu không được cung cấp
+        return this.parent().name
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+      }
     }
   },
 
@@ -77,6 +96,29 @@ const TagSchema = new mongoose.Schema({
 // === Middleware ===
 TagSchema.pre('save', function (next) {
   this.updatedAt = new Date();
+
+  // Đảm bảo urlSlug luôn có giá trị
+  if (!this.seo.urlSlug) {
+    this.seo.urlSlug = this.name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  // Đảm bảo các trường SEO có giá trị mặc định
+  if (!this.seo.keywords) {
+    this.seo.keywords = this.name;
+  }
+  if (!this.seo.metaTitle) {
+    this.seo.metaTitle = this.name;
+  }
+  if (!this.seo.metaDescription) {
+    this.seo.metaDescription = this.description;
+  }
+
   next();
 });
 

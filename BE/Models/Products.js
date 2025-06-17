@@ -1,3 +1,4 @@
+const { array, string } = require('joi');
 const mongoose = require('mongoose');
 
 // === Common Validators ===
@@ -124,11 +125,11 @@ const ProductSchema = new mongoose.Schema({
       required: true
     },
     ingredients: {
-      type: String,
+      type: Array,
       required: true
     },
     usageInstructions: {
-      type: String,
+      type: Array,
       required: true
     },
     expiration: {
@@ -161,7 +162,7 @@ const ProductSchema = new mongoose.Schema({
 
   seo: {
     keywords: {
-      type: String,
+      type: [String],
       required: true,
       validate: stringValidator
     },
@@ -185,11 +186,11 @@ const ProductSchema = new mongoose.Schema({
 
   policy: {
     shippingReturnWarranty: {
-      type: String,
+      type: [String],
       required: true
     },
     additionalOptions: {
-      type: String,
+      type: [String],
       required: true
     }
   },

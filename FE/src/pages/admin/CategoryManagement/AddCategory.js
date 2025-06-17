@@ -14,7 +14,6 @@ const AddCategory = () => {
         try {
             setLoading(true);
             const categoryData = {
-                idCategory: values.idCategory.trim(),
                 name: values.name.trim(),
                 description: values.description.trim(),
                 status: values.status || 'active'
@@ -56,24 +55,16 @@ const AddCategory = () => {
                 validateTrigger={['onChange', 'onBlur']}
             >
                 <Form.Item
-                    name="idCategory"
-                    label="ID Danh mục"
-                    rules={[
-                        { required: true, message: 'Vui lòng nhập ID danh mục' },
-                        { min: 1, message: 'ID danh mục phải có ít nhất 2 ký tự' },
-                        { max: 50, message: 'ID danh mục không được vượt quá 50 ký tự' }
-                    ]}
-                >
-                    <Input placeholder="Nhập ID danh mục" />
-                </Form.Item>
-
-                <Form.Item
                     name="name"
                     label="Tên danh mục"
                     rules={[
                         { required: true, message: 'Vui lòng nhập tên danh mục' },
                         { min: 2, message: 'Tên danh mục phải có ít nhất 2 ký tự' },
-                        { max: 50, message: 'Tên danh mục không được vượt quá 50 ký tự' }
+                        { max: 200, message: 'Tên danh mục không được vượt quá 200 ký tự' },
+                        {
+                            pattern: /^[\p{L}0-9\s,-]+$/u,
+                            message: 'Tên danh mục chỉ được chứa chữ cái, số, dấu phẩy và dấu gạch ngang'
+                        }
                     ]}
                 >
                     <Input placeholder="Nhập tên danh mục" />
@@ -83,9 +74,7 @@ const AddCategory = () => {
                     name="description"
                     label="Mô tả"
                     rules={[
-                        { required: true, message: 'Vui lòng nhập mô tả' },
-                        { min: 10, message: 'Mô tả phải có ít nhất 10 ký tự' },
-                        { max: 500, message: 'Mô tả không được vượt quá 500 ký tự' }
+                        { max: 3000, message: 'Mô tả không được vượt quá 3000 ký tự' }
                     ]}
                 >
                     <Input.TextArea

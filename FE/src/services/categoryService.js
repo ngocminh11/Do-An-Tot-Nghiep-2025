@@ -15,9 +15,9 @@ const categoryService = {
     },
 
     // Lấy danh mục theo ID
-    getCategoryById: async (idCategory) => {
+    getCategoryById: async (id) => {
         try {
-            const response = await axios.get(`${API_URL}/admin/categories/${idCategory}`);
+            const response = await axios.get(`${API_URL}/admin/categories/${id}`);
             return response.data;
         } catch (error) {
             console.error('Error in getCategoryById:', error);
@@ -29,7 +29,6 @@ const categoryService = {
     createCategory: async (categoryData) => {
         try {
             const response = await axios.post(`${API_URL}/admin/categories`, {
-                idCategory: categoryData.idCategory,
                 name: categoryData.name,
                 description: categoryData.description,
                 status: categoryData.status || 'active'
@@ -42,9 +41,9 @@ const categoryService = {
     },
 
     // Cập nhật danh mục
-    updateCategory: async (idCategory, categoryData) => {
+    updateCategory: async (id, categoryData) => {
         try {
-            const response = await axios.put(`${API_URL}/admin/categories/${idCategory}`, {
+            const response = await axios.put(`${API_URL}/admin/categories/${id}`, {
                 name: categoryData.name,
                 description: categoryData.description,
                 status: categoryData.status
@@ -57,9 +56,9 @@ const categoryService = {
     },
 
     // Xóa danh mục
-    deleteCategory: async (idCategory) => {
+    deleteCategory: async (id) => {
         try {
-            const response = await axios.delete(`${API_URL}/admin/categories/${idCategory}`);
+            const response = await axios.delete(`${API_URL}/admin/categories/${id}`);
             return response.data;
         } catch (error) {
             console.error('Error in deleteCategory:', error);

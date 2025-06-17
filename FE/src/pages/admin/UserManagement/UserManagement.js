@@ -16,7 +16,7 @@ import {
   Statistic,
 } from 'antd';
 import { DeleteOutlined, EditOutlined, UserOutlined, LockOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import accountService from '../../../services/accountService';
 import './UserManagement.scss';
 
 const { Option } = Select;
@@ -39,20 +39,20 @@ const UserManagement = () => {
     try {
       setLoading(true);
       const { current, pageSize, ...filters } = params;
-      const response = await axios.get('/api/users', {
-        params: {
-          page: current,
-          limit: pageSize,
-          ...filters
-        }
+      const response = await accountService.getAllUsers({
+        page: current,
+        limit: pageSize,
+        ...filters
       });
 
-      setUsers(response.data.data);
-      setPagination({
-        ...pagination,
-        total: response.data.total,
-        current: response.data.currentPage
-      });
+      if (response && response.data) {
+        setUsers(response.data.data);
+        setPagination({
+          ...pagination,
+          total: response.data.total,
+          current: response.data.currentPage
+        });
+      }
     } catch (error) {
       message.error('Không thể tải danh sách người dùng');
     } finally {
@@ -77,23 +77,23 @@ const UserManagement = () => {
   // Handle user update
   const handleUpdateUser = async (values) => {
     try {
-      await axios.put(`/api/users/${editingUser.idUser}`, values);
+      await accountService.updateUser(editingUser._id, values);
       message.success('Cập nhật người dùng thành công');
       setIsModalVisible(false);
       fetchUsers(pagination);
     } catch (error) {
-      message.error('Không thể cập nhật người dùng');
+      message.error(error.message || 'Không thể cập nhật người dùng');
     }
   };
 
   // Handle user delete
   const handleDeleteUser = async (id) => {
     try {
-      await axios.delete(`/api/users?id=${id}`);
+      await accountService.deleteUser(id);
       message.success('Xóa người dùng thành công');
       fetchUsers(pagination);
     } catch (error) {
-      message.error('Không thể xóa người dùng');
+      message.error(error.message || 'Không thể xóa người dùng');
     }
   };
 
@@ -101,8 +101,8 @@ const UserManagement = () => {
   const columns = [
     {
       title: 'ID',
-      dataIndex: 'idUser',
-      key: 'idUser',
+      dataIndex: '_id',
+      key: '_id',
       width: 100,
     },
     {
@@ -130,6 +130,12 @@ const UserManagement = () => {
       width: 150,
     },
     {
+      title: 'Giới tính',
+      dataIndex: 'gender',
+      key: 'gender',
+      width: 100,
+    },
+    {
       title: 'Vai trò',
       dataIndex: 'role',
       key: 'role',
@@ -151,7 +157,15 @@ const UserManagement = () => {
             icon={<EditOutlined />}
             onClick={() => {
               setEditingUser(record);
-              form.setFieldsValue(record);
+              form.setFieldsValue({
+                fullName: record.fullName,
+                email: record.email,
+                phone: record.phone,
+                skinType: record.skinType,
+                gender: record.gender,
+                address: record.address,
+                role: record.role
+              });
               setIsModalVisible(true);
             }}
           >
@@ -159,7 +173,7 @@ const UserManagement = () => {
           </Button>
           <Popconfirm
             title="Bạn có chắc chắn muốn xóa người dùng này?"
-            onConfirm={() => handleDeleteUser(record.idUser)}
+            onConfirm={() => handleDeleteUser(record._id)}
             okText="Có"
             cancelText="Không"
           >
@@ -206,7 +220,7 @@ const UserManagement = () => {
             <Table
               columns={columns}
               dataSource={users}
-              rowKey="idUser"
+              rowKey="_id"
               pagination={pagination}
               loading={loading}
               onChange={handleTableChange}
@@ -218,7 +232,7 @@ const UserManagement = () => {
       {/* Edit User Modal */}
       <Modal
         title="Chỉnh sửa thông tin người dùng"
-        visible={isModalVisible}
+        open={isModalVisible}
         onCancel={() => {
           setIsModalVisible(false);
           form.resetFields();
@@ -233,7 +247,10 @@ const UserManagement = () => {
           <Form.Item
             name="fullName"
             label="Họ và tên"
-            rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
+            rules={[
+              { required: true, message: 'Vui lòng nhập họ và tên' },
+              { min: 3, max: 100, message: 'Họ và tên phải từ 3 đến 100 ký tự' }
+            ]}
           >
             <Input />
           </Form.Item>
@@ -250,7 +267,10 @@ const UserManagement = () => {
           <Form.Item
             name="phone"
             label="Số điện thoại"
-            rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
+            rules={[
+              { required: true, message: 'Vui lòng nhập số điện thoại' },
+              { pattern: /^0\d{9,10}$/, message: 'Số điện thoại không hợp lệ' }
+            ]}
           >
             <Input />
           </Form.Item>
@@ -280,9 +300,22 @@ const UserManagement = () => {
           <Form.Item
             name="address"
             label="Địa chỉ"
-            rules={[{ required: true, message: 'Vui lòng nhập địa chỉ' }]}
+            rules={[
+              { required: true, message: 'Vui lòng nhập địa chỉ' },
+              { min: 5, max: 300, message: 'Địa chỉ phải từ 5 đến 300 ký tự' }
+            ]}
           >
             <Input.TextArea />
+          </Form.Item>
+          <Form.Item
+            name="role"
+            label="Vai trò"
+            rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
+          >
+            <Select>
+              <Option value="admin">Admin</Option>
+              <Option value="customer">Khách hàng</Option>
+            </Select>
           </Form.Item>
           <Form.Item>
             <Space>

@@ -12,12 +12,7 @@ const EditCategory = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Log để debug
-        console.log('EditCategory mounted with params:', { id });
-
-        // Kiểm tra id trước khi fetch data
         if (!id) {
-            console.error('id is undefined or null');
             message.error('Không tìm thấy ID danh mục!');
             navigate('/admin/categories');
             return;
@@ -26,18 +21,15 @@ const EditCategory = () => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                console.log('Fetching category with id:', id);
-                const category = await categoryService.getCategoryById(id);
-                console.log('Fetched category data:', category);
-
-                if (category) {
+                const response = await categoryService.getCategoryById(id);
+                if (response && response.data) {
+                    const categoryData = response.data;
                     form.setFieldsValue({
-                        name: category.name,
-                        description: category.description,
-                        status: category.status
+                        name: categoryData.name,
+                        description: categoryData.description,
+                        status: categoryData.status
                     });
                 } else {
-                    console.error('Category not found for id:', id);
                     message.error('Không tìm thấy danh mục!');
                     navigate('/admin/categories');
                 }
@@ -60,8 +52,6 @@ const EditCategory = () => {
                 description: values.description.trim(),
                 status: values.status
             };
-
-            console.log('Updating category with data:', { id, categoryData });
 
             const response = await categoryService.updateCategory(id, categoryData);
 
@@ -107,7 +97,11 @@ const EditCategory = () => {
                         rules={[
                             { required: true, message: 'Vui lòng nhập tên danh mục' },
                             { min: 2, message: 'Tên danh mục phải có ít nhất 2 ký tự' },
-                            { max: 50, message: 'Tên danh mục không được vượt quá 50 ký tự' }
+                            { max: 200, message: 'Tên danh mục không được vượt quá 200 ký tự' },
+                            {
+                                pattern: /^[\p{L}0-9\s,-]+$/u,
+                                message: 'Tên danh mục chỉ được chứa chữ cái, số, dấu phẩy và dấu gạch ngang'
+                            }
                         ]}
                     >
                         <Input placeholder="Nhập tên danh mục" />
@@ -117,9 +111,7 @@ const EditCategory = () => {
                         name="description"
                         label="Mô tả"
                         rules={[
-                            { required: true, message: 'Vui lòng nhập mô tả' },
-                            { min: 10, message: 'Mô tả phải có ít nhất 10 ký tự' },
-                            { max: 500, message: 'Mô tả không được vượt quá 500 ký tự' }
+                            { max: 3000, message: 'Mô tả không được vượt quá 3000 ký tự' }
                         ]}
                     >
                         <Input.TextArea
