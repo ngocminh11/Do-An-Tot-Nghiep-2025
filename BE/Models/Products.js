@@ -91,23 +91,23 @@ const ProductSchema = new mongoose.Schema({
   },
 
   media: {
-  mainImage: {
-    type: String,
-    required: true
-  },
-  imageGallery: {
-    type: [String],
-    required: true,
-    validate: {
-      validator: arr => Array.isArray(arr) && arr.length > 0,
-      message: 'Image gallery must not be empty'
+    mainImage: {
+      type: String,
+      required: true
+    },
+    imageGallery: {
+      type: [String],
+      required: true,
+      validate: {
+        validator: arr => Array.isArray(arr) && arr.length > 0,
+        message: 'Image gallery must not be empty'
+      }
+    },
+    videoUrl: {
+      type: String,
+      default: null
     }
   },
-  videoUrl: {
-    type: String,
-    default: null
-  }
-},
 
   mediaFiles: {
     images: [mediaFileSchema],
