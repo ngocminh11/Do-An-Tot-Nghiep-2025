@@ -6,17 +6,18 @@ const userController = require('../Controllers/account.controller');
 const commentController = require('../Controllers/comment.controller');
 const tagController = require('../Controllers/tag.controller');
 const cartController = require('../Controllers/cart.controller');
-
-
-const upload = require('../Middlewares/upload');
+const mediaController = require('../Controllers/media.controller');
+const validateImageUpload = require('../Middlewares/upload.middleware');
 
 //Routes for Product
 router.get('/products', productController.getAllProducts);
 router.get('/products/:id', productController.getProductById);
-router.post('/products', upload.array('files'), productController.createProduct);
-router.put('/products/:id', upload.array('files'), productController.updateProduct);
+router.post('/products', validateImageUpload, productController.createProduct);
+router.put('/products/:id', validateImageUpload, productController.updateProduct);
 router.delete('/products/:id', productController.deleteProduct);
 router.get('/products/export/csv', productController.exportProductsToExcel);
+
+router.get('/media/:id', mediaController.streamImageById);
 
 //Routes for Category
 router.get('/categories', categoryController.getAllCategories);

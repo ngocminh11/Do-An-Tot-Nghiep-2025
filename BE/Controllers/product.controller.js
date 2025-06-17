@@ -3,19 +3,17 @@ const Category = require('../Models/Categories');
 const path = require('path');
 const ExcelJS = require('exceljs');
 const moment = require('moment');
-const { Parser } = require('json2csv');
 const slugify = require('slugify');
 const mongoose = require('mongoose');
-const fs = require('fs').promises;
-
 const { sendSuccess, sendError } = require('../Utils/responseHelper');
 const StatusCodes = require('../Constants/ResponseCode');
 const Messages = require('../Constants/ResponseMessage');
+require('dotenv').config();
 
 const isValidId = id => mongoose.Types.ObjectId.isValid(id);
 const formatDate = date => new Date(date).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-
 const buildRegexSearch = value => new RegExp(`^${value}`, 'i');
+const buildImageUrl = filename => `${process.env.SERVER_URL}/uploads/${filename}`;
 
 const helperGetFilterFromQuery = query => {
   const { name, status, brand, categoryId, all } = query;
@@ -34,7 +32,7 @@ exports.getAllProducts = async (req, res) => {
     const { name, status, page = 1, limit = 10 } = req.query;
     const query = {};
 
-    if (name) query['basicInformation.name'] = buildRegexSearch(name);
+    if (name) query['basicInformation.productName'] = buildRegexSearch(name);
     if (status) query['basicInformation.status'] = status;
 
     const skip = (page - 1) * limit;
@@ -77,92 +75,210 @@ exports.getProductById = async (req, res) => {
 };
 
 exports.createProduct = async (req, res) => {
+  let basicInformation = {};
+  let pricingAndInventory = {};
+  let description = {};
+  let technicalDetails = {};
+  let seo = {};
+  let policy = {};
+
   try {
-    const {
-      name, sku, urlSlug, shortDescription, fullDescription,
-      brand, origin, ingredients, status, categoryIds,
-      price, originalPrice, stockQuantity
-    } = req.body;
+    basicInformation = JSON.parse(req.body.basicInformation || '{}');
+    pricingAndInventory = JSON.parse(req.body.pricingAndInventory || '{}');
+    description = JSON.parse(req.body.description || '{}');
+    technicalDetails = JSON.parse(req.body.technicalDetails || '{}');
+    seo = JSON.parse(req.body.seo || '{}');
+    policy = JSON.parse(req.body.policy || '{}');
+    console.log(seo);
+  } catch (err) {
+    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Dữ liệu JSON không hợp lệ: ' + err.message);
+  }
 
-    if (!name)
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.PRODUCT_NAME_REQUIRED);
+  if (!basicInformation.productName || !basicInformation.sku) {
+    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.PRODUCT_NAME_REQUIRED);
+  }
 
-    const [nameExists, skuExists, slugExists] = await Promise.all([
-      Product.findOne({ 'basicInformation.name': name }),
-      Product.findOne({ 'basicInformation.sku': sku }),
-      Product.findOne({ 'basicInformation.urlSlug': urlSlug }),
-    ]);
+  const [nameExists, skuExists] = await Promise.all([
+    Product.findOne({ 'basicInformation.productName': basicInformation.productName }),
+    Product.findOne({ 'basicInformation.sku': basicInformation.sku })
+  ]);
 
-    if (nameExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.PRODUCT_NAME_EXISTS);
-    if (skuExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.SKU_EXISTS);
-    if (slugExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.URLSLUG_EXISTS);
+  if (nameExists)
+    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.PRODUCT_NAME_EXISTS);
+  if (skuExists)
+    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.SKU_EXISTS);
 
-    const product = new Product({
-      basicInformation: {
-        name,
-        sku,
-        urlSlug: slugify(urlSlug, { lower: true, strict: true, locale: 'vi' }),
-        shortDescription,
-        fullDescription,
-        brand,
-        origin,
-        ingredients,
-        status,
-        categoryIds,
-      },
-      pricing: {
-        price,
-        originalPrice,
-        stockQuantity,
-      },
-    });
+  // === Tạo slug từ productName ===
+  let baseSlug = slugify(basicInformation.productName, {
+    lower: true,
+    strict: true,
+    locale: 'vi'
+  });
+  let slug = baseSlug;
+  let i = 1;
+  while (await Product.findOne({ 'seo.urlSlug': slug })) {
+    slug = `${baseSlug}-${i++}`;
+  }
 
+  const uploadedImages = req.uploadedImages;
+  if (!uploadedImages || uploadedImages.length === 0) {
+    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.IMAGE_REQUIRED);
+  }
+
+  const mainImage = uploadedImages[0];
+  let imageGallery = uploadedImages.slice(1);
+
+  // Nếu không đủ ảnh cho gallery thì thêm mainImage vào gallery
+  if (imageGallery.length === 0) {
+    imageGallery.push(mainImage);
+  }
+
+  const product = new Product({
+    basicInformation,
+    pricingAndInventory,
+    description,
+    technicalDetails,
+    seo: {
+      ...seo,
+      urlSlug: slug
+    },
+    policy,
+    media: {
+      mainImage: `/media/${mainImage._id}`,
+      imageGallery: imageGallery.map(file => `/media/${file._id}`),
+      videoUrl: null
+    },
+    mediaFiles: {
+      images: uploadedImages.map(file => ({
+        path: `/media/${file._id}`,
+        filename: file.filename,
+        mimetype: file.contentType,
+        size: file.size
+      })),
+      videos: []
+    }
+  });
+
+  try {
     const saved = await product.save();
     return sendSuccess(res, StatusCodes.SUCCESS_CREATED, { product: saved }, Messages.PRODUCT_CREATED);
-  } catch (error) {
-    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, error.message);
+  } catch (err) {
+    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, err.message);
   }
 };
 
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
-  if (!isValidId(id))
+
+  // 1. Validate ID
+  if (!isValidId(id)) {
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+  }
 
   try {
+    // 2. Tìm sản phẩm
     const product = await Product.findById(id);
-    if (!product)
+    if (!product) {
       return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.PRODUCT_NOT_FOUND);
+    }
 
-    const {
-      name, sku, urlSlug, categoryIds,
-      basicInformation = {}, pricing = {}
-    } = req.body;
+    // 3. Parse body an toàn
+    let parsedData = {};
+    const fieldsToParse = [
+      'basicInformation', 'pricingAndInventory',
+      'description', 'technicalDetails',
+      'seo', 'policy'
+    ];
 
-    const [nameExists, skuExists, slugExists] = await Promise.all([
-      name ? Product.findOne({ 'basicInformation.name': name, _id: { $ne: id } }) : null,
-      sku ? Product.findOne({ 'basicInformation.sku': sku, _id: { $ne: id } }) : null,
-      urlSlug ? Product.findOne({ 'basicInformation.urlSlug': urlSlug, _id: { $ne: id } }) : null,
+    try {
+      for (const field of fieldsToParse) {
+        parsedData[field] = JSON.parse(req.body[field] || '{}');
+      }
+    } catch (err) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, `Dữ liệu JSON không hợp lệ: ${err.message}`);
+    }
+
+    const { basicInformation, pricingAndInventory, description, technicalDetails, seo, policy } = parsedData;
+    const { productName, sku } = basicInformation;
+
+    // 4. Kiểm tra trùng productName, sku
+    const [nameExists, skuExists] = await Promise.all([
+      productName
+        ? Product.findOne({ 'basicInformation.productName': productName, _id: { $ne: id } })
+        : null,
+      sku
+        ? Product.findOne({ 'basicInformation.sku': sku, _id: { $ne: id } })
+        : null
     ]);
 
     if (nameExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.PRODUCT_NAME_EXISTS);
     if (skuExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.SKU_EXISTS);
-    if (slugExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.URLSLUG_EXISTS);
 
-    if (name) product.basicInformation.name = name;
+    // 5. Cập nhật slug nếu tên đổi
+    if (productName && productName !== product.basicInformation.productName) {
+      const baseSlug = slugify(productName, { lower: true, strict: true, locale: 'vi' });
+      let slug = baseSlug;
+      let counter = 1;
+
+      while (await Product.exists({ 'seo.urlSlug': slug, _id: { $ne: id } })) {
+        slug = `${baseSlug}-${counter++}`;
+      }
+
+      product.seo.urlSlug = slug;
+    }
+
+    // 6. Gán dữ liệu mới (sạch hơn Object.assign)
+    if (productName) product.basicInformation.productName = productName;
     if (sku) product.basicInformation.sku = sku;
-    if (urlSlug) product.basicInformation.urlSlug = slugify(urlSlug, { lower: true, strict: true, locale: 'vi' });
-    if (categoryIds) product.basicInformation.categoryIds = categoryIds;
+    if (basicInformation.categoryIds) product.basicInformation.categoryIds = basicInformation.categoryIds;
 
-    Object.assign(product.basicInformation, basicInformation);
-    Object.assign(product.pricing, pricing);
+    product.basicInformation = { ...product.basicInformation, ...basicInformation };
+    product.pricingAndInventory = { ...product.pricingAndInventory, ...pricingAndInventory };
+    product.description = { ...product.description, ...description };
+    product.technicalDetails = { ...product.technicalDetails, ...technicalDetails };
+    product.seo = { ...product.seo, ...seo };
+    product.policy = { ...product.policy, ...policy };
 
-    const updated = await product.save();
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, updated, Messages.PRODUCT_UPDATED);
-  } catch (error) {
-    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, error.message);
+    // 7. Xử lý ảnh nếu có upload
+    const uploadedImages = req.uploadedImages;
+    if (uploadedImages?.length > 0) {
+      if (uploadedImages.length > 6) {
+        return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.MAX_IMAGE_COUNT_EXCEEDED);
+      }
+
+      const totalSize = uploadedImages.reduce((sum, f) => sum + f.size, 0);
+      if (totalSize > 30 * 1024 * 1024) {
+        return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.MAX_TOTAL_SIZE_EXCEEDED);
+      }
+
+      const mainImage = uploadedImages[0];
+      const imageGallery = uploadedImages.slice(1);
+      if (imageGallery.length === 0) imageGallery.push(mainImage);
+
+      product.media = {
+        mainImage: `/media/${mainImage._id}`,
+        imageGallery: imageGallery.map(file => `/media/${file._id}`),
+        videoUrl: null
+      };
+
+      product.mediaFiles.images = uploadedImages.map(file => ({
+        path: `/media/${file._id}`,
+        filename: file.filename,
+        mimetype: file.contentType,
+        size: file.size
+      }));
+    }
+
+    // 8. Lưu và trả kết quả
+    const savedProduct = await product.save();
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, { product: savedProduct }, Messages.PRODUCT_UPDATED);
+
+  } catch (err) {
+    console.error('Update Product Error:', err);
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
+
 
 exports.deleteProduct = async (req, res) => {
   const { id } = req.params;
@@ -183,7 +299,6 @@ exports.deleteProduct = async (req, res) => {
 exports.exportProductsToExcel = async (req, res) => {
   try {
     const filter = helperGetFilterFromQuery(req.query);
-
     const products = await Product.find(filter)
       .populate('basicInformation.categoryIds', 'name')
       .sort({ updatedAt: -1, createdAt: -1 });
@@ -212,16 +327,13 @@ exports.exportProductsToExcel = async (req, res) => {
     ];
 
     worksheet.getRow(1).font = { name: 'Times New Roman', bold: true };
-
     ['price', 'originalPrice', 'stock'].forEach(key => {
       worksheet.getColumn(key).numFmt = '#,##0';
       worksheet.getColumn(key).alignment = { horizontal: 'center' };
     });
-
     ['createdAt', 'updatedAt'].forEach(key => {
       worksheet.getColumn(key).alignment = { horizontal: 'center' };
     });
-
     worksheet.views = [{ state: 'frozen', ySplit: 1 }];
 
     products.forEach(p => {
