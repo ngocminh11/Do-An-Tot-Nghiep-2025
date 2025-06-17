@@ -49,6 +49,12 @@ const ProductSchema = new mongoose.Schema({
       ref: 'Category',
       required: true
     }],
+    tagIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tag',
+      required: true
+
+    }],
     brand: {
       type: String,
       required: true,
@@ -63,7 +69,6 @@ const ProductSchema = new mongoose.Schema({
       type: String
     }
   },
-
   pricingAndInventory: {
     originalPrice: { type: Number, required: true, min: 0 },
     salePrice: { type: Number, required: true, min: 0 },

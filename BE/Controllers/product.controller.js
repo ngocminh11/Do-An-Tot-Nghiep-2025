@@ -89,15 +89,20 @@ exports.createProduct = async (req, res) => {
     technicalDetails = JSON.parse(req.body.technicalDetails || '{}');
     seo = JSON.parse(req.body.seo || '{}');
     policy = JSON.parse(req.body.policy || '{}');
-    console.log(seo);
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Dữ liệu JSON không hợp lệ: ' + err.message);
   }
 
+  // Validate required fields
   if (!basicInformation.productName || !basicInformation.sku) {
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.PRODUCT_NAME_REQUIRED);
   }
 
+  if (!Array.isArray(basicInformation.tagIds) || basicInformation.tagIds.length === 0) {
+    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Sản phẩm phải có ít nhất một tag.');
+  }
+
+  // Check duplicates
   const [nameExists, skuExists] = await Promise.all([
     Product.findOne({ 'basicInformation.productName': basicInformation.productName }),
     Product.findOne({ 'basicInformation.sku': basicInformation.sku })
@@ -108,7 +113,7 @@ exports.createProduct = async (req, res) => {
   if (skuExists)
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.SKU_EXISTS);
 
-  // === Tạo slug từ productName ===
+  // Generate slug
   let baseSlug = slugify(basicInformation.productName, {
     lower: true,
     strict: true,
@@ -120,19 +125,16 @@ exports.createProduct = async (req, res) => {
     slug = `${baseSlug}-${i++}`;
   }
 
+  // Validate images
   const uploadedImages = req.uploadedImages;
   if (!uploadedImages || uploadedImages.length === 0) {
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.IMAGE_REQUIRED);
   }
 
   const mainImage = uploadedImages[0];
-  let imageGallery = uploadedImages.slice(1);
+  const imageGallery = uploadedImages.length > 1 ? uploadedImages.slice(1) : [mainImage];
 
-  // Nếu không đủ ảnh cho gallery thì thêm mainImage vào gallery
-  if (imageGallery.length === 0) {
-    imageGallery.push(mainImage);
-  }
-
+  // Create product
   const product = new Product({
     basicInformation,
     pricingAndInventory,
@@ -145,7 +147,7 @@ exports.createProduct = async (req, res) => {
     policy,
     media: {
       mainImage: `/media/${mainImage._id}`,
-      imageGallery: imageGallery.map(file => `/media/${file._id}`),
+      imageGallery: imageGallery.map(img => `/media/${img._id}`),
       videoUrl: null
     },
     mediaFiles: {
@@ -170,19 +172,15 @@ exports.createProduct = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
 
-  // 1. Validate ID
   if (!isValidId(id)) {
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
   }
 
   try {
-    // 2. Tìm sản phẩm
     const product = await Product.findById(id);
     if (!product) {
       return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.PRODUCT_NOT_FOUND);
     }
-
-    // 3. Parse body an toàn
     let parsedData = {};
     const fieldsToParse = [
       'basicInformation', 'pricingAndInventory',
@@ -198,10 +196,17 @@ exports.updateProduct = async (req, res) => {
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, `Dữ liệu JSON không hợp lệ: ${err.message}`);
     }
 
-    const { basicInformation, pricingAndInventory, description, technicalDetails, seo, policy } = parsedData;
-    const { productName, sku } = basicInformation;
+    const {
+      basicInformation = {},
+      pricingAndInventory,
+      description,
+      technicalDetails,
+      seo,
+      policy
+    } = parsedData;
 
-    // 4. Kiểm tra trùng productName, sku
+    const { productName, sku, tagIds } = basicInformation;
+
     const [nameExists, skuExists] = await Promise.all([
       productName
         ? Product.findOne({ 'basicInformation.productName': productName, _id: { $ne: id } })
@@ -214,7 +219,13 @@ exports.updateProduct = async (req, res) => {
     if (nameExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.PRODUCT_NAME_EXISTS);
     if (skuExists) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.SKU_EXISTS);
 
-    // 5. Cập nhật slug nếu tên đổi
+    if (tagIds !== undefined) {
+      if (!Array.isArray(tagIds) || tagIds.length === 0) {
+        return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Sản phẩm phải có ít nhất một tag.');
+      }
+      product.basicInformation.tagIds = tagIds;
+    }
+
     if (productName && productName !== product.basicInformation.productName) {
       const baseSlug = slugify(productName, { lower: true, strict: true, locale: 'vi' });
       let slug = baseSlug;
@@ -227,7 +238,6 @@ exports.updateProduct = async (req, res) => {
       product.seo.urlSlug = slug;
     }
 
-    // 6. Gán dữ liệu mới (sạch hơn Object.assign)
     if (productName) product.basicInformation.productName = productName;
     if (sku) product.basicInformation.sku = sku;
     if (basicInformation.categoryIds) product.basicInformation.categoryIds = basicInformation.categoryIds;
@@ -239,7 +249,6 @@ exports.updateProduct = async (req, res) => {
     product.seo = { ...product.seo, ...seo };
     product.policy = { ...product.policy, ...policy };
 
-    // 7. Xử lý ảnh nếu có upload
     const uploadedImages = req.uploadedImages;
     if (uploadedImages?.length > 0) {
       if (uploadedImages.length > 6) {
@@ -268,8 +277,6 @@ exports.updateProduct = async (req, res) => {
         size: file.size
       }));
     }
-
-    // 8. Lưu và trả kết quả
     const savedProduct = await product.save();
     return sendSuccess(res, StatusCodes.SUCCESS_OK, { product: savedProduct }, Messages.PRODUCT_UPDATED);
 
@@ -278,7 +285,6 @@ exports.updateProduct = async (req, res) => {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
-
 
 exports.deleteProduct = async (req, res) => {
   const { id } = req.params;
