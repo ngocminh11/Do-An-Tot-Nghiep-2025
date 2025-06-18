@@ -1,0 +1,120 @@
+.dashboard {
+    padding: 24px;
+
+    h1 {
+        margin-bottom: 24px;
+        color: #1a1a1a;
+        font-weight: 600;
+    }
+
+    .stat-card {
+        transition: all 0.3s ease;
+
+        &:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .ant-statistic-title {
+            font-size: 16px;
+            color: #666;
+        }
+
+        .ant-statistic-content {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .growth-rate {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+
+            .growth-label {
+                color: #666;
+                font-size: 12px;
+                margin-left: 4px;
+            }
+        }
+    }
+
+    .chart-card {
+        height: 100%;
+        transition: all 0.3s ease;
+
+        &:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .ant-card-head-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+    }
+
+    .table-card {
+        height: 100%;
+        transition: all 0.3s ease;
+
+        &:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .ant-card-head-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+    }
+
+    .status-progress {
+        margin-bottom: 16px;
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: #666;
+        }
+
+        .ant-progress {
+            margin-bottom: 8px;
+        }
+    }
+
+    .status-completed {
+        color: #52c41a;
+        font-weight: 500;
+    }
+
+    .status-processing {
+        color: #1890ff;
+        font-weight: 500;
+    }
+
+    .status-pending {
+        color: #faad14;
+        font-weight: 500;
+    }
+
+    .status-cancelled {
+        color: #f5222d;
+        font-weight: 500;
+    }
+}
+
+// Responsive styles
+@media (max-width: 768px) {
+    .dashboard {
+        h1 {
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+
+        .ant-card {
+            .ant-statistic-content {
+                font-size: 20px;
+            }
+        }
+    }
+}

@@ -1,0 +1,227 @@
+{
+    "intents": [
+      {
+        "tag": "greeting",
+        "patterns": [
+          "xin chào",
+          "chào bạn",
+          "hi",
+          "hello",
+          "hey",
+          "alo",
+          "chào bot",
+          "chào trợ lý",
+          "coo",
+          "coucou"
+        ],
+        "responses": [
+          "Xin chào! Tôi là trợ lý ảo của CoCoo 🌸. Tôi có thể giúp bạn về chăm sóc da, thành phần, quy trình và sản phẩm. Bạn quan tâm điều gì trước tiên?",
+          "Chào mừng bạn đến với CoCoo! Cho tôi biết loại da hoặc vấn đề da bạn đang gặp, mình sẽ đồng hành cùng bạn."
+        ],
+        "context_set": "awaiting_topic"
+      },
+  
+      {
+        "tag": "goodbye",
+        "patterns": [
+          "tạm biệt",
+          "bye",
+          "goodbye",
+          "hẹn gặp lại",
+          "cảm ơn",
+          "thanks",
+          "cảm ơn bạn"
+        ],
+        "responses": [
+          "Cảm ơn bạn đã trò chuyện với tôi! Chúc bạn luôn rạng rỡ. Khi cần, cứ ghé CoCoo nhé 💖",
+          "Rất vui được hỗ trợ bạn. Hẹn gặp lại và nhớ bôi kem chống nắng mỗi ngày nhé!"
+        ]
+      },
+  
+      {
+        "tag": "skin_types",
+        "patterns": [
+          "các loại da",
+          "phân loại da",
+          "da có mấy loại",
+          "da thường là gì",
+          "da khô là gì",
+          "da dầu là gì",
+          "da hỗn hợp là gì",
+          "da nhạy cảm là gì",
+          "phân tích loại da"
+        ],
+        "responses": [
+          "Có 5 loại da cơ bản:\n① Da thường – cân bằng, lỗ chân lông nhỏ.\n② Da khô – thiếu dầu & nước, dễ bong tróc.\n③ Da dầu – bóng, lỗ chân lông to, dễ mụn.\n④ Da hỗn hợp – chữ T dầu, má khô.\n⑤ Da nhạy cảm – dễ đỏ, rát, kích ứng.\n\nBạn nghi mình thuộc loại nào? Nếu chưa chắc, tôi có thể hướng dẫn test giấy thấm dầu trong 30 phút."
+        ]
+      },
+  
+      {
+        "tag": "hydration_vs_moisture",
+        "patterns": [
+          "khác nhau giữa cấp nước và dưỡng ẩm",
+          "hydration vs moisturization",
+          "cấp ẩm và khóa ẩm",
+          "ẩm và nước"
+        ],
+        "responses": [
+          "Hydration = cấp nước (humectants: HA, glycerin…)\nMoisturization = khóa ẩm (occlusives: petrolatum, squalane…), bổ sung dầu (emollients).\nDa thiếu nước → căng, xỉn.\nDa thiếu dầu → bong tróc, thô ráp.\n\nThông tin thêm: muốn tối ưu, hãy dùng humectant + emollient + occlusive theo thứ tự lỏng → đặc."
+        ]
+      },
+  
+      {
+        "tag": "skin_care_routine",
+        "patterns": [
+          "quy trình chăm sóc da",
+          "các bước skincare",
+          "skincare routine",
+          "chăm sóc da cơ bản",
+          "routine cho người mới"
+        ],
+        "responses": [
+          "Routine tối giản AM/PM:\nAM ☀️: Sữa rửa mặt nhẹ → Serum chống oxi hóa (vitamin C) → Kem dưỡng mỏng → Chống nắng SPF 50.\nPM 🌙: Tẩy trang → Sữa rửa mặt → Toner cân bằng → Serum đặc trị (BHA/Retinol…) → Kem dưỡng phục hồi.\n\nBạn muốn đào sâu bước nào, hay cần routine cho loại da cụ thể?"
+        ],
+        "context_set": "awaiting_step"
+      },
+  
+      {
+        "tag": "layering_order",
+        "patterns": [
+          "thứ tự bôi skincare",
+          "layer sản phẩm sao cho đúng",
+          "apply sản phẩm trước sau",
+          "layering order"
+        ],
+        "responses": [
+          "Nguyên tắc: lỏng → đặc, pH thấp → cao, treatment mạnh (AHA/BHA/Retinol) nên nằm gần da.\n1) Sản phẩm rửa\n2) Toner/Essence (nếu có)\n3) Serum gốc nước\n4) Serum gốc dầu\n5) Lotion/Cream\n6) Dầu dưỡng (face oil)\n7) Chống nắng (buổi sáng).\n\nThao tác 60-giây giúp sản phẩm thấm tốt: vỗ nhẹ, tránh chà xát mạnh."
+        ]
+      },
+  
+      {
+        "tag": "ingredients",
+        "patterns": [
+          "thành phần dưỡng da",
+          "thành phần tốt cho da",
+          "niacinamide là gì",
+          "retinol công dụng",
+          "vitamin c tác dụng",
+          "aha bha",
+          "peptide",
+          "ceramide"
+        ],
+        "responses": [
+          "Bạn có thể gõ tên thành phần bất kỳ để tôi giải thích sâu: độ pH tối ưu, phần trăm hiệu quả, kết hợp & kiêng kỵ.\nVí dụ:\n• Niacinamide 5 % → giảm dầu, sáng da, dùng chung BHA/Retinol ok.\n• Retinol 0.3 % → chống lão hóa, dùng ban đêm, phải chống nắng kỹ.\n• AHA 8 % → bong sừng, hỗ trợ mờ thâm.\n\nThành phần nào bạn muốn zoom kỹ?"
+        ]
+      },
+  
+      {
+        "tag": "ingredient_incompatibility",
+        "patterns": [
+          "thành phần nào không nên kết hợp",
+          "kị nhau",
+          "có dùng chung retinol với aha không",
+          "dùng vitamin c với niacinamide được không"
+        ],
+        "responses": [
+          "Một vài cặp “khó ở”:\n• Retinol ↔ Benzoyl Peroxide: oxy hóa nhau → giảm hiệu quả.\n• AHA/BHA ↔ Vitamin C L-AA: pH chênh, dễ kích ứng.\n• Niacinamide <6% ↔ Vitamin C L-AA: ổn, nhưng nên cách 10-15 phút nếu da nhạy cảm.\n\nNếu bạn đã trót mix, để ý dấu hiệu châm chích và phục hồi với kem chứa ceramide."
+        ]
+      },
+  
+      {
+        "tag": "skin_problems",
+        "patterns": [
+          "mụn viêm",
+          "mụn ẩn",
+          "mụn đầu đen",
+          "da đổ dầu",
+          "da bong tróc",
+          "thâm mụn",
+          "nám",
+          "lão hóa",
+          "kích ứng"
+        ],
+        "responses": [
+          "Hãy cho tôi biết:\n① Loại mụn/vấn đề chính?\n② Mức độ (nhẹ/vừa/nặng)?\n③ Bạn đang dùng treatment gì?\nTừ đó tôi sẽ đề xuất routine 3–6 tháng kèm sản phẩm prescription-strength (nếu cần) hoặc OTC an toàn."
+        ],
+        "context_set": "awaiting_problem_detail"
+      },
+  
+      {
+        "tag": "teen_acne",
+        "patterns": [
+          "mụn tuổi dậy thì",
+          "skincare cho học sinh",
+          "mụn ở tuổi teen",
+          "routine cho sinh viên ít tiền"
+        ],
+        "responses": [
+          "Nguyên tắc ‘chống-dầu + kháng-viêm’:\n1. Gel rửa mặt dịu nhẹ pH ~ 5.5 (Cosrx Low pH, La Roche-Posay Effaclar Gel).\n2. 2–3 lần/tuần: BHA 2 % (Paula’s Choice BHA) quét vùng mụn.\n3. Buổi tối: Niacinamide 5 %.\n4. Buổi sáng: SPF 50, oil-free.\nTổng chi phí ~500k–700k/tháng."
+        ]
+      },
+  
+      {
+        "tag": "pregnancy_safe",
+        "patterns": [
+          "mang thai dùng sản phẩm gì",
+          "pregnancy safe skincare",
+          "thành phần cấm khi có bầu",
+          "phụ nữ có thai nên tránh"
+        ],
+        "responses": [
+          "Tránh hoàn toàn: Retinoids, BHA >2 %, Hydroquinone, Tazarotene.\nAn toàn: Vitamin C, Niacinamide, Azelaic Acid, HA, Ceramide, Kem chống nắng vật lý (ZnO/TiO₂).\n\nGợi ý routine: Rửa mặt dịu nhẹ → Serum HA → Kem dưỡng ceramide → SPF khoáng. Luôn hỏi ý kiến bác sĩ trước khi dùng treatment."
+        ]
+      },
+  
+      {
+        "tag": "product_usage",
+        "patterns": [
+          "cách sử dụng sản phẩm",
+          "dùng serum thế nào",
+          "bôi retinol đúng cách",
+          "đắp mặt nạ mấy lần",
+          "cách layer aha"
+        ],
+        "responses": [
+          "Quy tắc chung ‘3-hạt-đậu’: lấy lượng = 2-3 hạt đậu cho toàn mặt.\n• Retinol: da khô, ban đêm, tần suất 2-0-2 (tuần 1: 2 đêm, nghỉ; tuần 2: bỏ qua; tuần 3: 2 đêm…).\n• AHA: thoa sau rửa mặt, đợi 10 phút rồi dưỡng.\n• Sheet mask: 2–3 lần/tuần, 15 phút.\nBạn muốn hướng dẫn chi tiết bước nào hãy nêu rõ."
+        ]
+      },
+  
+      {
+        "tag": "product_recommendation",
+        "patterns": [
+          "tư vấn sản phẩm",
+          "mua kem dưỡng nào tốt",
+          "serum vitamin c nào ổn",
+          "chống nắng cho da dầu",
+          "budget 300k"
+        ],
+        "responses": [
+          "Cho tôi biết 4 yếu tố: (1) loại da, (2) vấn đề ưu tiên, (3) ngân sách, (4) sở thích texture. Tôi sẽ shortlist 3 sản phẩm có giá tại VN + link mua chính hãng."
+        ],
+        "context_set": "awaiting_reco_info"
+      },
+  
+      {
+        "tag": "sunscreen_usage",
+        "patterns": [
+          "dùng kem chống nắng thế nào",
+          "spf là gì",
+          "cách thoa sunscreen",
+          "bôi lại chống nắng",
+          "uống viên chống nắng",
+          "pa++++"
+        ],
+        "responses": [
+          "Mức SPF tối thiểu 30, PA+++ cho khí hậu Việt Nam.\nLượng chuẩn: 2 mg/cm² ~ 1/4 muỗng cà-phê cho mặt/cổ.\nDặm lại mỗi 2 giờ nếu ở ngoài trời hoặc đổ nhiều mồ hôi.\nViên uống chống nắng = bổ trợ, KHÔNG thay thế bôi.\nBạn muốn gợi ý kem chống nắng vật lý, hoá học hay hybrid?"
+        ]
+      },
+  
+      {
+        "tag": "fallback",
+        "patterns": [],
+        "responses": [
+          "Xin lỗi, tôi chưa bắt kịp ý. Bạn có thể diễn đạt khác hoặc hỏi về dưỡng da, thành phần, routine, sản phẩm…"
+        ]
+      }
+    ]
+  }

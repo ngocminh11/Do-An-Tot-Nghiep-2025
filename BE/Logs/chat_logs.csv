@@ -1,0 +1,12 @@
+timestamp,type,chatId,message,response,intent,score
+2025-06-13T11:28:38.114Z,start,e61bb75c-a236-46b7-8a78-3dcfac6529cc,Chat started,Welcome message,greeting,1
+2025-06-13T11:28:45.731Z,start,8a8bf615-a742-41b5-981f-e2c8bcd4a76a,Chat started,Welcome message,greeting,1
+2025-06-13T11:28:53.994Z,start,0d309d53-f38f-4ad6-a289-a761bdd8c876,Chat started,Welcome message,greeting,1
+2025-06-13T11:28:56.757Z,message,,ád,Một vài cặp “khó ở”:
+• Retinol ↔ Benzoyl Peroxide: oxy hóa nhau → giảm hiệu quả.
+• AHA/BHA ↔ Vitamin C L-AA: pH chênh, dễ kích ứng.
+• Niacinamide <6% ↔ Vitamin C L-AA: ổn, nhưng nên cách 10-15 phút nếu da nhạy cảm.
+
+Nếu bạn đã trót mix, để ý dấu hiệu châm chích và phục hồi với kem chứa ceramide.,ingredient_incompatibility,0.5
+2025-06-17T18:21:17.355Z,start,ef6fb44e-2083-410e-ba63-482f4b79aa71,Chat started,Welcome message,greeting,1
+2025-06-17T18:21:22.891Z,message,,da khô nên dùng gì,Cho tôi biết 4 yếu tố: (1) loại da, (2) vấn đề ưu tiên, (3) ngân sách, (4) sở thích texture. Tôi sẽ shortlist 3 sản phẩm có giá tại VN + link mua chính hãng.,product_recommendation,2.6

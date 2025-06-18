@@ -1,0 +1,133 @@
+.app-header {
+    background-color: #fff !important;
+    padding: 0 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 64px;
+    border-bottom: 1px solid #f0f0f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+    .header-left {
+        display: flex;
+        align-items: center;
+    }
+
+    .logo {
+        color: #ff4d4f;
+        font-size: 28px;
+        font-weight: bold;
+        margin-right: 40px;
+    }
+
+    .main-menu {
+        background-color: transparent !important;
+        border-bottom: none !important;
+        line-height: 62px;
+
+        .ant-menu-item {
+            font-weight: 500;
+            font-size: 16px;
+            margin: 0 10px;
+            color: #555;
+
+            &:hover {
+                color: #ff4d4f !important;
+            }
+
+            &.ant-menu-item-selected {
+                color: #ff4d4f !important;
+                border-bottom: 2px solid #ff4d4f !important;
+            }
+
+            .anticon {
+                font-size: 16px;
+                margin-right: 8px;
+            }
+        }
+    }
+
+    .header-right {
+        display: flex;
+        align-items: center;
+
+        .header-search {
+            .ant-input-search-button {
+                background-color: #ff4d4f;
+                border-color: #ff4d4f;
+
+                &:hover {
+                    background-color: #ff7875;
+                    border-color: #ff7875;
+                }
+            }
+        }
+
+        .notification-badge {
+            margin-right: 20px;
+
+            .ant-scroll-number-only {
+                background-color: #ff4d4f;
+            }
+        }
+
+        .user-profile-dropdown {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+
+            &:hover {
+                background-color: #f0f0f0;
+            }
+
+            .ant-avatar {
+                margin-right: 10px;
+                background-color: #ff4d4f;
+            }
+
+            .user-info {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+
+                .user-name {
+                    font-weight: bold;
+                    color: #333;
+                }
+
+                .user-email {
+                    font-size: 12px;
+                    color: #777;
+                }
+            }
+        }
+    }
+}
+
+.ant-dropdown-menu {
+    padding: 10px 0;
+
+    .ant-dropdown-menu-item {
+        padding: 10px 15px;
+
+        .anticon {
+            margin-right: 10px;
+        }
+
+        a {
+            color: #333;
+
+            &:hover {
+                color: #ff4d4f;
+            }
+        }
+
+        &:hover {
+            background-color: #fff0f0;
+            color: #ff4d4f;
+        }
+    }
+}
