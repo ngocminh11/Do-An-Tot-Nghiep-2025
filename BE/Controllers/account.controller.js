@@ -1,6 +1,5 @@
 const User = require('../Models/Accounts');
 const mongoose = require('mongoose');
-
 const { sendSuccess, sendError } = require('../Utils/responseHelper');
 const StatusCodes = require('../Constants/ResponseCode');
 const Messages = require('../Constants/ResponseMessage');
@@ -15,6 +14,7 @@ exports.getAllUsers = async (req, res) => {
       email,
       phone,
       role,
+      accountStatus,
       sortBy = 'createdAt',
       sortOrder = 'desc'
     } = req.query;
@@ -22,10 +22,11 @@ exports.getAllUsers = async (req, res) => {
     const query = {};
 
     if (id && mongoose.Types.ObjectId.isValid(id)) query._id = id;
-    if (fullName) query.fullName = new RegExp(fullName, 'i');
-    if (email) query.email = new RegExp(email, 'i');
-    if (phone) query.phone = new RegExp(phone, 'i');
+    if (fullName) query.fullName = { $regex: fullName, $options: 'i' };
+    if (email) query.email = { $regex: email, $options: 'i' };
+    if (phone) query.phone = { $regex: phone, $options: 'i' };
     if (role) query.role = role;
+    if (accountStatus) query.accountStatus = accountStatus;
 
     const sortField = ['createdAt', 'updatedAt'].includes(sortBy) ? sortBy : 'createdAt';
     const sortDirection = sortOrder === 'asc' ? 1 : -1;
@@ -39,11 +40,11 @@ exports.getAllUsers = async (req, res) => {
     const total = await User.countDocuments(query);
 
     return sendSuccess(res, StatusCodes.SUCCESS_OK, {
-      data: users,
       total,
       currentPage: Number(page),
       totalPages: Math.ceil(total / limit),
-      perPage: Number(limit)
+      perPage: Number(limit),
+      data: users
     }, Messages.USER_FETCH_SUCCESS);
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
@@ -70,10 +71,22 @@ exports.getUserById = async (req, res) => {
 
 exports.createUser = async (req, res) => {
   try {
-    const user = new User(req.body);
+    const ip = req.headers['x-forwarded-for']?.split(',').shift() || req.socket?.remoteAddress || null;
+    const userAgent = req.headers['user-agent'] || null;
+
+    const user = new User({
+      ...req.body,
+      registrationIP: ip,
+      userAgent: userAgent
+    });
+
     const savedUser = await user.save();
+
     return sendSuccess(res, StatusCodes.SUCCESS_CREATED, savedUser, Messages.USER_CREATED);
   } catch (error) {
+    if (error.code === 11000 && error.keyPattern?.email) {
+      return sendError(res, StatusCodes.ERROR_CONFLICT, Messages.EMAIL_ALREADY_EXISTS);
+    }
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, error.message);
   }
 };

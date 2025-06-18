@@ -7,6 +7,9 @@ const commentController = require('../Controllers/comment.controller');
 const tagController = require('../Controllers/tag.controller');
 const cartController = require('../Controllers/cart.controller');
 const mediaController = require('../Controllers/media.controller');
+const promotionController = require('../Controllers/promotion.controller');
+const postController = require('../Controllers/post.controller');
+const orderController = require('../Controllers/order.controller');
 const validateImageUpload = require('../Middlewares/upload.middleware');
 
 //Routes for Product
@@ -48,14 +51,35 @@ router.put('/tags/:id', tagController.updateTag);
 router.delete('/tags/:id', tagController.deleteTag);
 
 //Routes for Cart
-router.post('/cart/add', cartController.addToCart);
-router.put('/cart/update', cartController.updateQuantity);
-router.delete('/cart/remove', cartController.removeFromCart);
-router.get('/my-cart', cartController.getMyCart);
-router.delete('/cart/clear', cartController.clearMyCart);
-router.get('/cart', cartController.getAllCarts);
-router.get('/cart/:userId', cartController.getCartByUserId);
-router.delete('/cart/:userId', cartController.clearCartByUserId);
+router.post('/carts/add', cartController.addToCart);
+router.put('/carts/update', cartController.updateQuantity);
+router.delete('/carts/remove', cartController.removeFromCart);
+router.get('/carts/my-cart', cartController.getMyCart);
+router.delete('/carts/clear', cartController.clearMyCart);
+router.get('/carts', cartController.getAllCarts);
+router.get('/carts/:userId', cartController.getCartByUserId);
+router.delete('/carts/:userId', cartController.clearCartByUserId);
+
+//Routes for Promotion
+router.post('/promotions', promotionController.createPromotion);
+router.get('/promotions', promotionController.getAllPromotions);
+router.get('/promotions/:id', promotionController.getPromotionById);
+router.put('/promotions/:id', promotionController.updatePromotion);
+router.delete('/promotions/:id', promotionController.deletePromotion);
+
+//Routes for Order
+router.get('/orders', orderController.getAllOrders);
+router.get('/orders/:id', orderController.getOrderById);
+router.post('/orders', orderController.createOrder);
+router.put('/orders/:id', orderController.updateOrder);
+router.delete('/orders/:id', orderController.deleteOrder);
+
+//Routes for Post
+router.get('/posts', postController.getAllPosts);
+router.get('/posts/:id', postController.getPostById);
+router.post('/posts', postController.createPost);
+router.put('/posts/:id', postController.updatePost);
+router.delete('/posts/:id', postController.deletePost);
 
 
 module.exports = router;

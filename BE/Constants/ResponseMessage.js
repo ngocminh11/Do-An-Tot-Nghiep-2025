@@ -146,5 +146,18 @@ module.exports = {
     PRODUCT_NOT_IN_CART: 'Sản phẩm không có trong giỏ hàng.',
     CART_EMPTY: 'Giỏ hàng hiện đang trống.',
     CART_CLEARED: 'Đã xoá toàn bộ sản phẩm trong giỏ hàng.',
+    //Promotion
+    PROMOTION_CREATED: 'Tạo khuyến mãi thành công.',
+    PROMOTION_UPDATED: 'Cập nhật khuyến mãi thành công.',
+    PROMOTION_DELETED: 'Xóa khuyến mãi thành công.',
+    PROMOTION_FETCH_SUCCESS: 'Lấy thông tin khuyến mãi thành công.',
+    PROMOTION_NOT_FOUND: 'Không tìm thấy khuyến mãi.',
+    // Post
+    POST_FETCH_SUCCESS: 'Lấy danh sách bài viết thành công.',
+    POST_CREATED: 'Tạo bài viết thành công.',
+    POST_UPDATED: 'Cập nhật bài viết thành công.',
+    POST_DELETED: 'Xóa bài viết thành công.',
+    POST_NOT_FOUND: 'Không tìm thấy bài viết.',
+
 
 };

@@ -25,6 +25,7 @@ const phoneValidator = {
   message: props => `${props.value} không phải là số điện thoại hợp lệ.`
 };
 
+// === Schema ===
 const userSchema = new mongoose.Schema({
   fullName: {
     type: String,
@@ -58,10 +59,14 @@ const userSchema = new mongoose.Schema({
     trim: true,
     validate: emailValidator
   },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
   passwordHash: {
     type: String,
     required: true,
-    minlength: 60 // độ dài hash bcrypt (thường ~60 ký tự)
+    minlength: 60 // bcrypt hash
   },
   phone: {
     type: String,
@@ -79,7 +84,31 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: ['customer', 'admin'],
-    required: true
+    required: true,
+    default: 'customer'
+  },
+  loyaltyPoints: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  vouchers: [{
+  promotionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Promotion' },
+  isUsed: { type: Boolean, default: false },
+  redeemedAt: { type: Date }
+}],
+  accountStatus: {
+    type: String,
+    enum: ['active', 'inactive', 'banned'],
+    default: 'active'
+  },
+  registrationIP: {
+    type: String,
+    default: null
+  },
+  userAgent: {
+    type: String,
+    default: null
   },
   orderIds: [{
     type: mongoose.Schema.Types.ObjectId,
