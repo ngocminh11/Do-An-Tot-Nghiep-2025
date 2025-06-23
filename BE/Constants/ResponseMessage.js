@@ -5,24 +5,6 @@ module.exports = {
     SUCCESS_ACCEPTED: 'Yêu cầu đã được chấp nhận nhưng chưa hoàn thành',
     SUCCESS_NO_CONTENT: 'Không có dữ liệu để trả về',
 
-    // === Product Messages ===
-    SUCCESS_PRODUCT_FOUND: 'Tìm thấy sản phẩm',
-    SUCCESS_PRODUCT_CREATED: 'Tạo sản phẩm thành công',
-    SUCCESS_PRODUCT_UPDATED: 'Cập nhật sản phẩm thành công',
-    SUCCESS_PRODUCT_DELETED: 'Xóa sản phẩm thành công',
-    ERROR_PRODUCT_NOT_FOUND: 'Không tìm thấy sản phẩm',
-    ERROR_PRODUCT_CREATE: 'Lỗi tạo sản phẩm',
-    ERROR_PRODUCT_UPDATE: 'Lỗi cập nhật sản phẩm',
-    ERROR_PRODUCT_DELETE: 'Lỗi xóa sản phẩm',
-    ERROR_SEARCH_PRODUCT: 'Lỗi tìm kiếm sản phẩm',
-
-    // === Cart Messages ===
-    SUCCESS_CART_UPDATED: 'Cập nhật giỏ hàng thành công',
-    SUCCESS_CART_CLEARED: 'Xóa giỏ hàng thành công',
-    ERROR_CART_EMPTY: 'Giỏ hàng đang trống',
-    ERROR_CART_UPDATE: 'Lỗi cập nhật giỏ hàng',
-    ERROR_CART_NOT_FOUND: 'Không tìm thấy giỏ hàng',
-
     // === Order/Payment Messages ===
     SUCCESS_ORDER_PLACED: 'Đặt hàng thành công',
     SUCCESS_PAYMENT_SUCCESS: 'Thanh toán thành công',
@@ -32,14 +14,25 @@ module.exports = {
     ERROR_ORDER_CANCEL_FAILED: 'Hủy đơn hàng thất bại',
 
     // === User / Auth Messages ===
-    SUCCESS_LOGIN: 'Đăng nhập thành công',
-    SUCCESS_LOGOUT: 'Đăng xuất thành công',
-    SUCCESS_REGISTER: 'Đăng ký thành công',
     ERROR_USER_NOT_FOUND: 'Không tìm thấy người dùng',
     ERROR_INVALID_CREDENTIALS: 'Tài khoản hoặc mật khẩu không đúng',
     ERROR_UNAUTHORIZED: 'Không được xác thực, vui lòng đăng nhập',
     ERROR_FORBIDDEN: 'Không có quyền truy cập tài nguyên này',
     ERROR_USER_EXISTED: 'Tài khoản đã tồn tại',
+    AUTH_NO_TOKEN: 'Không có token.',
+    AUTH_INVALID_TOKEN: 'Token không hợp lệ.',
+    AUTH_FAILED: 'Xác thực thất bại.',
+    USER_REGISTERED: 'Đăng ký người dùng thành công.',
+    LOGIN_SUCCESS: 'Đăng nhập thành công.',
+    INVALID_CREDENTIALS: 'Email hoặc mật khẩu không đúng.',
+    EMAIL_ALREADY_EXISTS: 'Email đã tồn tại trong hệ thống.',
+    EMAIL_NOT_FOUND: 'Không tìm thấy email trong hệ thống.',
+    RESET_TOKEN_SENT: 'Mã đặt lại mật khẩu đã được gửi.',
+    INVALID_OR_EXPIRED_TOKEN: 'Token không hợp lệ hoặc đã hết hạn.',
+    PASSWORD_RESET_SUCCESS: 'Đặt lại mật khẩu thành công.',
+    OTP_SENT: 'Mã OTP đã được gửi thành công.',
+    OTP_VERIFIED: 'Mã OTP đã được xác minh.',
+    INVALID_OR_EXPIRED_OTP: 'Mã OTP không hợp lệ hoặc đã hết hạn.',
 
     // === Promotion Messages ===
     SUCCESS_PROMOTION_APPLIED: 'Áp dụng khuyến mãi thành công',
@@ -97,6 +90,8 @@ module.exports = {
     INVALID_PRODUCT_REFERENCES: 'Danh sách sản phẩm chứa ID không hợp lệ.',
     INVALID_ID: 'ID không hợp lệ.',
     INVALID_INPUT: 'Dữ liệu đầu vào không hợp lệ.',
+    FORBIDDEN: 'Không có quyền thực hiện hành động này',
+
 
     //Category
     CATEGORY_FETCH_SUCCESS: 'Lấy danh sách danh mục thành công.',
@@ -158,6 +153,15 @@ module.exports = {
     POST_UPDATED: 'Cập nhật bài viết thành công.',
     POST_DELETED: 'Xóa bài viết thành công.',
     POST_NOT_FOUND: 'Không tìm thấy bài viết.',
-
+    // Order
+    ORDER_CREATED: 'Tạo đơn hàng thành công.',
+    ORDER_UPDATED: 'Cập nhật đơn hàng thành công.',
+    ORDER_DELETED: 'Xoá đơn hàng thành công.',
+    ORDER_FETCH_SUCCESS: 'Lấy thông tin đơn hàng thành công.',
+    ORDER_NOT_FOUND: 'Không tìm thấy đơn hàng.',
+    ORDER_STATUS_UPDATED: 'Cập nhật trạng thái đơn hàng thành công.',
+    ORDER_CANCEL_REQUEST_SENT: 'Yêu cầu huỷ đơn hàng đã được gửi.',
+    ORDER_CANCELED: 'Đơn hàng đã bị huỷ.',
+    ORDER_CANCEL_REQUEST_DECLINED: 'Từ chối yêu cầu huỷ đơn hàng.',
 
 };

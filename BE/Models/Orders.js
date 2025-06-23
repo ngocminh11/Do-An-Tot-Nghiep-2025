@@ -1,36 +1,34 @@
+// models/Orders.js
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-  },
-  items: [{
-    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-    quantity: { type: Number, required: true, min: 1 },
-    price: { type: Number, required: true, min: 0 },
-    discount: { type: Number, default: 0 },
-  }],
-  totalAmount: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-  shippingInfo: {
-    recipientName: { type: String, required: true },
-    phone: { type: String, required: true, match: /^0\d{9}$/ },
-    address: { type: String, required: true, minlength: 10, maxlength: 300 },
-  },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  items: [
+    {
+      product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+      productName: { type: String, required: true },
+      unit: { type: String, required: true },
+      currency: { type: String, default: 'VND' },
+      quantity: { type: Number, required: true, min: 1 },
+      price: { type: Number, required: true, min: 0 },
+      discount: { type: Number, default: 0 },
+    }
+  ],
+  totalAmount: { type: Number, required: true, min: 0 },
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'],
-    default: 'pending',
+    enum: ['Chờ xác nhận', 'Xác nhận', 'Đang giao hàng', 'Đã hoàn thành', 'Hủy'],
+    default: 'Chờ xác nhận',
   },
-  statusHistory: [{
-    status: { type: String, enum: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'] },
-    timestamp: { type: Date, default: Date.now }
-  }],
+  statusHistory: [
+    {
+      status: {
+        type: String,
+        enum: ['Chờ xác nhận', 'Xác nhận', 'Đang giao hàng', 'Đã hoàn thành', 'Hủy'],
+      },
+      timestamp: { type: Date, default: Date.now },
+    }
+  ],
   paymentMethod: {
     type: String,
     enum: ['COD', 'BankTransfer', 'Momo', 'ZaloPay'],
@@ -38,17 +36,16 @@ const orderSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-    enum: ['unpaid', 'paid', 'refunded'],
-    default: 'unpaid',
+    enum: ['Chưa thanh toán', 'Đã thanh toán', 'Đã hoàn tiền'],
+    default: 'Chưa thanh toán',
   },
-  promotionCode: {
-    type: String,
-    default: null,
-  },
-  notes: {
-    type: String,
-    maxlength: 1000,
-  }
+  cancellationReason: { type: String, maxlength: 1000, default: null },
+  promotionCode: { type: String, default: null },
+  estimatedDeliveryDate: { type: Date, default: null },
+  notes: { type: String, maxlength: 1000 },
+
+  isCancelRequested: { type: Boolean, default: false },
+  cancelRequestTime: { type: Date, default: null },
 }, {
   timestamps: true,
 });
