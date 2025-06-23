@@ -269,16 +269,15 @@ const AddProduct = () => {
       setLoadingCategories(true);
       try {
         const response = await categoryService.getAllCategories();
-        if (response && response.data && response.data.data) {
-          setCategories(response.data.data);
+        if (response && Array.isArray(response.data)) {
+          setCategories(response.data);
         } else {
           setCategories([]);
           message.error('Không thể tải danh mục sản phẩm');
         }
       } catch (error) {
-        console.error('Error fetching categories:', error);
-        message.error('Không thể tải danh mục sản phẩm');
         setCategories([]);
+        message.error('Không thể tải danh mục sản phẩm');
       } finally {
         setLoadingCategories(false);
       }
@@ -304,16 +303,15 @@ const AddProduct = () => {
       setLoadingTags(true);
       try {
         const response = await tagService.getAllTags();
-        if (response && response.data && response.data.data) {
-          setTags(response.data.data);
+        if (response && Array.isArray(response.data)) {
+          setTags(response.data);
         } else {
           setTags([]);
           message.error('Không thể tải danh sách tags');
         }
       } catch (error) {
-        console.error('Error fetching tags:', error);
-        message.error('Không thể tải danh sách tags');
         setTags([]);
+        message.error('Không thể tải danh sách tags');
       } finally {
         setLoadingTags(false);
       }

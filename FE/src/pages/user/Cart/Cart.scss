@@ -1,13 +1,16 @@
+@import '../../../styles/variables.scss';
+
 .cart-page {
     padding: 40px 24px;
-    background-color: #f8f8f8;
+    background: var(--cocoon-bg);
+    color: var(--cocoon-brown);
     min-height: calc(100vh - 128px);
     /* Adjust based on header/footer height */
 
     .page-title {
         text-align: center;
         margin-bottom: 30px;
-        color: #333;
+        color: var(--cocoon-gold);
         font-size: 32px;
         font-weight: bold;
     }
@@ -15,6 +18,7 @@
     .cart-items-card {
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        background: var(--cocoon-white);
 
         .ant-card-body {
             padding: 0;
@@ -53,6 +57,7 @@
     .cart-summary-card {
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        background: var(--cocoon-white);
 
         .ant-card-head {
             background-color: #f0f0f0;
@@ -99,12 +104,14 @@
         }
 
         .checkout-button {
-            background-color: #ff4d4f;
-            border-color: #ff4d4f;
+            background: var(--cocoon-gold);
+            border-color: var(--cocoon-gold);
+            color: var(--cocoon-white);
 
             &:hover {
-                background-color: #ff7875;
-                border-color: #ff7875;
+                background: var(--cocoon-brown);
+                border-color: var(--cocoon-brown);
+                color: var(--cocoon-gold);
             }
         }
 

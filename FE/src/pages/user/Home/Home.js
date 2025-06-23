@@ -3,7 +3,16 @@ import { Carousel, Card, Row, Col, Button, Space, Input, Form, message, Typograp
 import { useNavigate } from 'react-router-dom';
 import { UpOutlined, MailOutlined, CheckCircleOutlined, StarOutlined, HeartOutlined, MessageOutlined, SendOutlined, CloseOutlined, CustomerServiceOutlined, ShoppingOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import ChatBot from '../../../components/ChatBot/ChatBot';
+import productService from '../../../services/productService';
+import categoryService from '../../../services/categoryService';
 import './Home.scss';
+import screenshotImg from '../../../upload/Screenshot 2025-06-23 162358.png';
+import stylishImg from '../../../upload/a_stylish_and_simp_image_.png';
+import facialImg from '../../../upload/a_bottle_of_facial_image_.png';
+import cocoWImg from '../../../upload/a_bottle_of_coco_w_image_.png';
+import tubeImg from '../../../upload/a_tube_of_cocoo_su_image_.png';
+import productImg1 from '../../../upload/a_product_image_of_image_.png';
+import productImg2 from '../../../upload/a_product_image_of_image_ (1).png';
 
 const { Title, Text } = Typography;
 
@@ -11,6 +20,9 @@ const Home = () => {
     const navigate = useNavigate();
     const [showScrollToTopButton, setShowScrollToTopButton] = useState(false);
     const [newsletterForm] = Form.useForm();
+    const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -25,6 +37,24 @@ const Home = () => {
         return () => {
             window.removeEventListener('scroll', handleScroll);
         };
+    }, []);
+
+    useEffect(() => {
+        async function fetchData() {
+            setLoading(true);
+            try {
+                const productRes = await productService.getAllProducts({ page: 1, limit: 10 });
+                setProducts(productRes.data || []);
+                const categoryRes = await categoryService.getAllCategories({ page: 1, limit: 10 });
+                setCategories(categoryRes.data || []);
+            } catch (err) {
+                setProducts([]);
+                setCategories([]);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchData();
     }, []);
 
     const scrollToTop = () => {
@@ -49,110 +79,46 @@ const Home = () => {
         navigate(`/posts/${postId}`); // Giả định có route /posts/:id
     };
 
-    const mockProducts = [
-        {
-            _id: '1',
-            name: 'Kem dưỡng da',
-            price: 250000,
-            imageUrls: ['/images/products/product1.jpg'],
-            averageRating: 4.5
-        },
-        {
-            _id: '2',
-            name: 'Sữa rửa mặt',
-            price: 180000,
-            imageUrls: ['/images/products/product2.jpg'],
-            averageRating: 4.2
-        },
-        {
-            _id: '3',
-            name: 'Toner cân bằng da',
-            price: 200000,
-            imageUrls: ['/images/products/product3.jpg'],
-            averageRating: 4.7
-        },
-        {
-            _id: '4',
-            name: 'Serum dưỡng trắng',
-            price: 350000,
-            imageUrls: ['/images/products/product4.jpg'],
-            averageRating: 4.8
-        },
-        {
-            _id: '5',
-            name: 'Mặt nạ dưỡng da',
-            price: 150000,
-            imageUrls: ['/images/products/product5.jpg'],
-            averageRating: 4.3
-        }
-    ];
-
     const mockCampaigns = [
         {
             _id: '1',
             title: 'Khuyến mãi mùa hè',
-            imageUrl: '/images/campaigns/campaign1.jpg'
+            imageUrl: screenshotImg
         },
         {
             _id: '2',
             title: 'Ưu đãi tháng 6',
-            imageUrl: '/images/campaigns/campaign2.jpg'
+            imageUrl: stylishImg
         }
     ];
 
-    const mockCategories = [
+    const skinModels = [
         {
-            _id: '1',
-            name: 'Chăm sóc da mặt',
-            slug: 'cham-soc-da-mat'
+            id: 1,
+            name: 'Ngọc Trinh',
+            image: facialImg,
+            description: 'Làn da trắng sáng, mịn màng, không tì vết. Bí quyết: dưỡng ẩm đều đặn, chống nắng kỹ, ưu tiên sản phẩm dịu nhẹ.'
         },
         {
-            _id: '2',
-            name: 'Trang điểm',
-            slug: 'trang-diem'
+            id: 2,
+            name: 'Hà Tăng',
+            image: cocoWImg,
+            description: 'Da khỏe, đều màu, ít khuyết điểm. Chú trọng làm sạch sâu, dùng serum vitamin C và kem chống nắng phổ rộng.'
         },
         {
-            _id: '3',
-            name: 'Chăm sóc tóc',
-            slug: 'cham-soc-toc'
-        },
-        {
-            _id: '4',
-            name: 'Nước hoa',
-            slug: 'nuoc-hoa'
-        }
-    ];
-
-    const mockPosts = [
-        {
-            _id: '1',
-            title: 'Cách chăm sóc da mùa hè',
-            excerpt: 'Những bí quyết giúp làn da luôn tươi sáng trong mùa hè nóng bức...',
-            imageUrl: '/images/posts/post1.jpg',
-            createdAt: '2024-03-15'
-        },
-        {
-            _id: '2',
-            title: 'Top 5 sản phẩm dưỡng da bán chạy nhất',
-            excerpt: 'Khám phá những sản phẩm được yêu thích nhất trong tháng...',
-            imageUrl: '/images/posts/post2.jpg',
-            createdAt: '2024-03-10'
-        },
-        {
-            _id: '3',
-            title: 'Xu hướng làm đẹp 2024',
-            excerpt: 'Cập nhật những xu hướng làm đẹp mới nhất trong năm 2024...',
-            imageUrl: '/images/posts/post3.jpg',
-            createdAt: '2024-03-05'
+            id: 3,
+            name: 'IU',
+            image: tubeImg,
+            description: 'Da căng bóng kiểu Hàn, luôn tươi trẻ. Ưu tiên cấp ẩm, đắp mặt nạ và massage mặt mỗi ngày.'
         }
     ];
 
     return (
         <Layout className="home-page">
-            <Carousel autoplay className="banner-carousel">
+            <Carousel autoplay className="banner-carousel home-fade-in">
                 {mockCampaigns.map(campaign => (
-                    <div key={campaign._id} className="carousel-item">
-                        <img src={campaign.imageUrl} alt={campaign.title} />
+                    <div key={campaign._id} className="carousel-item home-scale-on-hover">
+                        <img src={campaign.imageUrl} alt={campaign.title} style={{ borderRadius: '18px', boxShadow: '0 8px 32px rgba(44,62,80,0.18)', transition: 'transform 0.4s' }} />
                     </div>
                 ))}
             </Carousel>
@@ -160,7 +126,7 @@ const Home = () => {
             <div className="slogan-section section-animate">
                 <Title level={1}>Làm đẹp tự nhiên - tin cậy từ CoCoo</Title>
                 <Space size={[16, 16]} wrap className="category-buttons">
-                    {mockCategories.map(category => (
+                    {categories.map(category => (
                         <Button
                             key={category._id}
                             onClick={() => handleViewCategory(category.slug)}
@@ -172,29 +138,29 @@ const Home = () => {
                 </Space>
             </div>
 
-            <div className="section featured-products section-animate">
+            <div className="section featured-products section-animate home-fade-in">
                 <Title level={2}>SẢN PHẨM NỔI BẬT</Title>
                 <Row gutter={[24, 24]}>
-                    {mockProducts.slice(0, 5).map(product => (
-                        <Col xs={24} sm={12} md={8} lg={4} key={product._id}>
+                    {(Array.isArray(products) ? products : []).slice(0, 5).map(product => (
+                        <Col xs={24} sm={12} md={8} lg={4} key={product._id} className="home-scale-on-hover">
                             <Card
                                 hoverable
-                                cover={<img alt={product.name} src={product.imageUrls[0]} />}
+                                cover={<img alt={product.name} src={product.imageUrls?.[0]} style={{ transition: 'transform 0.4s' }} />}
                                 className="product-card"
-                            >
+                                style={{ boxShadow: '0 4px 16px rgba(44,62,80,0.10)', borderRadius: '16px' }}>
                                 <Card.Meta
                                     title={product.name}
                                     description={
                                         <Space direction="vertical" size={0} className="product-meta-content">
                                             <Rate allowHalf disabled defaultValue={product.averageRating} className="product-rating" />
-                                            <Text className="price-text">{`${product.price.toLocaleString('vi-VN')} VNĐ`}</Text>
+                                            <Text className="price-text">{`${product.price?.toLocaleString('vi-VN') || ''} VNĐ`}</Text>
                                         </Space>
                                     }
                                 />
                                 <Button
                                     type="primary"
                                     block
-                                    className="buy-now-button"
+                                    className="buy-now-button home-btn-animate"
                                     onClick={() => handleViewProduct(product._id)}
                                 >
                                     Mua ngay
@@ -265,27 +231,15 @@ const Home = () => {
             <div className="section latest-posts-section section-animate">
                 <Title level={2}>TIN TỨC MỚI NHẤT</Title>
                 <Row gutter={[24, 24]}>
-                    {mockPosts.slice(0, 3).map(post => (
-                        <Col xs={24} sm={12} md={8} key={post._id}>
-                            <Card
-                                hoverable
-                                cover={<img alt={post.title} src={post.imageUrl} />}
-                                onClick={() => handleViewPost(post._id)}
-                                className="post-card"
-                            >
-                                <Card.Meta
-                                    title={post.title}
-                                    description={post.excerpt}
-                                />
-                                <Text type="secondary" className="post-date">{post.createdAt}</Text>
-                            </Card>
-                        </Col>
-                    ))}
+                    <Col span={24} style={{ textAlign: 'center', color: '#aaa', fontStyle: 'italic' }}>
+                        Chưa có bài viết.
+                    </Col>
                 </Row>
                 <Button
                     type="default"
                     className="view-all-posts-button"
-                    onClick={() => navigate('/posts')}
+                    disabled
+                    style={{ opacity: 0.5, pointerEvents: 'none' }}
                 >
                     Xem tất cả bài viết
                 </Button>
@@ -301,6 +255,34 @@ const Home = () => {
                                 cover={<img alt={campaign.title} src={campaign.imageUrl} />}
                                 className="campaign-card"
                             >
+                            </Card>
+                        </Col>
+                    ))}
+                </Row>
+            </div>
+
+            <div className="section skin-models-section section-animate home-fade-in">
+                <Title level={2}>HÌNH MẪU LÀN DA ĐẸP</Title>
+                <Row gutter={[24, 24]}>
+                    {skinModels.map(model => (
+                        <Col xs={24} sm={12} md={8} key={model.id} className="home-scale-on-hover">
+                            <Card
+                                hoverable
+                                cover={<img alt={model.name} src={model.image} style={{ objectFit: 'cover', height: 260, borderRadius: '50%', boxShadow: '0 2px 8px rgba(44,62,80,0.10)', transition: 'transform 0.4s' }} />}
+                                className="skin-model-card"
+                            >
+                                <Card.Meta
+                                    title={model.name}
+                                    description={model.description}
+                                />
+                                <Button
+                                    type="link"
+                                    onClick={() => window.open('/blog/skin-inspiration', '_blank')}
+                                    style={{ marginTop: 8 }}
+                                    className="home-btn-animate"
+                                >
+                                    Xem bí quyết
+                                </Button>
                             </Card>
                         </Col>
                     ))}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import './ChatBot.scss';
+import { MessageOutlined, UserOutlined, RobotOutlined, ShoppingOutlined, CustomerServiceOutlined, QuestionCircleOutlined, SendOutlined, CloseOutlined, CheckCircleOutlined, HeartOutlined, GiftOutlined } from '@ant-design/icons';
 
 // API URL configuration
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -11,10 +12,10 @@ const ChatBot = () => {
     const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [chatId, setChatId] = useState(null);
     const [error, setError] = useState(null);
     const messagesEndRef = useRef(null);
     const { user } = useAuth();
+    const [suggestedProducts, setSuggestedProducts] = useState([]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -23,52 +24,6 @@ const ChatBot = () => {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
-
-    useEffect(() => {
-        if (isOpen && !chatId) {
-            startChat();
-        }
-    }, [isOpen, chatId]);
-
-    const startChat = async () => {
-        try {
-            setError(null);
-            setIsLoading(true);
-            console.log('Starting chat with API:', `${API_URL}/api/chat/start`);
-            const response = await axios.get(`${API_URL}/api/chat/start`, {
-                timeout: 5000 // 5 seconds timeout
-            });
-
-            if (response.data.success) {
-                setChatId(response.data.data.chatId);
-                setMessages([{
-                    content: response.data.data.message,
-                    sender: 'bot',
-                    timestamp: new Date().toISOString()
-                }]);
-            } else {
-                throw new Error(response.data.error || 'Failed to start chat');
-            }
-        } catch (error) {
-            console.error('Error starting chat:', error);
-            let errorMessage = 'Không thể kết nối với chat. Vui lòng thử lại sau.';
-
-            if (error.code === 'ECONNABORTED') {
-                errorMessage = 'Kết nối quá thời gian. Vui lòng kiểm tra lại kết nối mạng.';
-            } else if (error.response) {
-                errorMessage = error.response.data.error || errorMessage;
-            }
-
-            setError(errorMessage);
-            setMessages([{
-                content: 'Xin lỗi, có lỗi xảy ra khi khởi tạo chat. Vui lòng thử lại sau.',
-                sender: 'bot',
-                timestamp: new Date().toISOString()
-            }]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
@@ -88,39 +43,44 @@ const ChatBot = () => {
         setInputMessage('');
         setIsLoading(true);
         setError(null);
+        setSuggestedProducts([]);
 
         try {
-            console.log('Sending message to API:', `${API_URL}/api/chat/send`);
-            const response = await axios.post(`${API_URL}/api/chat/send`, {
-                message: inputMessage,
-                chatId: chatId
+            const response = await axios.post(`${API_URL}/api/chatbot/ask`, {
+                message: newMessage.content
             }, {
-                timeout: 5000, // 5 seconds timeout
+                timeout: 10000,
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });
 
-            if (response.data.success) {
+            if (response.data && response.data.reply) {
                 const botMessage = {
-                    content: response.data.data.message,
+                    content: response.data.reply,
                     sender: 'bot',
                     timestamp: new Date().toISOString()
                 };
                 setMessages(prev => [...prev, botMessage]);
+
+                // Tách phần gợi ý sản phẩm nếu có (dạng link hoặc tên sản phẩm)
+                const productLinks = [];
+                const regex = /Xem chi tiết: (\/product\/[\w-]+)/g;
+                let match;
+                while ((match = regex.exec(response.data.reply)) !== null) {
+                    productLinks.push(match[1]);
+                }
+                setSuggestedProducts(productLinks);
             } else {
-                throw new Error(response.data.error || 'Failed to send message');
+                throw new Error('Không nhận được phản hồi từ chatbot.');
             }
         } catch (error) {
-            console.error('Error sending message:', error);
             let errorMessage = 'Không thể gửi tin nhắn. Vui lòng thử lại sau.';
-
             if (error.code === 'ECONNABORTED') {
                 errorMessage = 'Kết nối quá thời gian. Vui lòng kiểm tra lại kết nối mạng.';
             } else if (error.response) {
                 errorMessage = error.response.data.error || errorMessage;
             }
-
             setError(errorMessage);
             const errorMessageObj = {
                 content: 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.',
@@ -142,7 +102,6 @@ const ChatBot = () => {
 
     const handleClose = () => {
         setIsOpen(false);
-        setChatId(null);
         setMessages([]);
         setError(null);
         setInputMessage('');
@@ -155,38 +114,78 @@ const ChatBot = () => {
                     className="chat-button"
                     onClick={() => setIsOpen(true)}
                 >
-                    <i className="fas fa-comments"></i>
+                    <CustomerServiceOutlined style={{ fontSize: 28 }} />
                 </button>
             )}
 
             {isOpen && (
                 <div className="chat-window">
                     <div className="chat-header">
-                        <h3>Trợ lý chăm sóc da</h3>
+                        <h3><RobotOutlined style={{ marginRight: 8, fontSize: 22 }} />Trợ lý chăm sóc da</h3>
                         {user && (
                             <div className="user-info">
-                                Xin chào, {user.username}
+                                <UserOutlined style={{ marginRight: 4 }} />Xin chào, {user.username}
                             </div>
                         )}
                         <button
                             className="close-button"
                             onClick={handleClose}
                         >
-                            <i className="fas fa-times"></i>
+                            <CloseOutlined />
                         </button>
                     </div>
 
                     <div className="chat-messages">
                         {messages.length === 0 && !error && !isLoading && (
                             <div className="welcome-message">
-                                Xin chào! Tôi là trợ lý chăm sóc da của bạn. Tôi có thể giúp bạn:
+                                <h4><CheckCircleOutlined style={{ color: 'var(--cocoon-gold)', marginRight: 6 }} />Xin chào! Tôi là trợ lý chăm sóc da của bạn.</h4>
+                                <p><HeartOutlined style={{ color: 'var(--cocoon-gold)', marginRight: 6 }} />Tôi có thể giúp bạn với các vấn đề:</p>
                                 <ul>
-                                    <li>Tư vấn về các loại da</li>
-                                    <li>Hướng dẫn quy trình chăm sóc da</li>
-                                    <li>Giải thích về các sản phẩm và thành phần</li>
-                                    <li>Giải đáp các vấn đề về da</li>
+                                    <li><CheckCircleOutlined style={{ color: 'var(--cocoon-gold)', marginRight: 4 }} />Phân tích và tư vấn loại da</li>
+                                    <li><CheckCircleOutlined style={{ color: 'var(--cocoon-gold)', marginRight: 4 }} />Gợi ý sản phẩm phù hợp</li>
+                                    <li><CheckCircleOutlined style={{ color: 'var(--cocoon-gold)', marginRight: 4 }} />Hướng dẫn quy trình skincare</li>
+                                    <li><CheckCircleOutlined style={{ color: 'var(--cocoon-gold)', marginRight: 4 }} />Giải đáp về thành phần mỹ phẩm</li>
+                                    <li><CheckCircleOutlined style={{ color: 'var(--cocoon-gold)', marginRight: 4 }} />Xử lý các vấn đề về da</li>
                                 </ul>
-                                Bạn có thể hỏi tôi bất cứ điều gì về chăm sóc da!
+                                <div className="suggested-questions">
+                                    <p><QuestionCircleOutlined style={{ color: 'var(--cocoon-gold)', marginRight: 4 }} />Bạn có thể hỏi những câu như:</p>
+                                    <button
+                                        onClick={() => {
+                                            setInputMessage("Làm sao để xác định loại da của tôi?");
+                                            handleSendMessage({ preventDefault: () => { } });
+                                        }}
+                                        className="question-suggestion"
+                                    >
+                                        <QuestionCircleOutlined style={{ marginRight: 6 }} />Làm sao để xác định loại da của tôi?
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setInputMessage("Quy trình chăm sóc da cơ bản buổi tối?");
+                                            handleSendMessage({ preventDefault: () => { } });
+                                        }}
+                                        className="question-suggestion"
+                                    >
+                                        <QuestionCircleOutlined style={{ marginRight: 6 }} />Quy trình chăm sóc da cơ bản buổi tối?
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setInputMessage("Thành phần nào tốt cho da mụn?");
+                                            handleSendMessage({ preventDefault: () => { } });
+                                        }}
+                                        className="question-suggestion"
+                                    >
+                                        <QuestionCircleOutlined style={{ marginRight: 6 }} />Thành phần nào tốt cho da mụn?
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setInputMessage("Cách chọn kem chống nắng phù hợp?");
+                                            handleSendMessage({ preventDefault: () => { } });
+                                        }}
+                                        className="question-suggestion"
+                                    >
+                                        <QuestionCircleOutlined style={{ marginRight: 6 }} />Cách chọn kem chống nắng phù hợp?
+                                    </button>
+                                </div>
                             </div>
                         )}
                         {error && (
@@ -199,16 +198,16 @@ const ChatBot = () => {
                                 key={index}
                                 className={`message ${message.sender}`}
                             >
-                                {message.sender === 'user' && message.user && (
-                                    <div className="message-user">
-                                        {message.user.username}
-                                    </div>
-                                )}
-                                <div className="message-content">
-                                    {message.content}
+                                <div className="message-avatar">
+                                    {message.sender === 'user' ? (
+                                        <UserOutlined style={{ fontSize: 22, color: '#2980b9' }} />
+                                    ) : (
+                                        <RobotOutlined style={{ fontSize: 22, color: '#16a085' }} />
+                                    )}
                                 </div>
-                                <div className="message-time">
-                                    {new Date(message.timestamp).toLocaleTimeString()}
+                                <div className="message-bubble">
+                                    <div className="message-content">{message.content}</div>
+                                    <div className="message-time">{new Date(message.timestamp).toLocaleTimeString()}</div>
                                 </div>
                             </div>
                         ))}
@@ -221,6 +220,21 @@ const ChatBot = () => {
                                         <span></span>
                                     </div>
                                 </div>
+                            </div>
+                        )}
+                        {suggestedProducts.length > 0 && (
+                            <div className="suggested-products">
+                                <strong><ShoppingOutlined style={{ color: 'var(--cocoon-gold)', marginRight: 4 }} />Sản phẩm gợi ý:</strong>
+                                <ul>
+                                    {suggestedProducts.map((link, idx) => (
+                                        <li key={idx}>
+                                            <a href={link} target="_blank" rel="noopener noreferrer">
+                                                <GiftOutlined style={{ color: 'var(--cocoon-gold)', marginRight: 4 }} />
+                                                {link}
+                                            </a>
+                                        </li>
+                                    ))}
+                                </ul>
                             </div>
                         )}
                         <div ref={messagesEndRef} />
@@ -240,7 +254,7 @@ const ChatBot = () => {
                             disabled={isLoading || !inputMessage.trim()}
                             className={isLoading || !inputMessage.trim() ? 'disabled' : ''}
                         >
-                            <i className="fas fa-paper-plane"></i>
+                            <SendOutlined />
                         </button>
                     </form>
                 </div>

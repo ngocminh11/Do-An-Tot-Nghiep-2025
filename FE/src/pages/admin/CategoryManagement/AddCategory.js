@@ -19,9 +19,9 @@ const AddCategory = () => {
                 status: values.status || 'active'
             };
 
-            const response = await categoryService.createCategory(categoryData);
+            const created = await categoryService.createCategory(categoryData);
 
-            if (response) {
+            if (created) {
                 message.success({
                     content: 'Thêm danh mục thành công!',
                     duration: 2,
@@ -36,8 +36,7 @@ const AddCategory = () => {
                 });
             }
         } catch (error) {
-            console.error('Failed to add category:', error);
-            const errorMessage = error.message || 'Thêm danh mục thất bại!';
+            const errorMessage = error?.message || error?.msg || 'Thêm danh mục thất bại!';
             message.error(errorMessage);
         } finally {
             setLoading(false);

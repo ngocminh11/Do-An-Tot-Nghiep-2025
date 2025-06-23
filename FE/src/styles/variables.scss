@@ -8,6 +8,19 @@ $info-color: #17a2b8;
 $light-color: #f8f9fa;
 $dark-color: #343a40;
 
+// Cocoon Theme Colors
+$cocoon-gold: #C7A15A;
+$cocoon-brown: #3A2E1F;
+$cocoon-bg: #FAF7EF;
+$cocoon-white: #fff;
+
+:root {
+    --cocoon-gold: #C7A15A;
+    --cocoon-brown: #3A2E1F;
+    --cocoon-bg: #FAF7EF;
+    --cocoon-white: #fff;
+}
+
 // Typography
 $font-family-base: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 $font-size-base: 1rem;

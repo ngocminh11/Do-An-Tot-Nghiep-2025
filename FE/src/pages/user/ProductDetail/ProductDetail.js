@@ -1,43 +1,79 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Row, Col, Card, Button, InputNumber, Rate, Tabs, message } from 'antd';
+import { Row, Col, Card, Button, InputNumber, Rate, Tabs, message, Spin } from 'antd';
 import { ShoppingCartOutlined, HeartOutlined } from '@ant-design/icons';
-import { mockProducts, mockReviews } from '../../../services/mockData';
+import productService from '../../../services/productService';
 import './ProductDetail.scss';
 
 const { TabPane } = Tabs;
 
 const ProductDetail = () => {
-    const { id } = useParams();
+    const { productId: id } = useParams();
+    console.log('ProductDetail param id:', id);
     const [quantity, setQuantity] = useState(1);
-    const product = mockProducts.find(p => p._id === id);
+    const [product, setProduct] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [errorMsg, setErrorMsg] = useState('');
 
-    if (!product) {
-        return <div>Không tìm thấy sản phẩm</div>;
-    }
+    useEffect(() => {
+        if (!id) {
+            setProduct(null);
+            setErrorMsg('ID sản phẩm không hợp lệ');
+            setLoading(false);
+            return;
+        }
+        async function fetchProduct() {
+            setLoading(true);
+            setErrorMsg('');
+            try {
+                const res = await productService.getProductById(id);
+                console.log('API response for getProductById:', res);
+                if (res?.status === 'Error' || !res?.data) {
+                    setProduct(null);
+                    setErrorMsg(res?.message || 'Không tìm thấy sản phẩm');
+                } else {
+                    setProduct(res.data);
+                    console.log('Fetched product:', res.data);
+                }
+            } catch (err) {
+                setProduct(null);
+                setErrorMsg(err?.message || 'Không tìm thấy sản phẩm');
+                console.log('Error fetching product:', err);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchProduct();
+    }, [id]);
 
-    const handleAddToCart = () => {
-        // In a real app, you would add the product to cart here
-        message.success('Đã thêm sản phẩm vào giỏ hàng');
-    };
+    if (loading) return <Spin size="large" style={{ display: 'block', margin: '40px auto' }} />;
+    if (!product) return <div style={{ color: 'red', textAlign: 'center', margin: 40 }}>{errorMsg || 'Không tìm thấy sản phẩm'}</div>;
 
-    const handleAddToWishlist = () => {
-        // In a real app, you would add the product to wishlist here
-        message.success('Đã thêm sản phẩm vào danh sách yêu thích');
-    };
+    // Lấy thông tin cần thiết từ product
+    const basic = product.basicInformation || {};
+    const priceInfo = product.pricingAndInventory || {};
+    const desc = product.description || {};
+    const media = product.media || {};
+    const mediaFiles = product.mediaFiles || {};
+    const images = Array.isArray(mediaFiles.images) && mediaFiles.images.length > 0
+        ? mediaFiles.images.map(img => img.path)
+        : (Array.isArray(media.imageGallery) && media.imageGallery.length > 0 ? media.imageGallery : (media.mainImage ? [media.mainImage] : []));
+    const mainImage = images[0] || '/images/products/default.jpg';
+    console.log('Product images:', images);
+    console.log('Main image:', mainImage);
 
     return (
         <div className="product-detail">
             <Row gutter={[32, 32]}>
                 <Col xs={24} md={12}>
                     <div className="product-images">
-                        <img src={product.imageUrls[0]} alt={product.name} className="main-image" />
+                        <img src={mainImage} alt={basic.productName} className="main-image" />
                         <div className="thumbnail-list">
-                            {product.imageUrls.map((url, index) => (
+                            {images.map((url, index) => (
                                 <img
                                     key={index}
                                     src={url}
-                                    alt={`${product.name} ${index + 1}`}
+                                    alt={`${basic.productName || ''} ${index + 1}`}
                                     className="thumbnail"
                                 />
                             ))}
@@ -47,19 +83,19 @@ const ProductDetail = () => {
 
                 <Col xs={24} md={12}>
                     <div className="product-info">
-                        <h1>{product.name}</h1>
-                        <div className="price">{product.price.toLocaleString('vi-VN')} VNĐ</div>
+                        <h1>{basic.productName || 'Không có tên'}</h1>
+                        <div className="price">{(priceInfo.salePrice || priceInfo.originalPrice || 0).toLocaleString('vi-VN')} VNĐ</div>
                         <div className="rating">
-                            <Rate disabled defaultValue={product.rating} />
-                            <span className="review-count">({product.reviewCount} đánh giá)</span>
+                            <Rate disabled defaultValue={product.averageRating || 5} />
+                            {/* <span className="review-count">({product.reviewCount || 0} đánh giá)</span> */}
                         </div>
-                        <p className="description">{product.description}</p>
+                        <p className="description">{desc.shortDescription || desc.detailedDescription || basic.description || ''}</p>
 
                         <div className="quantity-selector">
                             <span>Số lượng:</span>
                             <InputNumber
                                 min={1}
-                                max={product.stockQuantity}
+                                max={priceInfo.stockQuantity || 99}
                                 value={quantity}
                                 onChange={setQuantity}
                             />
@@ -70,14 +106,14 @@ const ProductDetail = () => {
                                 type="primary"
                                 icon={<ShoppingCartOutlined />}
                                 size="large"
-                                onClick={handleAddToCart}
+                                onClick={() => message.success('Đã thêm sản phẩm vào giỏ hàng')}
                             >
                                 Thêm vào giỏ hàng
                             </Button>
                             <Button
                                 icon={<HeartOutlined />}
                                 size="large"
-                                onClick={handleAddToWishlist}
+                                onClick={() => message.success('Đã thêm sản phẩm vào danh sách yêu thích')}
                             >
                                 Yêu thích
                             </Button>
@@ -86,17 +122,15 @@ const ProductDetail = () => {
                         <div className="product-meta">
                             <div className="meta-item">
                                 <span className="label">Thương hiệu:</span>
-                                <span className="value">{product.brand}</span>
+                                <span className="value">{basic.brand || 'Không rõ'}</span>
                             </div>
                             <div className="meta-item">
                                 <span className="label">Danh mục:</span>
-                                <span className="value">{product.category}</span>
+                                <span className="value">{Array.isArray(basic.categoryIds) && basic.categoryIds.length > 0 ? basic.categoryIds.map(cat => cat.name || cat).join(', ') : (basic.category || 'Không rõ')}</span>
                             </div>
                             <div className="meta-item">
                                 <span className="label">Tình trạng:</span>
-                                <span className="value">
-                                    {product.stockQuantity > 0 ? 'Còn hàng' : 'Hết hàng'}
-                                </span>
+                                <span className="value">{(priceInfo.stockQuantity || 0) > 0 ? 'Còn hàng' : 'Hết hàng'}</span>
                             </div>
                         </div>
                     </div>
@@ -108,30 +142,14 @@ const ProductDetail = () => {
                     <TabPane tab="Mô tả" key="1">
                         <div className="tab-content">
                             <h3>Chi tiết sản phẩm</h3>
-                            <p>{product.description}</p>
+                            <p>{desc.detailedDescription || desc.shortDescription || ''}</p>
                             <h3>Thành phần</h3>
-                            <p>{product.ingredients}</p>
+                            <p>{Array.isArray(desc.ingredients) ? desc.ingredients.join(', ') : desc.ingredients || ''}</p>
                             <h3>Cách sử dụng</h3>
-                            <p>{product.usage}</p>
+                            <p>{Array.isArray(desc.usageInstructions) ? desc.usageInstructions.join(' ') : desc.usageInstructions || ''}</p>
                         </div>
                     </TabPane>
-
-                    <TabPane tab="Đánh giá" key="2">
-                        <div className="tab-content">
-                            {mockReviews.map(review => (
-                                <div key={review._id} className="review-item">
-                                    <div className="review-header">
-                                        <Rate disabled defaultValue={review.rating} />
-                                        <span className="reviewer">{review.userName}</span>
-                                        <span className="review-date">
-                                            {new Date(review.createdAt).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                    <p className="review-content">{review.content}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </TabPane>
+                    {/* Tab đánh giá có thể bổ sung sau */}
                 </Tabs>
             </Card>
         </div>
