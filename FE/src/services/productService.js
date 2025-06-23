@@ -102,6 +102,16 @@ const productService = {
     } catch (error) {
       throw error.response?.data || error.message;
     }
+  },
+
+  /**
+   * Lấy sản phẩm gợi ý cho chatbot dựa trên từ khóa/vấn đề da
+   * @param {string} query
+   * @returns {Promise<Array>} Danh sách sản phẩm phù hợp
+   */
+  getRecommendedProductsForChatbot: async (query) => {
+    const response = await axios.get(`${API_URL}/products/recommend?query=${encodeURIComponent(query)}`);
+    return response.data.data || [];
   }
 };
 

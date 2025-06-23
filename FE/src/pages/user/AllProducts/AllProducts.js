@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Input, Select, Button, Rate, Pagination } from 'antd';
 import { SearchOutlined, FilterOutlined } from '@ant-design/icons';
-import { mockProducts, mockCategories } from '../../../services/mockData';
+import productService from '../../../services/productService';
+import categoryService from '../../../services/categoryService';
 import './AllProducts.scss';
+import { useNavigate } from 'react-router-dom';
 
 const { Option } = Select;
 
@@ -12,10 +14,36 @@ const AllProducts = () => {
     const [sortBy, setSortBy] = useState('newest');
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 12;
+    const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
-    const filteredProducts = mockProducts.filter(product => {
-        const matchesSearch = product.name.toLowerCase().includes(searchText.toLowerCase()) ||
-            product.description.toLowerCase().includes(searchText.toLowerCase());
+    useEffect(() => {
+        async function fetchData() {
+            setLoading(true);
+            try {
+                const productRes = await productService.getAllProducts({ page: 1, limit: 100 });
+                setProducts(Array.isArray(productRes?.data?.data) ? productRes.data.data : []);
+                const categoryRes = await categoryService.getAllCategories({ page: 1, limit: 100 });
+                setCategories(Array.isArray(categoryRes?.data) ? categoryRes.data : []);
+            } catch (err) {
+                setProducts([]);
+                setCategories([]);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchData();
+    }, []);
+
+    const filteredProducts = (Array.isArray(products) ? products : []).filter(product => {
+        const name = typeof product.name === 'string' ? product.name : (product.basicInformation?.productName || '');
+        const description = typeof product.description === 'string'
+            ? product.description
+            : (product.description?.shortDescription || product.basicInformation?.description || '');
+        const matchesSearch = name.toLowerCase().includes(searchText.toLowerCase()) ||
+            description.toLowerCase().includes(searchText.toLowerCase());
         const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
         return matchesSearch && matchesCategory;
     });
@@ -57,7 +85,7 @@ const AllProducts = () => {
                             style={{ width: '100%' }}
                         >
                             <Option value="all">Tất cả danh mục</Option>
-                            {mockCategories.map(category => (
+                            {categories.map(category => (
                                 <Option key={category._id} value={category._id}>
                                     {category.name}
                                 </Option>
@@ -84,15 +112,37 @@ const AllProducts = () => {
                     <Col xs={24} sm={12} md={8} lg={6} key={product._id}>
                         <Card
                             hoverable
-                            cover={<img alt={product.name} src={product.imageUrls[0]} />}
+                            cover={
+                                (() => {
+                                    let img = '';
+                                    if (Array.isArray(product.imageUrls) && product.imageUrls[0]) {
+                                        img = product.imageUrls[0];
+                                    } else if (product.media && product.media.mainImage) {
+                                        img = product.media.mainImage;
+                                    } else if (product.mediaFiles && Array.isArray(product.mediaFiles.images) && product.mediaFiles.images[0]?.path) {
+                                        img = product.mediaFiles.images[0].path;
+                                    } else {
+                                        img = '/images/products/default.jpg';
+                                    }
+                                    return <img alt={product.name || product.basicInformation?.productName || ''} src={img} />;
+                                })()
+                            }
                             className="product-card"
+                            onClick={() => product._id && navigate(`/products/${product._id}`)}
                         >
                             <Card.Meta
                                 title={product.name}
                                 description={
                                     <>
                                         <div className="price">
-                                            {product.price.toLocaleString('vi-VN')} VNĐ
+                                            {(() => {
+                                                let price = product.price;
+                                                if (typeof price !== 'number') {
+                                                    price = product.pricingAndInventory?.salePrice;
+                                                }
+                                                if (typeof price !== 'number') price = 0;
+                                                return price.toLocaleString('vi-VN') + ' VNĐ';
+                                            })()}
                                         </div>
                                         <div className="rating">
                                             <Rate disabled defaultValue={product.rating} />

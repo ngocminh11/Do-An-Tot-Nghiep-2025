@@ -1,7 +1,15 @@
+:root {
+    --cocoon-gold: #C7A15A;
+    --cocoon-brown: #3A2E1F;
+    --cocoon-bg: #FAF7EF;
+    --cocoon-white: #fff;
+}
+
 .app-footer {
-    background-color: #f7f7f7;
+    background-color: var(--cocoon-brown);
     padding: 40px 24px;
-    border-top: 1px solid #e8e8e8;
+    border-top: 1px solid rgba(199, 161, 90, 0.1);
+    color: var(--cocoon-white);
 
     .ant-row {
         justify-content: space-between;
@@ -9,22 +17,45 @@
     }
 
     .footer-logo {
-        color: #333;
+        background: linear-gradient(45deg, var(--cocoon-gold), #E5C992);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
         font-size: 28px;
         font-weight: bold;
         margin-bottom: 10px;
+        transition: all 0.3s ease;
+
+        &:hover {
+            opacity: 0.9;
+        }
     }
 
     .ant-typography {
-        color: #666;
+        color: rgba(255, 255, 255, 0.8);
         margin-bottom: 5px;
         display: block;
+        transition: color 0.3s ease;
+
+        &:hover {
+            color: var(--cocoon-gold);
+        }
     }
 
     .ant-typography.ant-typography-title {
-        color: #333;
+        color: var(--cocoon-gold);
         margin-bottom: 15px;
         font-size: 18px;
+        font-weight: 600;
+    }
+
+    a.ant-typography {
+        color: rgba(255, 255, 255, 0.8);
+        transition: all 0.3s ease;
+
+        &:hover {
+            color: var(--cocoon-gold);
+        }
     }
 
     .social-icons {
@@ -32,12 +63,13 @@
 
         .anticon {
             font-size: 24px;
-            color: #666;
-            transition: color 0.3s ease;
+            color: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            margin: 0 8px;
 
             &:hover {
-                color: #ff4d4f;
-                /* Accent color */
+                color: var(--cocoon-gold);
+                transform: translateY(-2px);
             }
         }
     }
@@ -67,6 +99,14 @@
 
         .ant-typography.ant-typography-title {
             font-size: 16px;
+        }
+
+        .social-icons {
+            justify-content: center;
+
+            .anticon {
+                margin: 0 12px;
+            }
         }
     }
 }

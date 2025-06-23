@@ -1,12 +1,19 @@
+:root {
+    --cocoon-gold: #C7A15A;
+    --cocoon-brown: #3A2E1F;
+    --cocoon-bg: #FAF7EF;
+    --cocoon-white: #fff;
+}
+
 .app-header {
-    background-color: #fff !important;
+    background: var(--cocoon-white) !important;
     padding: 0 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     height: 64px;
-    border-bottom: 1px solid #f0f0f0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid rgba(199, 161, 90, 0.1);
+    box-shadow: 0 2px 15px rgba(199, 161, 90, 0.05);
 
     .header-left {
         display: flex;
@@ -14,10 +21,18 @@
     }
 
     .logo {
-        color: #ff4d4f;
+        background: linear-gradient(45deg, var(--cocoon-gold), #E5C992);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
         font-size: 28px;
         font-weight: bold;
         margin-right: 40px;
+        transition: all 0.3s ease;
+
+        &:hover {
+            transform: scale(1.05);
+        }
     }
 
     .main-menu {
@@ -29,15 +44,17 @@
             font-weight: 500;
             font-size: 16px;
             margin: 0 10px;
-            color: #555;
+            color: var(--cocoon-brown);
+            transition: all 0.3s ease;
 
             &:hover {
-                color: #ff4d4f !important;
+                color: var(--cocoon-gold) !important;
+                transform: translateY(-2px);
             }
 
             &.ant-menu-item-selected {
-                color: #ff4d4f !important;
-                border-bottom: 2px solid #ff4d4f !important;
+                color: var(--cocoon-gold) !important;
+                border-bottom: 2px solid var(--cocoon-gold) !important;
             }
 
             .anticon {
@@ -50,24 +67,78 @@
     .header-right {
         display: flex;
         align-items: center;
+        gap: 20px;
 
-        .header-search {
-            .ant-input-search-button {
-                background-color: #ff4d4f;
-                border-color: #ff4d4f;
+        .search-container {
+            position: relative;
+            transition: all 0.3s ease;
+
+            .header-search {
+                width: 300px;
+                transition: all 0.3s ease;
+
+                .ant-input {
+                    border-radius: 20px;
+                    padding-left: 15px;
+                    border-color: rgba(199, 161, 90, 0.2);
+
+                    &:focus {
+                        border-color: var(--cocoon-gold);
+                        box-shadow: 0 0 0 2px rgba(199, 161, 90, 0.1);
+                    }
+
+                    &::placeholder {
+                        color: rgba(58, 46, 31, 0.5);
+                    }
+                }
+
+                .ant-input-search-button {
+                    border-radius: 0 20px 20px 0;
+                    background: linear-gradient(45deg, var(--cocoon-gold), #E5C992);
+                    border: none;
+                    height: 32px;
+                    transition: all 0.3s ease;
+
+                    &:hover {
+                        opacity: 0.9;
+                        transform: translateY(-1px);
+                    }
+
+                    .anticon {
+                        color: var(--cocoon-white);
+                    }
+                }
+            }
+
+            .search-icon-button {
+                color: var(--cocoon-brown);
+                transition: all 0.3s ease;
 
                 &:hover {
-                    background-color: #ff7875;
-                    border-color: #ff7875;
+                    color: var(--cocoon-gold);
+                    transform: scale(1.1);
                 }
             }
         }
 
-        .notification-badge {
-            margin-right: 20px;
+        .notification-badge,
+        .cart-badge {
+            margin: 0 5px;
 
-            .ant-scroll-number-only {
-                background-color: #ff4d4f;
+            .ant-badge-count {
+                background: linear-gradient(45deg, var(--cocoon-gold), #E5C992);
+                box-shadow: 0 2px 5px rgba(199, 161, 90, 0.2);
+                border: 2px solid var(--cocoon-white);
+            }
+
+            button {
+                color: var(--cocoon-brown);
+                transition: all 0.3s ease;
+
+                &:hover {
+                    color: var(--cocoon-gold);
+                    transform: scale(1.1);
+                }
             }
         }
 
@@ -75,17 +146,27 @@
             cursor: pointer;
             display: flex;
             align-items: center;
-            padding: 8px 12px;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
+            padding: 8px 16px;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            background: rgba(199, 161, 90, 0.05);
+            margin-left: 10px;
 
             &:hover {
-                background-color: #f0f0f0;
+                background: rgba(199, 161, 90, 0.1);
+                transform: translateY(-1px);
             }
 
             .ant-avatar {
-                margin-right: 10px;
-                background-color: #ff4d4f;
+                margin-right: 12px;
+                border: 2px solid var(--cocoon-white);
+                box-shadow: 0 2px 8px rgba(199, 161, 90, 0.1);
+                background: linear-gradient(45deg, var(--cocoon-gold), #E5C992);
+                transition: all 0.3s ease;
+
+                &:hover {
+                    transform: scale(1.05);
+                }
             }
 
             .user-info {
@@ -94,13 +175,16 @@
                 align-items: flex-start;
 
                 .user-name {
-                    font-weight: bold;
-                    color: #333;
+                    font-weight: 600;
+                    color: var(--cocoon-brown);
+                    font-size: 14px;
+                    line-height: 1.2;
                 }
 
-                .user-email {
+                .user-level {
                     font-size: 12px;
-                    color: #777;
+                    color: var(--cocoon-gold);
+                    font-weight: 500;
                 }
             }
         }
@@ -108,26 +192,124 @@
 }
 
 .ant-dropdown-menu {
-    padding: 10px 0;
+    padding: 8px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(199, 161, 90, 0.08);
+    border: 1px solid rgba(199, 161, 90, 0.1);
+
+    .user-status-menu-item {
+        padding: 8px 4px;
+        text-align: center;
+
+        .user-level {
+            font-weight: 600;
+            color: var(--cocoon-gold);
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .user-points {
+            color: var(--cocoon-brown);
+            font-size: 12px;
+        }
+    }
 
     .ant-dropdown-menu-item {
-        padding: 10px 15px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin: 2px 0;
+        transition: all 0.3s ease;
 
         .anticon {
             margin-right: 10px;
+            color: var(--cocoon-brown);
         }
 
         a {
-            color: #333;
+            color: var(--cocoon-brown);
+            font-weight: 500;
+            transition: all 0.3s ease;
 
             &:hover {
-                color: #ff4d4f;
+                color: var(--cocoon-gold);
             }
         }
 
         &:hover {
-            background-color: #fff0f0;
-            color: #ff4d4f;
+            background: rgba(199, 161, 90, 0.05);
+            transform: translateX(4px);
+
+            .anticon {
+                color: var(--cocoon-gold);
+            }
+        }
+
+        &.ant-dropdown-menu-item-disabled {
+            color: inherit;
+            background: transparent;
+            cursor: default;
+
+            &:hover {
+                transform: none;
+            }
         }
     }
+
+    .ant-dropdown-menu-item-divider {
+        background-color: rgba(199, 161, 90, 0.1);
+        margin: 8px 0;
+    }
+}
+
+// Responsive styles
+@media (max-width: 768px) {
+    .app-header {
+        .header-right {
+            .search-container {
+                .header-search {
+                    width: 200px;
+                }
+            }
+
+            .user-profile-dropdown {
+                .user-info {
+                    display: none;
+                }
+
+                .ant-avatar {
+                    margin-right: 0;
+                }
+            }
+        }
+    }
+}
+
+@media (max-width: 576px) {
+    .app-header {
+        padding: 0 12px;
+
+        .logo {
+            font-size: 24px;
+            margin-right: 20px;
+        }
+
+        .header-right {
+            .search-container {
+                .header-search {
+                    width: 150px;
+                }
+            }
+        }
+    }
+}
+
+// Ghi đè hiệu ứng hover/gạch chân xanh dương của AntD
+.main-menu .ant-menu-item::after {
+    border-bottom: none !important;
+}
+
+.main-menu .ant-menu-item:hover::after,
+.main-menu .ant-menu-item-selected::after {
+    border-bottom: 2px solid var(--cocoon-gold) !important;
+    box-shadow: none !important;
 }

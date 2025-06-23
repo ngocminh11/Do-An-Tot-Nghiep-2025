@@ -119,19 +119,21 @@ const EditProduct = () => {
         };
 
         const fetchCategories = async () => {
+            setLoadingCategories(true);
             try {
-                setLoadingCategories(true);
                 const response = await categoryService.getAllCategories();
-                if (response && response.data && response.data.data) {
-                    const categoriesData = response.data.data.map(cat => ({
+                if (response && Array.isArray(response.data)) {
+                    setCategories(response.data.map(cat => ({
                         ...cat,
                         _id: String(cat._id),
                         name: cat.name || 'Unnamed Category'
-                    }));
-                    setCategories(categoriesData);
+                    })));
+                } else {
+                    setCategories([]);
+                    message.error('Không thể tải danh mục sản phẩm');
                 }
             } catch (error) {
-                console.error('Error fetching categories:', error);
+                setCategories([]);
                 message.error('Không thể tải danh mục sản phẩm');
             } finally {
                 setLoadingCategories(false);
@@ -139,19 +141,21 @@ const EditProduct = () => {
         };
 
         const fetchTags = async () => {
+            setLoadingTags(true);
             try {
-                setLoadingTags(true);
                 const response = await tagService.getAllTags();
-                if (response && response.data && response.data.data) {
-                    const tagsData = response.data.data.map(tag => ({
+                if (response && Array.isArray(response.data)) {
+                    setTags(response.data.map(tag => ({
                         ...tag,
                         _id: String(tag._id),
                         name: tag.name || 'Unnamed Tag'
-                    }));
-                    setTags(tagsData);
+                    })));
+                } else {
+                    setTags([]);
+                    message.error('Không thể tải tags');
                 }
             } catch (error) {
-                console.error('Error fetching tags:', error);
+                setTags([]);
                 message.error('Không thể tải tags');
             } finally {
                 setLoadingTags(false);

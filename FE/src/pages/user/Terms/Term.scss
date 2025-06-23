@@ -1,16 +1,21 @@
+@import '../../../styles/variables.scss';
+
 .term-page {
     max-width: 800px;
     margin: 0 auto;
     padding: 24px;
+    background: var(--cocoon-bg);
+    color: var(--cocoon-brown);
 
     .ant-card {
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        background: var(--cocoon-white);
     }
 
     h1 {
         font-size: 28px;
-        color: #1a1a1a;
+        color: var(--cocoon-gold);
         margin-bottom: 32px;
         text-align: center;
     }
@@ -20,7 +25,7 @@
 
         h2 {
             font-size: 20px;
-            color: #1a1a1a;
+            color: var(--cocoon-brown);
             margin-bottom: 16px;
         }
 

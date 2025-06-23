@@ -61,7 +61,6 @@ exports.getProductById = async (req, res) => {
   const { id } = req.params;
   if (!isValidId(id))
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
-
   try {
     const product = await Product.findById(id)
       .populate('basicInformation.categoryIds', 'name');
