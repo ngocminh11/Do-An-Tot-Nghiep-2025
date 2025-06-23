@@ -1,0 +1,123 @@
+.checkout-page {
+    padding: 24px;
+    background-color: #f5f5f5;
+    min-height: calc(100vh - 64px);
+
+    .page-title {
+        margin-bottom: 24px;
+        text-align: center;
+    }
+
+    .shipping-info-card {
+        margin-bottom: 24px;
+
+        .address-selection {
+            margin-bottom: 24px;
+
+            .address-list {
+                width: 100%;
+                margin-bottom: 16px;
+
+                .address-item {
+                    padding: 12px;
+                    border: 1px solid #f0f0f0;
+                    border-radius: 4px;
+                    margin-bottom: 8px;
+                    background-color: #fff;
+
+                    &:hover {
+                        border-color: #1890ff;
+                    }
+
+                    .address-header {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        margin-bottom: 8px;
+                    }
+
+                    .address-content {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 4px;
+                        color: #666;
+                    }
+                }
+            }
+
+            .add-address-button {
+                width: 100%;
+                margin-top: 16px;
+            }
+        }
+    }
+
+    .payment-method-card {
+        margin-bottom: 24px;
+
+        .payment-options {
+            .payment-option {
+                padding: 16px;
+                border: 1px solid #f0f0f0;
+                border-radius: 4px;
+                margin-bottom: 16px;
+                cursor: pointer;
+                transition: all 0.3s;
+
+                &:hover {
+                    border-color: #1890ff;
+                }
+
+                &.selected {
+                    border-color: #1890ff;
+                    background-color: #e6f7ff;
+                }
+
+                .payment-icon {
+                    font-size: 24px;
+                    margin-right: 16px;
+                }
+            }
+        }
+    }
+
+    .order-summary-card {
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+
+            &.total {
+                font-size: 18px;
+                font-weight: bold;
+                border-top: 1px solid #f0f0f0;
+                padding-top: 16px;
+                margin-top: 16px;
+            }
+        }
+
+        .checkout-button {
+            width: 100%;
+            height: 40px;
+            font-size: 16px;
+        }
+    }
+}
+
+// Responsive styles
+@media (max-width: 768px) {
+    .checkout-page {
+        padding: 16px;
+
+        .page-title {
+            font-size: 20px;
+            margin-bottom: 16px;
+        }
+
+        .shipping-info-card,
+        .payment-method-card,
+        .order-summary-card {
+            margin-bottom: 16px;
+        }
+    }
+}

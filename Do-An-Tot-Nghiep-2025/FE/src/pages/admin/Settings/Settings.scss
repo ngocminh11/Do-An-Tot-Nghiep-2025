@@ -1,0 +1,72 @@
+.settings {
+    padding: 24px;
+
+    .header {
+        margin-bottom: 24px;
+
+        h1 {
+            color: #1a1a1a;
+            margin: 0;
+            font-size: 24px;
+        }
+    }
+
+    .settings-card {
+        margin-bottom: 24px;
+
+        .ant-card-head {
+            background-color: #fafafa;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .ant-card-head-title {
+            font-size: 16px;
+            font-weight: 500;
+        }
+    }
+
+    .ant-form-item {
+        margin-bottom: 24px;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    .ant-upload-list {
+        margin-top: 8px;
+    }
+
+    .form-actions {
+        margin-top: 24px;
+        text-align: right;
+    }
+
+    @media (max-width: 768px) {
+        padding: 16px;
+
+        .header {
+            margin-bottom: 16px;
+
+            h1 {
+                font-size: 20px;
+            }
+        }
+
+        .settings-card {
+            margin-bottom: 16px;
+        }
+
+        .ant-form-item {
+            margin-bottom: 16px;
+        }
+
+        .form-actions {
+            margin-top: 16px;
+
+            .ant-btn {
+                width: 100%;
+            }
+        }
+    }
+}
