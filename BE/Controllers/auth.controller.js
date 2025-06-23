@@ -6,6 +6,9 @@ const nodemailer = require('nodemailer');
 const { sendSuccess, sendError } = require('../Utils/responseHelper');
 const StatusCodes = require('../Constants/ResponseCode');
 const { generateOtpEmailHtml, logoPath } = require('../Utils/emailTemplates');
+const otpRateLimitMap = new Map(); // email => { count, firstAttemptTime }
+const loginAttempts = new Map(); // email -> { count: số lần sai, lockUntil: timestamp 
+
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -52,11 +55,44 @@ exports.sendOTP = async (req, res) => {
   if (!email) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Phải cung cấp email.');
   if (!isEmail(email)) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Email không hợp lệ.');
 
+  // === Xử lý giới hạn gửi OTP mỗi email ===
+  const currentTime = Date.now();
+  const limitWindow = 60 * 1000; // 1 phút
+  const maxAttempts = 3;
+
+  const rateData = otpRateLimitMap.get(email);
+
+  if (rateData) {
+    const { count, firstAttemptTime } = rateData;
+
+    if (currentTime - firstAttemptTime < limitWindow) {
+      if (count >= maxAttempts) {
+        return sendError(res, StatusCodes.ERROR_TOO_MANY_REQUESTS, 'Vượt quá số lần gửi OTP. Vui lòng thử lại sau 1 phút.');
+      } else {
+        otpRateLimitMap.set(email, {
+          count: count + 1,
+          firstAttemptTime,
+        });
+      }
+    } else {
+      // Reset vì đã qua 1 phút
+      otpRateLimitMap.set(email, {
+        count: 1,
+        firstAttemptTime: currentTime,
+      });
+    }
+  } else {
+    otpRateLimitMap.set(email, {
+      count: 1,
+      firstAttemptTime: currentTime,
+    });
+  }
+
   const otp = generateOTP();
   const otpToken = generateToken({ email, otp }, process.env.JWT_OTP_SECRET, '10m');
 
   try {
-    await sendOtpEmail(email, otp, 'Mã xác thực OTP - COCOOSHOP', 'Xác Thực OTP');
+    await sendOtpEmail(email, otp);
     return sendSuccess(res, StatusCodes.SUCCESS_OK, { otpToken }, 'OTP đã được gửi qua email.');
   } catch (error) {
     console.error('Lỗi khi gửi OTP:', error);
@@ -67,18 +103,57 @@ exports.sendOTP = async (req, res) => {
 // === XÁC MINH OTP ===
 exports.verifyOTP = async (req, res) => {
   const { otpToken, otp } = req.body;
-  if (!otpToken || !otp) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Thiếu mã OTP hoặc token.');
+
+  // Kiểm tra đầu vào
+  if (!otpToken || !otp) {
+    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Thiếu mã OTP hoặc token.');
+  }
+
+  // Ràng buộc: OTP phải là chuỗi số có đúng 6 chữ số
+  const otpRegex = /^\d{6}$/;
+  if (!otpRegex.test(otp)) {
+    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Mã OTP không hợp lệ. Vui lòng nhập đúng 6 chữ số.');
+  }
 
   try {
+    // Giải mã token OTP
     const decoded = jwt.verify(otpToken, process.env.JWT_OTP_SECRET);
-    if (decoded.otp !== otp) return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Mã OTP không chính xác.');
 
-    const verifiedToken = generateToken({ email: decoded.email }, process.env.JWT_OTP_SECRET, '15m');
+    // Kiểm tra có chứa email và otp không
+    if (!decoded?.email || !decoded?.otp) {
+      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Token OTP không hợp lệ.');
+    }
+
+    // Email trong token phải hợp lệ
+    if (!isEmail(decoded.email)) {
+      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Email trong token không hợp lệ.');
+    }
+
+    // So sánh mã OTP
+    if (decoded.otp !== otp) {
+      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Mã OTP không chính xác.');
+    }
+
+    // Nếu đúng -> tạo token xác thực mới dùng cho đăng ký / reset mật khẩu
+    const verifiedToken = generateToken(
+      { email: decoded.email },
+      process.env.JWT_OTP_SECRET,
+      '15m'
+    );
+
     return sendSuccess(res, StatusCodes.SUCCESS_OK, { otpToken: verifiedToken }, 'OTP xác thực thành công.');
   } catch (err) {
-    return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'OTP không hợp lệ hoặc đã hết hạn.');
+    if (err.name === 'TokenExpiredError') {
+      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'OTP đã hết hạn.');
+    }
+    if (err.name === 'JsonWebTokenError') {
+      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Token không hợp lệ.');
+    }
+
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, 'Lỗi xác thực OTP.');
   }
 };
+
 
 // === ĐĂNG KÝ ===
 exports.register = async (req, res) => {
@@ -135,15 +210,30 @@ exports.register = async (req, res) => {
 // === ĐĂNG NHẬP (STEP 1) - GỬI OTP XÁC MINH ===
 exports.loginStep1 = async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Thiếu email hoặc mật khẩu.');
+  if (!email || !password)
+    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Thiếu email hoặc mật khẩu.');
+
+  const attemptInfo = loginAttempts.get(email);
+  const now = Date.now();
+
+  if (attemptInfo && attemptInfo.lockUntil > now) {
+    const waitSeconds = Math.ceil((attemptInfo.lockUntil - now) / 1000);
+    return sendError(res, StatusCodes.ERROR_TOO_MANY_REQUESTS, `Tài khoản tạm khóa trong ${waitSeconds} giây.`, {
+      failedAttempts: attemptInfo.count,
+    });
+  }
 
   try {
     const user = await User.findOne({ email });
-    if (!user) return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Sai email hoặc mật khẩu.');
+    if (!user) {
+      const failedAttempts = updateLoginAttempts(email);
+      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Sai email hoặc mật khẩu.', {
+        failedAttempts,
+      });
+    }
 
     const pwdHash = user.passwordHash || '';
 
-    // Nếu mật khẩu chưa hash, tự động hash lại và lưu DB
     if (!isHashed(pwdHash)) {
       const newHash = await bcrypt.hash(pwdHash, 10);
       user.passwordHash = newHash;
@@ -151,12 +241,25 @@ exports.loginStep1 = async (req, res) => {
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Sai email hoặc mật khẩu.');
+    if (!isMatch) {
+      const failedAttempts = updateLoginAttempts(email);
+      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Sai email hoặc mật khẩu.', {
+        failedAttempts,
+      });
+    }
+
+    // Reset attempt nếu đúng
+    loginAttempts.delete(email);
 
     const otp = generateOTP();
     const otpToken = generateToken({ email, otp }, process.env.JWT_OTP_SECRET, '10m');
 
-    await sendOtpEmail(email, otp, 'Xác minh đăng nhập - COCOOSHOP', 'Mã OTP đăng nhập của bạn có hiệu lực trong vòng <strong>10 phút</strong>.');
+    await sendOtpEmail(
+      email,
+      otp,
+      'Xác minh đăng nhập - COCOOSHOP',
+      'Mã OTP đăng nhập của bạn có hiệu lực trong vòng <strong>10 phút</strong>.'
+    );
 
     return sendSuccess(res, StatusCodes.SUCCESS_OK, { otpToken }, 'Đã gửi mã OTP xác minh đăng nhập.');
   } catch (err) {
@@ -259,3 +362,29 @@ exports.refreshToken = async (req, res) => {
     return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Refresh token hết hạn hoặc không hợp lệ.');
   }
 };
+
+function updateLoginAttempts(email) {
+  const current = loginAttempts.get(email) || { count: 0, lockUntil: 0 };
+  const newCount = current.count + 1;
+
+  console.log(`[Login] Email ${email} đăng nhập sai ${newCount} lần.`);
+
+  if (newCount >= 3) {
+    const lockFor = 60 * 1000; // 1 phút
+    loginAttempts.set(email, {
+      count: newCount,
+      lockUntil: Date.now() + lockFor,
+    });
+    console.log(`[Login] Email ${email} đã bị khóa tạm thời trong 1 phút.`);
+  } else {
+    loginAttempts.set(email, {
+      count: newCount,
+      lockUntil: 0,
+    });
+  }
+
+  return newCount;
+}
+
+
+

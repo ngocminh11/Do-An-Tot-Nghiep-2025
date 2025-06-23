@@ -9,8 +9,17 @@ const sendSuccess = (res, code = StatusCodes.SUCCESS_OK, data = null, message = 
   return res.status(code).json({ status: STATUS_SUCCESS, message, data });
 };
 
-const sendError = (res, code = StatusCodes.ERROR_INTERNAL_SERVER, message = Messages.SERVER_ERROR) => {
-  return res.status(code).json({ status: STATUS_FAIL, message });
+const sendError = (res, code = StatusCodes.ERROR_INTERNAL_SERVER, message = Messages.SERVER_ERROR, data = null) => {
+  const response = {
+    status: STATUS_FAIL,
+    message,
+  };
+
+  if (data) {
+    response.data = data;
+  }
+
+  return res.status(code).json(response);
 };
 
 module.exports = { sendSuccess, sendError };
