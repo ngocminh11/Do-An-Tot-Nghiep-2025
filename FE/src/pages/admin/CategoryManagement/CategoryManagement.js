@@ -30,28 +30,18 @@ const CategoryManagement = () => {
                 page: pagination.current,
                 limit: pagination.pageSize
             });
-
-            // Kiểm tra và xử lý dữ liệu trả về theo cấu trúc API
-            if (response && response.data && response.data.data) {
-                setCategories(response.data.data);
-                setPagination({
-                    ...pagination,
-                    current: response.data.currentPage,
-                    total: response.data.totalItems,
-                    pageSize: response.data.perPage
-                });
-            } else {
-                console.error('Invalid response format:', response);
-                setCategories([]);
-                setPagination({
-                    ...pagination,
-                    total: 0
-                });
-            }
+            // response: { data, currentPage, totalItems, perPage }
+            setCategories(response.data);
+            setPagination({
+                ...pagination,
+                current: response.currentPage,
+                total: response.totalItems,
+                pageSize: response.perPage
+            });
         } catch (error) {
-            console.error('Error fetching categories:', error);
-            message.error('Không thể tải danh mục sản phẩm');
             setCategories([]);
+            setPagination({ ...pagination, total: 0 });
+            message.error('Không thể tải danh mục sản phẩm');
         } finally {
             setLoading(false);
         }
@@ -178,7 +168,7 @@ const CategoryManagement = () => {
             message.success('Xóa danh mục thành công.');
             fetchCategories(searchParams);
         } catch (error) {
-            const errorMessage = error.message || 'Xóa danh mục thất bại.';
+            const errorMessage = error?.message || error?.msg || 'Xóa danh mục thất bại.';
             message.error(errorMessage);
         }
     };

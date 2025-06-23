@@ -86,22 +86,20 @@ const ProductManagement = () => {
     setLoadingCategories(true);
     try {
       const response = await categoryService.getAllCategories();
-      if (response && response.data && response.data.data) {
-        const categoriesData = response.data.data.map(cat => ({
+      // Chuẩn hóa lấy đúng mảng danh mục
+      if (response && Array.isArray(response.data)) {
+        setCategories(response.data.map(cat => ({
           ...cat,
           _id: String(cat._id),
           name: cat.name || 'Unnamed Category'
-        }));
-        setCategories(categoriesData);
+        })));
       } else {
-        console.error('Invalid categories response:', response);
         setCategories([]);
         message.error('Không thể tải danh mục sản phẩm');
       }
     } catch (error) {
-      console.error('Error fetching categories:', error);
-      message.error('Không thể tải danh mục sản phẩm');
       setCategories([]);
+      message.error('Không thể tải danh mục sản phẩm');
     } finally {
       setLoadingCategories(false);
     }

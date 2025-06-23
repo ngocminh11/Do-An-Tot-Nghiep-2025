@@ -21,6 +21,8 @@ import EditProduct from './pages/admin/ProductManagement/EditProduct';
 import AppFooter from './components/common/AppFooter/AppFooter';
 import AppHeader from './components/common/AppHeader/AppHeader';
 import ChatBot from './components/ChatBot/ChatBot';
+import { Modal, Form, Input, Button, message } from 'antd';
+import { MailOutlined } from '@ant-design/icons';
 
 // Lazy load user components
 const Home = lazy(() => import('./pages/user/Home/Home'));
@@ -32,7 +34,6 @@ const Contact = lazy(() => import('./pages/user/Contact/Contact'));
 const Privacy = lazy(() => import('./pages/user/Privacy/Privacy'));
 const TermsOfService = lazy(() => import('./pages/user/Terms/Terms'));
 const FAQ = lazy(() => import('./pages/user/FAQ/FAQ'));
-const Login = lazy(() => import('./pages/user/Login/Login'));
 
 // Import Cart and Checkout directly
 import Cart from './pages/user/Cart/Cart';
@@ -94,6 +95,8 @@ const App = () => {
 const AppContent = () => {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const { user } = useAuth();
+  const navigate = typeof useLocation === 'function' ? useLocation() : null;
 
   const userRoutes = [
     { path: '/', element: <Home /> },
@@ -109,7 +112,6 @@ const AppContent = () => {
     { path: '/privacy', element: <Privacy /> },
     { path: '/terms', element: <TermsOfService /> },
     { path: '/faq', element: <FAQ /> },
-    { path: '/login', element: <Login /> },
   ];
 
   const adminRoutes = [

@@ -168,7 +168,6 @@ exports.loginStep1 = async (req, res) => {
 exports.loginStep2 = async (req, res) => {
   const { otpToken, otp } = req.body;
   if (!otpToken || !otp) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Thiếu OTP hoặc token.');
-
   try {
     const decoded = jwt.verify(otpToken, process.env.JWT_OTP_SECRET);
     if (decoded.otp !== otp) return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'OTP không hợp lệ.');
