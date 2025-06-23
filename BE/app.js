@@ -19,6 +19,8 @@ const mongoSanitize = require('mongo-sanitize');
 // Routes
 const chatRoutes = require('./Routes/chat.routes');
 const adminRoutes = require('./Routes/admin.routes');
+const userRoutes = require('./Routes/user.routes');
+const authRoutes = require('./Routes/auth.routes');
 
 const app = express();
 const server = http.createServer(app);
@@ -117,6 +119,8 @@ app.use('/api/', limiter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/chat', chatRoutes);
 app.use('/admin/', adminRoutes);
+app.use('/', userRoutes);
+app.use('/', authRoutes);
 
 //============================= 404 HANDLER ================================
 app.use((req, res, next) => {
