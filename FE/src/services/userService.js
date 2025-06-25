@@ -32,7 +32,9 @@ export const userAPI = {
     },
     // Đăng nhập bước 2: xác minh OTP, trả về token
     loginStep2: async (otpToken, otp) => {
+        console.log('FE: Gọi API /login-verify với otpToken:', otpToken, 'otp:', otp);
         const res = await api.post('/login-verify', { otpToken, otp });
+        console.log('FE: Response từ /login-verify:', res.data);
         return res.data.data; // { user, accessToken, refreshToken }
     },
     // Làm mới access token

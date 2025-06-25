@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import postService from '../../../services/postService';
 import categoryService from '../../../services/categoryService';
 import tagService from '../../../services/tagService';
+import slugify from 'slugify';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -41,11 +42,19 @@ const AddPost = () => {
     const handleFinish = async (values) => {
         try {
             setLoading(true);
+            // Sinh excerpt nếu thiếu
+            let excerpt = values.excerpt?.trim();
+            if (!excerpt) {
+                excerpt = values.content?.substring(0, 297) + (values.content?.length > 300 ? '...' : '');
+            }
+            // Sinh slug nếu thiếu
+            let slug = slugify(values.title || '', { lower: true, strict: true });
             // Chuẩn bị dữ liệu gửi lên API
             const postData = {
                 title: values.title,
+                slug,
                 content: values.content,
-                excerpt: values.excerpt || '',
+                excerpt,
                 category: values.category,
                 tags: values.tags,
                 status: values.status || 'draft',

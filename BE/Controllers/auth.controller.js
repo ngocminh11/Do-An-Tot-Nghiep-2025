@@ -104,6 +104,7 @@ exports.sendOTP = async (req, res) => {
 exports.verifyOTP = async (req, res) => {
   const { otpToken, otp } = req.body;
 
+
   // Kiểm tra đầu vào
   if (!otpToken || !otp) {
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Thiếu mã OTP hoặc token.');
@@ -271,19 +272,21 @@ exports.loginStep1 = async (req, res) => {
 exports.loginStep2 = async (req, res) => {
   const { otpToken, otp } = req.body;
   if (!otpToken || !otp) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Thiếu OTP hoặc token.');
+
   try {
     const decoded = jwt.verify(otpToken, process.env.JWT_OTP_SECRET);
     if (decoded.otp !== otp) return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'OTP không hợp lệ.');
 
-    const user = await User.findOne({ email: decoded.email });
+    const user = await User.findOne({ email: decoded.email }).select('-passwordHash -refreshToken');
     if (!user) return sendError(res, StatusCodes.ERROR_NOT_FOUND, 'Không tìm thấy tài khoản.');
 
     const accessToken = generateToken({ id: user._id }, process.env.JWT_SECRET, '15m');
     const refreshToken = generateToken({ id: user._id }, process.env.JWT_REFRESH_SECRET, '7d');
 
-    user.refreshToken = refreshToken;
-    await user.save();
+    // Cập nhật refreshToken vào database
+    await User.findByIdAndUpdate(user._id, { refreshToken });
 
+    // Sửa lại: Trả về user, accessToken, refreshToken thay vì otpToken
     return sendSuccess(res, StatusCodes.SUCCESS_OK, {
       user: {
         _id: user._id,
@@ -295,6 +298,7 @@ exports.loginStep2 = async (req, res) => {
       accessToken,
       refreshToken,
     }, 'Đăng nhập thành công.');
+
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'OTP không hợp lệ hoặc đã hết hạn.');
   }

@@ -38,7 +38,15 @@ const postService = {
     // Tạo bài viết mới
     createPost: async (postData) => {
         try {
-            const response = await axios.post(`${API_URL}/admin/posts`, postData);
+            let config = {};
+            let data = postData;
+            if (postData instanceof FormData) {
+                config.headers = { 'Content-Type': 'multipart/form-data' };
+            } else {
+                config.headers = { 'Content-Type': 'application/json' };
+                data = JSON.stringify(postData);
+            }
+            const response = await axios.post(`${API_URL}/admin/posts`, data, config);
             if (response.data && response.data.data) {
                 return response.data.data;
             }

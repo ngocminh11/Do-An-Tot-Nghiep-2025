@@ -16,17 +16,22 @@ const wordCountValidator = (min, max) => ({
 });
 
 const commentSchema = new mongoose.Schema({
-userId: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'User',
-  required: true
-},
-productId: {
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  productId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
     required: true
-    },
-content: {
+  },
+  orderId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Order',
+    required: true
+  },
+  content: {
     type: String,
     required: true,
     trim: true,
@@ -37,32 +42,31 @@ content: {
       wordCountValidator(1, 100)
     ]
   },
-rating: {
+  rating: {
     type: Number,
     min: 1,
     max: 5
   },
-reply: {
-  content: {
-    type: String,
-    trim: true,
-    maxlength: 10000
+  reply: {
+    content: {
+      type: String,
+      trim: true,
+      maxlength: 10000
+    },
+    repliedAt: {
+      type: Date
+    }
   },
-  repliedAt: {
-    type: Date
-  }
-},
-images: [{
+  images: [{
     type: String, // URL
   }],
-status: {
+  status: {
     type: String,
     enum: ['visible', 'hidden', 'pending'],
     default: 'visible'
   }
-},
- {
-timestamps: true
+}, {
+  timestamps: true
 });
 
 module.exports = mongoose.model('Comment', commentSchema);

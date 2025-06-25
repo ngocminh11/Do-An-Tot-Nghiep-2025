@@ -8,7 +8,12 @@ import {
     SettingOutlined,
     MenuFoldOutlined,
     MenuUnfoldOutlined,
-    LogoutOutlined
+    LogoutOutlined,
+    ShoppingCartOutlined,
+    GiftOutlined,
+    CommentOutlined,
+    AppstoreOutlined,
+    TagsOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './AdminLayout.scss';
@@ -26,51 +31,54 @@ const AdminLayout = ({ children }) => {
     const menuItems = [
         {
             key: '/admin',
-            icon: <DashboardOutlined />,
-            label: 'Dashboard',
+            icon: <DashboardOutlined />, label: 'Dashboard',
+        },
+        {
+            key: '/admin/orders',
+            icon: <ShoppingCartOutlined />, label: 'Quản lý đơn hàng',
+        },
+        {
+            key: '/admin/promotion',
+            icon: <GiftOutlined />, label: 'Quản lý khuyến mãi',
+        },
+        {
+            key: '/admin/comments',
+            icon: <CommentOutlined />, label: 'Quản lý bình luận',
         },
         {
             key: '/admin/products',
-            icon: <ShoppingOutlined />,
-            label: 'Products',
+            icon: <ShoppingOutlined />, label: 'Quản lý sản phẩm',
         },
         {
             key: '/admin/categories',
-            icon: <ShoppingOutlined />,
-            label: 'Category',
+            icon: <AppstoreOutlined />, label: 'Quản lý danh mục',
         },
         {
             key: '/admin/tags',
-            icon: <ShoppingOutlined />,
-            label: 'Tags',
+            icon: <TagsOutlined />, label: 'Quản lý tag',
         },
         {
             key: '/admin/users',
-            icon: <UserOutlined />,
-            label: 'Users',
+            icon: <UserOutlined />, label: 'Quản lý người dùng',
         },
         {
             key: '/admin/posts',
-            icon: <FileTextOutlined />,
-            label: 'Posts',
+            icon: <FileTextOutlined />, label: 'Quản lý bài viết',
         },
         {
             key: '/admin/settings',
-            icon: <SettingOutlined />,
-            label: 'Settings',
+            icon: <SettingOutlined />, label: 'Cài đặt',
         },
     ];
 
     const userMenuItems = [
         {
             key: 'profile',
-            icon: <UserOutlined />,
-            label: 'Profile',
+            icon: <UserOutlined />, label: 'Profile',
         },
         {
             key: 'logout',
-            icon: <LogoutOutlined />,
-            label: 'Logout',
+            icon: <LogoutOutlined />, label: 'Logout',
         },
     ];
 
@@ -112,9 +120,7 @@ const AdminLayout = ({ children }) => {
                         className="trigger-button"
                     />
                     <div className="header-right">
-                        <Button type="link" onClick={() => navigate('/')}>
-                            View Site
-                        </Button>
+                        <Button type="link" onClick={() => navigate('/')}>View Site</Button>
                         <Dropdown
                             menu={{
                                 items: userMenuItems,
