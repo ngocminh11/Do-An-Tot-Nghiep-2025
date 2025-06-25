@@ -211,12 +211,30 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    if (!mongoose.Types.ObjectId.isValid(id)) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
 
-    const order = await Order.findById(id);
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+
+    const order = await Order.findById(id).populate('items.product'); // Populate để có thông tin sản phẩm
     if (!order) return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.ORDER_NOT_FOUND);
 
-    if (order.status === status) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Trạng thái không thay đổi');
+    if (order.status === status)
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Trạng thái không thay đổi');
+
+    // === Giảm tồn kho nếu xác nhận đơn hàng ===
+    if (status === 'Xác nhận' && order.status !== 'Xác nhận') {
+      for (const item of order.items) {
+        const product = item.product;
+        const quantityOrdered = item.quantity;
+
+        if (!product || product.pricingAndInventory.stock < quantityOrdered) {
+          return sendError(res, StatusCodes.ERROR_BAD_REQUEST, `Sản phẩm ${product?.basicInformation?.name || ''} không đủ hàng tồn kho.`);
+        }
+
+        product.pricingAndInventory.stock -= quantityOrdered;
+        await product.save();
+      }
+    }
 
     order.status = status;
     order.statusHistory.push({ status });
@@ -224,9 +242,11 @@ exports.updateOrderStatus = async (req, res) => {
 
     return sendSuccess(res, StatusCodes.SUCCESS_OK, order, Messages.ORDER_STATUS_UPDATED);
   } catch (error) {
+    console.error('Lỗi cập nhật trạng thái đơn hàng:', error);
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
+
 
 exports.respondCancelRequest = async (req, res) => {
   try {
