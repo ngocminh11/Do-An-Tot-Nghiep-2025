@@ -116,7 +116,7 @@ exports.getCartByUserId = async (req, res) => {
 
   try {
     const cart = await Cart.findOne({ userId }).populate('items.productId');
-    if (!cart) return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CART_NOT_FOUND);
+    if (!cart) return sendSuccess(res, StatusCodes.SUCCESS_OK, { items: [] }, Messages.CART_EMPTY);
     return sendSuccess(res, StatusCodes.SUCCESS_OK, cart);
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);

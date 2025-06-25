@@ -7,7 +7,9 @@ import {
     UserOutlined,
     LogoutOutlined,
     AppstoreOutlined,
-    TagsOutlined
+    TagsOutlined,
+    GiftOutlined,
+    CommentOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -25,29 +27,39 @@ const AdminLayout = ({ children }) => {
             label: 'Dashboard',
         },
         {
+            key: '/admin/orders',
+            icon: <ShoppingCartOutlined />,
+            label: 'Quản lý đơn hàng',
+        },
+        {
+            key: '/admin/promotion',
+            icon: <GiftOutlined />,
+            label: 'Quản lý khuyến mãi',
+        },
+        {
+            key: '/admin/comments',
+            icon: <CommentOutlined />,
+            label: 'Quản lý bình luận',
+        },
+        {
             key: '/admin/products',
             icon: <ShoppingOutlined />,
-            label: 'Products',
+            label: 'Quản lý sản phẩm',
         },
         {
             key: '/admin/categories',
             icon: <AppstoreOutlined />,
-            label: 'Category Management',
+            label: 'Quản lý danh mục',
         },
         {
             key: '/admin/tags',
             icon: <TagsOutlined />,
-            label: 'Tag Management',
-        },
-        {
-            key: '/admin/orders',
-            icon: <ShoppingCartOutlined />,
-            label: 'Orders',
+            label: 'Quản lý tag',
         },
         {
             key: '/admin/users',
             icon: <UserOutlined />,
-            label: 'Users',
+            label: 'Quản lý người dùng',
         },
     ];
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Table,
     Button,
@@ -15,71 +15,133 @@ import {
 import { DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import './Cart.scss';
+import cartService from '../../../services/cartService';
+import productService from '../../../services/productService';
 
 const { Title, Text } = Typography;
 
-const mockCartItems = [
-    {
-        _id: '1',
-        productId: '1',
-        name: 'Serum Vitamin C Chống Lão Hóa',
-        imageUrl: 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1888&q=80',
-        price: 250000,
-        quantity: 2
-    },
-    {
-        _id: '2',
-        productId: '2',
-        name: 'Kem Dưỡng Ẩm Hyaluronic Acid',
-        imageUrl: 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80',
-        price: 350000,
-        quantity: 1
-    }
-];
+// Memoized Cart Item Component
+const CartItem = React.memo(({ record, imageUrls, onQuantityChange, onDelete }) => {
+    const itemTotal = useMemo(() =>
+        (record.price * record.quantity).toLocaleString('vi-VN') + ' VNĐ',
+        [record.price, record.quantity]
+    );
+
+    const productImage = useMemo(() =>
+        imageUrls[record.productId] || record.imageUrl || '/images/products/default.jpg',
+        [imageUrls, record.productId, record.imageUrl]
+    );
+
+    return (
+        <Space>
+            <img
+                src={productImage}
+                alt={record.name}
+                style={{ width: 60, height: 60, objectFit: 'cover' }}
+                loading="lazy"
+            />
+            <Text>{record.name}</Text>
+        </Space>
+    );
+});
+
+// Memoized Cart Summary Component
+const CartSummary = React.memo(({ subtotal, total, onCheckout, cartItems }) => {
+    const isCheckoutDisabled = useMemo(() => cartItems.length === 0, [cartItems.length]);
+
+    return (
+        <Card title="Tóm tắt đơn hàng" className="cart-summary-card">
+            <Space direction="vertical" style={{ width: '100%' }}>
+                <div className="summary-item">
+                    <Text>Tổng phụ:</Text>
+                    <Text>{subtotal.toLocaleString('vi-VN')} VNĐ</Text>
+                </div>
+                <div className="summary-item">
+                    <Text>Phí vận chuyển:</Text>
+                    <Text>Miễn phí</Text>
+                </div>
+                <Divider />
+                <div className="summary-item">
+                    <Text strong>Tổng cộng:</Text>
+                    <Text strong>{total.toLocaleString('vi-VN')} VNĐ</Text>
+                </div>
+                <Button
+                    type="primary"
+                    size="large"
+                    block
+                    onClick={onCheckout}
+                    disabled={isCheckoutDisabled}
+                >
+                    Tiến hành thanh toán
+                </Button>
+            </Space>
+        </Card>
+    );
+});
 
 const Cart = () => {
     const navigate = useNavigate();
-    const [cartItems, setCartItems] = useState(mockCartItems);
+    const [cartItems, setCartItems] = useState([]);
     const [subtotal, setSubtotal] = useState(0);
     const [total, setTotal] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [imageUrls, setImageUrls] = useState({}); // key: productId, value: objectURL
 
-    useEffect(() => {
-        calculateTotals();
+    // Memoized event handlers
+    const handleQuantityChange = useCallback(async (value, recordId) => {
+        const item = cartItems.find(i => i._id === recordId);
+        if (!item) return;
+        try {
+            await cartService.updateQuantity(item.productId, value);
+            setCartItems(prevItems =>
+                prevItems.map(i =>
+                    i._id === recordId ? { ...i, quantity: value } : i
+                )
+            );
+        } catch (err) {
+            message.error('Không thể cập nhật số lượng!');
+        }
     }, [cartItems]);
 
-    const calculateTotals = () => {
+    const handleDelete = useCallback(async (recordId) => {
+        const item = cartItems.find(i => i._id === recordId);
+        if (!item) return;
+        try {
+            await cartService.removeFromCart(item.productId);
+            setCartItems(prevItems => prevItems.filter(i => i._id !== recordId));
+            message.success('Sản phẩm đã được xóa khỏi giỏ hàng!');
+        } catch (err) {
+            message.error('Không thể xóa sản phẩm khỏi giỏ hàng!');
+        }
+    }, [cartItems]);
+
+    const handleCheckout = useCallback(() => {
+        navigate('/checkout');
+    }, [navigate]);
+
+    // Memoized calculations
+    const calculateTotals = useCallback(() => {
         let newSubtotal = 0;
         cartItems.forEach(item => {
             newSubtotal += item.price * item.quantity;
         });
         setSubtotal(newSubtotal);
-        // For now, no discount or shipping logic
         setTotal(newSubtotal);
-    };
+    }, [cartItems]);
 
-    const handleQuantityChange = (value, recordId) => {
-        setCartItems(prevItems =>
-            prevItems.map(item =>
-                item._id === recordId ? { ...item, quantity: value } : item
-            )
-        );
-    };
-
-    const handleDelete = (recordId) => {
-        setCartItems(prevItems => prevItems.filter(item => item._id !== recordId));
-        message.success('Sản phẩm đã được xóa khỏi giỏ hàng!');
-    };
-
-    const columns = [
+    // Memoized table columns
+    const columns = useMemo(() => [
         {
             title: 'Sản phẩm',
             dataIndex: 'name',
             key: 'name',
             render: (text, record) => (
-                <Space>
-                    <img src={record.imageUrl} alt={record.name} style={{ width: 60, height: 60, objectFit: 'cover' }} />
-                    <Text>{text}</Text>
-                </Space>
+                <CartItem
+                    record={record}
+                    imageUrls={imageUrls}
+                    onQuantityChange={handleQuantityChange}
+                    onDelete={handleDelete}
+                />
             ),
         },
         {
@@ -120,7 +182,87 @@ const Cart = () => {
                 </Popconfirm>
             ),
         },
-    ];
+    ], [imageUrls, handleQuantityChange, handleDelete]);
+
+    // Optimized image loading
+    const loadProductImages = useCallback(async (items) => {
+        const imagePromises = items.map(async (item) => {
+            const pid = item.productId?._id || item.productId;
+            let imgPath = item.productId?.media?.mainImage || item.imageUrl;
+
+            if (imgPath && !imageUrls[pid]) {
+                try {
+                    const blob = await productService.getImageById(imgPath.replace('/media/', ''));
+                    const objectUrl = URL.createObjectURL(blob);
+                    return { productId: pid, url: objectUrl };
+                } catch (e) {
+                    return null;
+                }
+            }
+            return null;
+        });
+
+        const results = await Promise.all(imagePromises);
+        const newImageUrls = {};
+        results.forEach(result => {
+            if (result) {
+                newImageUrls[result.productId] = result.url;
+            }
+        });
+
+        setImageUrls(prev => ({ ...prev, ...newImageUrls }));
+    }, [imageUrls]);
+
+    // Optimized useEffect for cart fetching
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchCart = async () => {
+            setLoading(true);
+            try {
+                const cart = await cartService.getMyCart();
+                if (!isMounted) return;
+
+                if (cart && Array.isArray(cart.items)) {
+                    const processedItems = cart.items.map(item => ({
+                        _id: item._id || item.productId?._id || item.productId,
+                        productId: item.productId?._id || item.productId,
+                        name: item.productId?.basicInformation?.productName || item.productId?.name || '',
+                        imageUrl: item.productId?.media?.mainImage || '',
+                        price: item.productId?.pricingAndInventory?.salePrice || 0,
+                        quantity: item.quantity
+                    }));
+
+                    setCartItems(processedItems);
+
+                    // Load images in background
+                    loadProductImages(cart.items);
+                } else {
+                    setCartItems([]);
+                }
+            } catch (err) {
+                if (isMounted) {
+                    setCartItems([]);
+                    message.error('Không thể tải giỏ hàng!');
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        fetchCart();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [loadProductImages]);
+
+    // Optimized useEffect for totals calculation
+    useEffect(() => {
+        calculateTotals();
+    }, [calculateTotals]);
 
     return (
         <div className="cart-page">
@@ -149,41 +291,12 @@ const Cart = () => {
                     </Card>
                 </Col>
                 <Col xs={24} lg={8}>
-                    <Card title="Tóm tắt đơn hàng" className="cart-summary-card">
-                        <Space direction="vertical" style={{ width: '100%' }}>
-                            <div className="summary-item">
-                                <Text>Tổng phụ:</Text>
-                                <Text>{subtotal.toLocaleString('vi-VN')} VNĐ</Text>
-                            </div>
-                            <div className="summary-item">
-                                <Text>Phí vận chuyển:</Text>
-                                <Text>Miễn phí</Text>
-                            </div>
-                            <Divider />
-                            <div className="summary-item total-price">
-                                <Title level={4}>Tổng cộng:</Title>
-                                <Title level={4}>{total.toLocaleString('vi-VN')} VNĐ</Title>
-                            </div>
-                            <Button
-                                type="primary"
-                                block
-                                size="large"
-                                className="checkout-button"
-                                onClick={() => navigate('/checkout')}
-                            >
-                                TIẾN HÀNH THANH TOÁN
-                            </Button>
-                            <Button
-                                type="default"
-                                block
-                                size="large"
-                                className="continue-shopping-button"
-                                onClick={() => navigate('/products')}
-                            >
-                                TIẾP TỤC MUA SẮM
-                            </Button>
-                        </Space>
-                    </Card>
+                    <CartSummary
+                        subtotal={subtotal}
+                        total={total}
+                        onCheckout={handleCheckout}
+                        cartItems={cartItems}
+                    />
                 </Col>
             </Row>
         </div>

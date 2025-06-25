@@ -76,14 +76,26 @@ export const AuthProvider = ({ children }) => {
 
     const loginStep2 = async (otpToken, otp) => {
         try {
-            const { user, accessToken, refreshToken } = await userAPI.loginStep2(otpToken, otp);
+            const data = await userAPI.loginStep2(otpToken, otp);
+            console.log('DATA loginStep2:', data);
+            console.log("otpToken", otpToken);
+            console.log("otp", otp);
+            if (!data) {
+                console.warn('loginStep2: Không nhận được data từ userAPI.loginStep2');
+            }
+            // Nếu chỉ có otpToken, báo lỗi rõ ràng
+            if (data && data.otpToken && !data.accessToken) {
+                message.error('API trả về sai format! Đăng nhập OTP phải trả về user, accessToken, refreshToken.');
+                throw new Error('API trả về sai format cho loginStep2');
+            }
+            const { user, accessToken, refreshToken } = data || {};
             localStorage.setItem('token', accessToken);
             localStorage.setItem('refreshToken', refreshToken);
             setUser(user);
             message.success('Đăng nhập thành công!');
             return user;
         } catch (error) {
-            message.error(error.response?.data?.message || 'OTP không đúng hoặc đã hết hạn!');
+            message.error(error.response?.data?.message || error.message || 'OTP không đúng hoặc đã hết hạn!');
             throw error;
         }
     };

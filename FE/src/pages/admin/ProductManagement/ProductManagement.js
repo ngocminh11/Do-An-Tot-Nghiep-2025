@@ -34,13 +34,18 @@ const ProductManagement = () => {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
-  const [filters, setFilters] = useState({ search: '', category: undefined });
+  const [filters, setFilters] = useState({
+    search: '',
+    category: undefined,
+    status: undefined
+  });
   const [sorter, setSorter] = useState({});
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
     total: 0,
   });
+  const [imageUrls, setImageUrls] = useState({}); // key: product._id, value: objectURL
 
   const navigate = useNavigate();
 
@@ -48,12 +53,24 @@ const ProductManagement = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await productService.getAllProducts({
-        page: pagination.current,
-        limit: pagination.pageSize,
-        name: filters.search,
-        categoryId: filters.category
-      });
+
+      let response;
+      if (filters.category) {
+        // Sử dụng API lấy sản phẩm theo danh mục
+        response = await productService.getProductsByCategory(filters.category, {
+          page: pagination.current,
+          limit: pagination.pageSize,
+          status: filters.status
+        });
+      } else {
+        // Sử dụng API lấy tất cả sản phẩm
+        response = await productService.getAllProducts({
+          page: pagination.current,
+          limit: pagination.pageSize,
+          name: filters.search,
+          status: filters.status
+        });
+      }
 
       if (response && response.data && response.data.data) {
         const productsData = response.data.data;
@@ -113,6 +130,29 @@ const ProductManagement = () => {
     fetchProducts();
   }, [pagination.current, pagination.pageSize, filters]);
 
+  // Lấy ảnh blob cho từng sản phẩm khi allProducts thay đổi
+  useEffect(() => {
+    if (!Array.isArray(allProducts)) return;
+    allProducts.forEach(async (product) => {
+      let imgPath = '';
+      if (product.mediaFiles && Array.isArray(product.mediaFiles.images) && product.mediaFiles.images[0]?.path) {
+        imgPath = product.mediaFiles.images[0].path;
+      } else if (product.media && product.media.mainImage) {
+        imgPath = product.media.mainImage;
+      }
+      if (imgPath && !imageUrls[product._id]) {
+        try {
+          const blob = await productService.getImageById(imgPath.replace('/media/', ''));
+          const objectUrl = URL.createObjectURL(blob);
+          setImageUrls(prev => ({ ...prev, [product._id]: objectUrl }));
+        } catch (e) {
+          // fallback
+        }
+      }
+    });
+    // eslint-disable-next-line
+  }, [allProducts]);
+
   // Sử dụng debounce để lọc tìm kiếm (tránh render quá nhiều khi gõ liên tục)
   const debouncedSearch = useMemo(
     () =>
@@ -133,11 +173,18 @@ const ProductManagement = () => {
     setPagination((prev) => ({ ...prev, current: 1 }));
   };
 
+  // Lọc sản phẩm theo trạng thái
+  const handleStatusChange = (value) => {
+    setFilters((prev) => ({ ...prev, status: value }));
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  };
+
   // Áp dụng bộ lọc dựa vào tìm kiếm và danh mục
   const filteredProducts = useMemo(() => {
     let data = Array.isArray(allProducts) ? [...allProducts] : [];
 
-    if (filters.search) {
+    // Chỉ áp dụng filter search nếu không có category filter (vì API đã filter rồi)
+    if (filters.search && !filters.category) {
       data = data.filter((product) => {
         const name = product?.basicInformation?.productName || '';
         const shortDesc = product?.description?.shortDescription || '';
@@ -150,10 +197,11 @@ const ProductManagement = () => {
       });
     }
 
-    if (filters.category) {
+    // Chỉ áp dụng filter status nếu không có category filter (vì API đã filter rồi)
+    if (filters.status && !filters.category) {
       data = data.filter((product) => {
-        const catIds = product?.basicInformation?.categoryIds || [];
-        return catIds.map(String).includes(filters.category);
+        const status = product?.basicInformation?.status || '';
+        return status === filters.status;
       });
     }
 
@@ -297,13 +345,13 @@ const ProductManagement = () => {
 
         return mainImage ? (
           <Image
-            src={`${API_URL}/media${mainImage.path}`}
+            src={imageUrls[record._id] || `${API_URL}/media${mainImage.path}`}
             alt={mainImage.filename}
             width={60}
             height={60}
             style={{ objectFit: 'cover' }}
             preview={{
-              src: `${API_URL}/media${mainImage.path}`,
+              src: imageUrls[record._id] || `${API_URL}/media${mainImage.path}`,
             }}
             onError={(e) => {
               console.error('Image load error:', e);
@@ -423,6 +471,21 @@ const ProductManagement = () => {
       width: 160,
     },
     {
+      title: 'Trạng thái',
+      dataIndex: ['basicInformation', 'status'],
+      key: 'basicInformation.status',
+      render: (status) => {
+        const statusConfig = {
+          active: { color: 'green', text: 'Hoạt động' },
+          inactive: { color: 'red', text: 'Không hoạt động' },
+          draft: { color: 'orange', text: 'Bản nháp' }
+        };
+        const config = statusConfig[status] || { color: 'default', text: status || 'N/A' };
+        return <Tag color={config.color}>{config.text}</Tag>;
+      },
+      width: 120,
+    },
+    {
       title: 'Mô tả ngắn',
       dataIndex: ['description', 'shortDescription'],
       key: 'description.shortDescription',
@@ -519,6 +582,17 @@ const ProductManagement = () => {
               </Option>
             ))
           )}
+        </Select>
+        <Select
+          placeholder="Trạng thái"
+          allowClear
+          style={{ width: 150 }}
+          onChange={handleStatusChange}
+          value={filters.status}
+        >
+          <Option value="active">Hoạt động</Option>
+          <Option value="inactive">Không hoạt động</Option>
+          <Option value="draft">Bản nháp</Option>
         </Select>
       </div>
       <Table

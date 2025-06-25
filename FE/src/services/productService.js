@@ -24,6 +24,23 @@ const productService = {
     }
   },
 
+  // Lấy sản phẩm theo danh mục (public API)
+  getProductsByCategory: async (categoryId, params = {}) => {
+    try {
+      const { page = 1, limit = 10, status } = params;
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        ...(status && { status })
+      });
+
+      const response = await axios.get(`${API_URL}/products/category/${categoryId}?${queryParams}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Lấy một sản phẩm theo ID
   getProductById: async (id) => {
     try {
@@ -114,5 +131,12 @@ const productService = {
     return response.data.data || [];
   }
 };
+
+// Hàm trả về URL đầy đủ cho ảnh
+export function getImageUrl(path) {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  return API_URL + path;
+}
 
 export default productService;

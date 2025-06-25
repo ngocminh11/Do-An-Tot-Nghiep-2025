@@ -1,3 +1,4 @@
+// LEGACY: Không sử dụng TokenService nữa, hãy dùng AuthContext thay thế.
 import { mockUsers } from '../../services/mockData';
 
 class TokenService {
@@ -35,6 +36,17 @@ class TokenService {
     static stopRefreshTimer() {
         // In a real app, you would clear the refresh timer
         this.removeToken();
+    }
+
+    static getUserIdFromRefreshToken() {
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (!refreshToken) return null;
+        try {
+            const payload = JSON.parse(atob(refreshToken.split('.')[1]));
+            return payload.id || null;
+        } catch (e) {
+            return null;
+        }
     }
 }
 

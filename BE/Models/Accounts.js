@@ -74,13 +74,23 @@ const userSchema = new mongoose.Schema({
     validate: phoneValidator
   },
   address: {
-    type: String,
+    type: [String],
     required: true,
     trim: true,
     minlength: 5,
     maxlength: 300,
     validate: stringValidator
   },
+  addresses: [{
+    id: { type: String, required: true },
+    fullName: { type: String, required: true },
+    phoneNumber: { type: String, required: true },
+    city: { type: String, required: true },
+    district: { type: String, required: true },
+    ward: { type: String, required: true },
+    address: { type: String, required: true },
+    isDefault: { type: Boolean, default: false }
+  }],
   role: {
     type: String,
     enum: ['customer', 'admin'],
@@ -93,10 +103,10 @@ const userSchema = new mongoose.Schema({
     min: 0
   },
   vouchers: [{
-  promotionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Promotion' },
-  isUsed: { type: Boolean, default: false },
-  redeemedAt: { type: Date }
-}],
+    promotionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Promotion' },
+    isUsed: { type: Boolean, default: false },
+    redeemedAt: { type: Date }
+  }],
   accountStatus: {
     type: String,
     enum: ['active', 'inactive', 'banned'],
@@ -115,10 +125,10 @@ const userSchema = new mongoose.Schema({
     ref: 'Order'
   }],
   refreshToken: { type: String }
-}, 
+},
 
-{
-  timestamps: true
-});
+  {
+    timestamps: true
+  });
 
 module.exports = mongoose.model('User', userSchema);

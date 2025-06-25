@@ -1,6 +1,9 @@
 // Import variables and mixins
 @import './variables';
 
+// Import performance optimizations
+@import './performance';
+
 // Import responsive styles
 @import './responsive';
 
@@ -13,25 +16,30 @@
 // Import profile styles
 @import './profile';
 
-// Global styles
+// Global styles with modern design
 body {
     font-family: $font-family-base;
     font-size: $font-size-base;
     line-height: $line-height-base;
-    color: $dark-color;
-    background-color: $light-color;
+    color: #1e293b; // Modern dark color
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    min-height: 100vh;
 }
 
-// Container
+// Modern container with gradient background
 .container {
     width: 100%;
     padding-right: $spacing-md;
     padding-left: $spacing-md;
     margin-right: auto;
     margin-left: auto;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 
     @include mobile {
         max-width: 100%;
+        border-radius: 0;
     }
 
     @include tablet {
@@ -47,7 +55,7 @@ body {
     }
 }
 
-// Grid system
+// Modern grid system
 .row {
     display: flex;
     flex-wrap: wrap;
@@ -82,7 +90,7 @@ body {
     }
 }
 
-// Typography
+// Modern Typography with gradients
 h1,
 h2,
 h3,
@@ -90,45 +98,139 @@ h4,
 h5,
 h6 {
     margin-bottom: $spacing-md;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.2;
+    color: #1e293b;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
-// Links
+h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+}
+
+h2 {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+// Modern Links with hover effects
 a {
-    color: $primary-color;
+    color: #3b82f6;
     text-decoration: none;
-    transition: $transition-base;
+    transition: all 0.3s ease;
+    position: relative;
 
     &:hover {
-        color: darken($primary-color, 10%);
+        color: #1d4ed8;
+        transform: translateY(-1px);
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 2px;
+        bottom: -2px;
+        left: 0;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        transition: width 0.3s ease;
+    }
+
+    &:hover::after {
+        width: 100%;
     }
 }
 
-// Buttons
+// Modern Buttons with gradients and animations
 .btn {
     @include button-style;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 12px 24px;
+    border: none;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: width 0.3s ease, height 0.3s ease;
+    }
+
+    &:active::before {
+        width: 300px;
+        height: 300px;
+    }
 
     &-primary {
-        background-color: $primary-color;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
         color: white;
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
 
         &:hover {
-            background-color: darken($primary-color, 10%);
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
         }
     }
 
     &-secondary {
-        background-color: $secondary-color;
-        color: white;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        color: #374151;
+        border: 2px solid #e2e8f0;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 
         &:hover {
-            background-color: darken($secondary-color, 10%);
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+    }
+
+    &-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+
+        &:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+    }
+
+    &-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+
+        &:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
         }
     }
 }
 
-// Forms
+// Modern Forms with better styling
 .form-group {
     margin-bottom: $spacing-md;
 }
@@ -136,35 +238,120 @@ a {
 .form-control {
     @include input-style;
     width: 100%;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    padding: 12px 16px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background: #ffffff;
+
+    &:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        transform: translateY(-1px);
+    }
+
+    &:hover {
+        border-color: #cbd5e1;
+    }
 }
 
-// Cards
+// Modern Cards with gradients and shadows
 .card {
     @include card-style;
+    background: #ffffff;
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    overflow: hidden;
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-bottom: 1px solid #e2e8f0;
+        padding: 20px 24px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .card-body {
+        padding: 24px;
+    }
+
+    .card-footer {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-top: 1px solid #e2e8f0;
+        padding: 20px 24px;
+    }
 }
 
-// Navigation
+// Modern Navigation
 .nav {
     @include flex-between;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 12px;
+    padding: 16px 24px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 
     @include mobile {
         flex-direction: column;
+        gap: 16px;
     }
 
     @include tablet {
         flex-direction: row;
     }
+
+    .nav-item {
+        transition: all 0.3s ease;
+
+        &:hover {
+            transform: translateY(-1px);
+        }
+    }
 }
 
-// Tables
+// Modern Tables with better styling
 .table {
     width: 100%;
     margin-bottom: $spacing-md;
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 
     th,
     td {
-        padding: $spacing-sm;
-        border-bottom: 1px solid lighten($secondary-color, 40%);
+        padding: 16px;
+        border-bottom: 1px solid #e2e8f0;
+        color: #374151;
+    }
+
+    th {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        font-weight: 600;
+        color: #1e293b;
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+    }
+
+    tr {
+        transition: all 0.3s ease;
+
+        &:hover {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+
+        &:last-child td {
+            border-bottom: none;
+        }
     }
 
     @include mobile {
@@ -173,13 +360,127 @@ a {
     }
 }
 
-// Images
+// Modern Images with hover effects
 .img-fluid {
     max-width: 100%;
     height: auto;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+
+    &:hover {
+        transform: scale(1.02);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
 }
 
-// Utilities
+// Modern Badge component
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    &-primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+    }
+
+    &-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+
+    &-warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+
+    &-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+
+    &-info {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        color: white;
+    }
+}
+
+// Modern Alert component
+.alert {
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: $spacing-md;
+    border: none;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+    }
+
+    &-primary {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        color: #1e40af;
+
+        &::before {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        }
+    }
+
+    &-success {
+        background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+        color: #065f46;
+
+        &::before {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+    }
+
+    &-warning {
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        color: #92400e;
+
+        &::before {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+    }
+
+    &-danger {
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        color: #991b1b;
+
+        &::before {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+    }
+}
+
+// Modern Progress bar
+.progress {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: $spacing-md;
+
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+}
+
+// Modern Utilities with enhanced styling
 .text-center {
     text-align: center;
 }
@@ -192,6 +493,27 @@ a {
     text-align: left;
 }
 
+.text-primary {
+    color: #3b82f6;
+}
+
+.text-success {
+    color: #10b981;
+}
+
+.text-warning {
+    color: #f59e0b;
+}
+
+.text-danger {
+    color: #ef4444;
+}
+
+.text-muted {
+    color: #64748b;
+}
+
+// Enhanced spacing utilities
 .mt-1 {
     margin-top: $spacing-xs;
 }
@@ -250,4 +572,130 @@ a {
 
 .p-5 {
     padding: $spacing-xl;
+}
+
+// Modern hover effects
+.hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    }
+}
+
+.hover-scale {
+    transition: transform 0.3s ease;
+
+    &:hover {
+        transform: scale(1.05);
+    }
+}
+
+// Modern gradient backgrounds
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.bg-gradient-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.bg-gradient-light {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+// Modern border radius utilities
+.rounded-sm {
+    border-radius: 4px;
+}
+
+.rounded {
+    border-radius: 8px;
+}
+
+.rounded-lg {
+    border-radius: 12px;
+}
+
+.rounded-xl {
+    border-radius: 16px;
+}
+
+.rounded-full {
+    border-radius: 50%;
+}
+
+// Modern shadow utilities
+.shadow-sm {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.shadow {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.shadow-lg {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.shadow-xl {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+// Modern animation classes
+.fade-in {
+    animation: fadeIn 0.6s ease-in-out;
+}
+
+.slide-up {
+    animation: slideUp 0.5s ease-out;
+}
+
+.scale-in {
+    animation: scaleIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }

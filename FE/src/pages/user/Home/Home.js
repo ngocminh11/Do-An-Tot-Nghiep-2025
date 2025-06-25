@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Carousel, Card, Row, Col, Button, Space, Input, Form, message, Typography, Layout, Rate, Avatar, Badge, Modal, Tooltip } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { UpOutlined, MailOutlined, CheckCircleOutlined, StarOutlined, HeartOutlined, MessageOutlined, SendOutlined, CloseOutlined, CustomerServiceOutlined, ShoppingOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import ChatBot from '../../../components/ChatBot/ChatBot';
-import productService from '../../../services/productService';
+import productService, { getImageUrl } from '../../../services/productService';
 import categoryService from '../../../services/categoryService';
 import './Home.scss';
-import screenshotImg from '../../../upload/Screenshot 2025-06-23 162358.png';
+import screenshotImg from '../../../upload/an_elegant_product_image_.png';
 import stylishImg from '../../../upload/a_stylish_and_simp_image_.png';
 import facialImg from '../../../upload/a_bottle_of_facial_image_.png';
 import cocoWImg from '../../../upload/a_bottle_of_coco_w_image_.png';
@@ -16,6 +16,77 @@ import productImg2 from '../../../upload/a_product_image_of_image_ (1).png';
 
 const { Title, Text } = Typography;
 
+// Debounce function
+const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+};
+
+// Memoized Product Card Component
+const ProductCard = React.memo(({ product, onViewProduct, productImg1 }) => {
+    const imageUrl = useMemo(() => getImageUrl(product.imageUrls?.[0]), [product.imageUrls]);
+
+    return (
+        <Col xs={24} sm={12} md={8} lg={4} className="home-scale-on-hover">
+            <Card
+                hoverable
+                cover={
+                    <img
+                        alt={product.name}
+                        src={imageUrl || productImg1}
+                        onError={e => { e.target.onerror = null; e.target.src = productImg1; }}
+                        style={{
+                            transition: 'transform 0.4s',
+                            height: 180,
+                            objectFit: 'cover',
+                            borderRadius: '12px 12px 0 0'
+                        }}
+                        loading="lazy"
+                    />
+                }
+                className="product-card"
+                style={{ boxShadow: '0 4px 16px rgba(44,62,80,0.10)', borderRadius: '16px' }}
+            >
+                <Card.Meta
+                    title={product.name}
+                    description={
+                        <Space direction="vertical" size={0} className="product-meta-content">
+                            <Rate allowHalf disabled defaultValue={product.averageRating || 0} className="product-rating" />
+                            <Text className="price-text">{`${product.price?.toLocaleString('vi-VN') || ''} VNĐ`}</Text>
+                        </Space>
+                    }
+                />
+                <Button
+                    type="primary"
+                    block
+                    className="buy-now-button home-btn-animate"
+                    onClick={() => onViewProduct(product._id)}
+                >
+                    Mua ngay
+                </Button>
+            </Card>
+        </Col>
+    );
+});
+
+// Memoized Category Button Component
+const CategoryButton = React.memo(({ category, onViewCategory }) => (
+    <Button
+        key={category._id}
+        onClick={() => onViewCategory(category.slug)}
+        className="category-button"
+    >
+        {category.name}
+    </Button>
+));
+
 const Home = () => {
     const navigate = useNavigate();
     const [showScrollToTopButton, setShowScrollToTopButton] = useState(false);
@@ -24,62 +95,42 @@ const Home = () => {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const handleScroll = () => {
+    // Memoized event handlers
+    const handleScroll = useCallback(
+        debounce(() => {
             if (window.scrollY > 300) {
                 setShowScrollToTopButton(true);
             } else {
                 setShowScrollToTopButton(false);
             }
-        };
+        }, 100),
+        []
+    );
 
-        window.addEventListener('scroll', handleScroll);
-        return () => {
-            window.removeEventListener('scroll', handleScroll);
-        };
-    }, []);
-
-    useEffect(() => {
-        async function fetchData() {
-            setLoading(true);
-            try {
-                const productRes = await productService.getAllProducts({ page: 1, limit: 10 });
-                setProducts(productRes.data || []);
-                const categoryRes = await categoryService.getAllCategories({ page: 1, limit: 10 });
-                setCategories(categoryRes.data || []);
-            } catch (err) {
-                setProducts([]);
-                setCategories([]);
-            } finally {
-                setLoading(false);
-            }
-        }
-        fetchData();
-    }, []);
-
-    const scrollToTop = () => {
+    const scrollToTop = useCallback(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
+    }, []);
 
-    const handleViewProduct = (productId) => {
+    const handleViewProduct = useCallback((productId) => {
         navigate(`/products/${productId}`);
-    };
+    }, [navigate]);
 
-    const handleViewCategory = (categorySlug) => {
+    const handleViewCategory = useCallback((categorySlug) => {
         navigate(`/products?category=${categorySlug}`);
-    };
+    }, [navigate]);
 
-    const handleNewsletterSubmit = (values) => {
+    const handleNewsletterSubmit = useCallback((values) => {
         console.log('Email đăng ký:', values.email);
         message.success('Cảm ơn bạn đã đăng ký nhận tin!');
         newsletterForm.resetFields();
-    };
+    }, [newsletterForm]);
 
-    const handleViewPost = (postId) => {
-        navigate(`/posts/${postId}`); // Giả định có route /posts/:id
-    };
+    const handleViewPost = useCallback((postId) => {
+        navigate(`/posts/${postId}`);
+    }, [navigate]);
 
-    const mockCampaigns = [
+    // Memoized static data
+    const mockCampaigns = useMemo(() => [
         {
             _id: '1',
             title: 'Khuyến mãi mùa hè',
@@ -90,9 +141,9 @@ const Home = () => {
             title: 'Ưu đãi tháng 6',
             imageUrl: stylishImg
         }
-    ];
+    ], []);
 
-    const skinModels = [
+    const skinModels = useMemo(() => [
         {
             id: 1,
             name: 'Ngọc Trinh',
@@ -111,14 +162,81 @@ const Home = () => {
             image: tubeImg,
             description: 'Da căng bóng kiểu Hàn, luôn tươi trẻ. Ưu tiên cấp ẩm, đắp mặt nạ và massage mặt mỗi ngày.'
         }
-    ];
+    ], []);
+
+    // Optimized useEffect for scroll event
+    useEffect(() => {
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, [handleScroll]);
+
+    // Optimized useEffect for data fetching
+    useEffect(() => {
+        let isMounted = true;
+
+        async function fetchData() {
+            setLoading(true);
+            try {
+                const [productRes, categoryRes] = await Promise.all([
+                    productService.getAllProducts({ page: 1, limit: 10 }),
+                    categoryService.getAllCategories({ page: 1, limit: 10 })
+                ]);
+
+                if (isMounted) {
+                    setProducts(productRes.data || []);
+                    setCategories(categoryRes.data || []);
+                }
+            } catch (err) {
+                if (isMounted) {
+                    setProducts([]);
+                    setCategories([]);
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        }
+
+        fetchData();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    // Memoized product list
+    const productList = useMemo(() => {
+        const validProducts = Array.isArray(products) ? products : [];
+        return validProducts.slice(0, 5);
+    }, [products]);
 
     return (
         <Layout className="home-page">
-            <Carousel autoplay className="banner-carousel home-fade-in">
+            <Carousel
+                autoplay
+                className="banner-carousel home-fade-in"
+                dots={{ position: 'bottom' }}
+                effect="fade"
+                autoplaySpeed={5000}
+                pauseOnHover={true}
+            >
                 {mockCampaigns.map(campaign => (
                     <div key={campaign._id} className="carousel-item home-scale-on-hover">
-                        <img src={campaign.imageUrl} alt={campaign.title} style={{ borderRadius: '18px', boxShadow: '0 8px 32px rgba(44,62,80,0.18)', transition: 'transform 0.4s' }} />
+                        <img
+                            src={campaign.imageUrl}
+                            alt={campaign.title}
+                            style={{
+                                borderRadius: '18px',
+                                boxShadow: '0 8px 32px rgba(44,62,80,0.18)',
+                                transition: 'transform 0.4s',
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                            }}
+                        />
                     </div>
                 ))}
             </Carousel>
@@ -127,13 +245,7 @@ const Home = () => {
                 <Title level={1}>Làm đẹp tự nhiên - tin cậy từ CoCoo</Title>
                 <Space size={[16, 16]} wrap className="category-buttons">
                     {categories.map(category => (
-                        <Button
-                            key={category._id}
-                            onClick={() => handleViewCategory(category.slug)}
-                            className="category-button"
-                        >
-                            {category.name}
-                        </Button>
+                        <CategoryButton key={category._id} category={category} onViewCategory={handleViewCategory} />
                     ))}
                 </Space>
             </div>
@@ -141,32 +253,8 @@ const Home = () => {
             <div className="section featured-products section-animate home-fade-in">
                 <Title level={2}>SẢN PHẨM NỔI BẬT</Title>
                 <Row gutter={[24, 24]}>
-                    {(Array.isArray(products) ? products : []).slice(0, 5).map(product => (
-                        <Col xs={24} sm={12} md={8} lg={4} key={product._id} className="home-scale-on-hover">
-                            <Card
-                                hoverable
-                                cover={<img alt={product.name} src={product.imageUrls?.[0]} style={{ transition: 'transform 0.4s' }} />}
-                                className="product-card"
-                                style={{ boxShadow: '0 4px 16px rgba(44,62,80,0.10)', borderRadius: '16px' }}>
-                                <Card.Meta
-                                    title={product.name}
-                                    description={
-                                        <Space direction="vertical" size={0} className="product-meta-content">
-                                            <Rate allowHalf disabled defaultValue={product.averageRating} className="product-rating" />
-                                            <Text className="price-text">{`${product.price?.toLocaleString('vi-VN') || ''} VNĐ`}</Text>
-                                        </Space>
-                                    }
-                                />
-                                <Button
-                                    type="primary"
-                                    block
-                                    className="buy-now-button home-btn-animate"
-                                    onClick={() => handleViewProduct(product._id)}
-                                >
-                                    Mua ngay
-                                </Button>
-                            </Card>
-                        </Col>
+                    {productList.map(product => (
+                        <ProductCard key={product._id} product={product} onViewProduct={handleViewProduct} productImg1={productImg1} />
                     ))}
                 </Row>
             </div>

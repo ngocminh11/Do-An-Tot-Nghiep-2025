@@ -1,22 +1,32 @@
-import { mockFAQs } from './mockData';
+import axios from 'axios';
+import config from '../config';
 
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const API_URL = config.API_BASE_URL;
 
-export const faqAPI = {
+const faqService = {
+    // Lấy tất cả FAQ
     getFAQs: async () => {
-        await delay(500);
-        return mockFAQs;
+        try {
+            const response = await axios.get(`${API_URL}/faqs`);
+            return response.data?.data || [];
+        } catch (error) {
+            console.error('Error fetching FAQs:', error);
+            return [];
+        }
     },
-    createFAQ: async (faqData) => {
-        await delay(500);
-        return { ...faqData, _id: Date.now().toString() };
-    },
-    updateFAQ: async (faqId, data) => {
-        await delay(500);
-        return { ...data, _id: faqId };
-    },
-    deleteFAQ: async (faqId) => {
-        await delay(500);
-        return { success: true };
+
+    // Lấy FAQ theo category
+    getFAQsByCategory: async (category) => {
+        try {
+            const response = await axios.get(`${API_URL}/faqs`, {
+                params: { category }
+            });
+            return response.data?.data || [];
+        } catch (error) {
+            console.error('Error fetching FAQs by category:', error);
+            return [];
+        }
     }
-}; 
+};
+
+export default faqService; 

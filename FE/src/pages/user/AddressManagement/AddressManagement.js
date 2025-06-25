@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Card,
     Button,
@@ -10,50 +10,81 @@ import {
     Typography,
     Space,
     Popconfirm,
-    Radio
+    Radio,
+    Row,
+    Col,
+    AutoComplete,
+    Spin
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined, StarFilled } from '@ant-design/icons';
+import {
+    PlusOutlined,
+    EditOutlined,
+    DeleteOutlined,
+    StarOutlined,
+    StarFilled,
+    UserOutlined,
+    PhoneOutlined,
+    HomeOutlined,
+    EnvironmentOutlined,
+    SearchOutlined,
+    AimOutlined
+} from '@ant-design/icons';
 import './AddressManagement.scss';
+import accountService from '../../../services/accountService';
+import { useAuth } from '../../../contexts/AuthContext';
+import vietnamAddressData from './vietnamAddressData'; // File dữ liệu địa chỉ
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-// Mock data for addresses
-const mockAddresses = [
-    {
-        id: '1',
-        fullName: 'Nguyễn Văn A',
-        phoneNumber: '0987654321',
-        address: '123 Đường ABC',
-        city: 'TP Hồ Chí Minh',
-        district: 'Quận 1',
-        ward: 'Phường Bến Nghé',
-        isDefault: true
-    },
-    {
-        id: '2',
-        fullName: 'Nguyễn Văn B',
-        phoneNumber: '0987654322',
-        address: '456 Đường XYZ',
-        city: 'TP Hồ Chí Minh',
-        district: 'Quận Bình Thạnh',
-        ward: 'Phường 25',
-        isDefault: false
-    }
-];
-
 const AddressManagement = () => {
-    const [addresses, setAddresses] = useState(mockAddresses);
+    const { user, refreshUser } = useAuth();
+    const [addresses, setAddresses] = useState([]);
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [editingAddress, setEditingAddress] = useState(null);
     const [form] = Form.useForm();
+    const [districts, setDistricts] = useState([]);
+    const [wards, setWards] = useState([]);
+    const [mapModalVisible, setMapModalVisible] = useState(false);
+    const [mapLoading, setMapLoading] = useState(false);
+    const [autoCompleteResults, setAutoCompleteResults] = useState([]);
+    const autoCompleteService = useRef(null);
+
+    // Khởi tạo Google Places Autocomplete
+    useEffect(() => {
+        if (window.google && window.google.maps) {
+            autoCompleteService.current = new window.google.maps.places.AutocompleteService();
+        }
+    }, []);
+
+    // Load địa chỉ từ backend khi user thay đổi
+    useEffect(() => {
+        if (user && user._id) {
+            setAddresses(user.addresses || []);
+        }
+    }, [user]);
 
     const showModal = (address = null) => {
         setEditingAddress(address);
         if (address) {
             form.setFieldsValue(address);
+            // Load districts và wards tương ứng
+            const city = address.city;
+            if (city && vietnamAddressData[city]) {
+                setDistricts(Object.keys(vietnamAddressData[city]));
+                const district = address.district;
+                if (district && vietnamAddressData[city][district]) {
+                    setWards(vietnamAddressData[city][district]);
+                }
+            }
         } else {
-            form.resetFields();
+            // Tự động điền họ tên, sdt từ user khi thêm mới
+            form.setFieldsValue({
+                fullName: user?.fullName || '',
+                phoneNumber: user?.phone || ''
+            });
+            setDistricts([]);
+            setWards([]);
         }
         setIsModalVisible(true);
     };
@@ -62,50 +93,217 @@ const AddressManagement = () => {
         setIsModalVisible(false);
         form.resetFields();
         setEditingAddress(null);
+        setDistricts([]);
+        setWards([]);
+        setAutoCompleteResults([]);
     };
 
-    const handleSubmit = (values) => {
-        if (editingAddress) {
-            // Update existing address
-            setAddresses(prevAddresses =>
-                prevAddresses.map(addr =>
+    const handleSubmit = async (values) => {
+        try {
+            let newAddresses;
+            if (editingAddress) {
+                // Update existing address
+                newAddresses = addresses.map(addr =>
                     addr.id === editingAddress.id ? { ...values, id: addr.id } : addr
-                )
-            );
-            message.success('Cập nhật địa chỉ thành công!');
-        } else {
-            // Add new address
-            const newAddress = {
-                ...values,
-                id: Date.now().toString(),
-                isDefault: addresses.length === 0 // Set as default if it's the first address
-            };
-            setAddresses(prevAddresses => [...prevAddresses, newAddress]);
-            message.success('Thêm địa chỉ mới thành công!');
+                );
+            } else {
+                // Add new address
+                const newAddress = {
+                    ...values,
+                    id: Date.now().toString(),
+                    isDefault: addresses.length === 0
+                };
+                newAddresses = [...addresses, newAddress];
+            }
+            await accountService.updateUser(user._id, { addresses: newAddresses });
+            message.success(editingAddress ? 'Cập nhật địa chỉ thành công!' : 'Thêm địa chỉ mới thành công!');
+            if (refreshUser) await refreshUser();
+            handleCancel();
+        } catch (e) {
+            message.error('Có lỗi khi cập nhật địa chỉ!');
         }
-        handleCancel();
     };
 
-    const handleDelete = (addressId) => {
-        setAddresses(prevAddresses => {
-            const newAddresses = prevAddresses.filter(addr => addr.id !== addressId);
-            // If deleted address was default, set the first remaining address as default
+    const handleDelete = async (addressId) => {
+        try {
+            let newAddresses = addresses.filter(addr => addr.id !== addressId);
+            // Nếu xóa địa chỉ mặc định, gán địa chỉ đầu tiên còn lại làm mặc định
             if (newAddresses.length > 0 && !newAddresses.some(addr => addr.isDefault)) {
                 newAddresses[0].isDefault = true;
             }
-            return newAddresses;
-        });
-        message.success('Xóa địa chỉ thành công!');
+            await accountService.updateUser(user._id, { addresses: newAddresses });
+            message.success('Xóa địa chỉ thành công!');
+            if (refreshUser) await refreshUser();
+        } catch (e) {
+            message.error('Có lỗi khi xóa địa chỉ!');
+        }
     };
 
-    const setDefaultAddress = (addressId) => {
-        setAddresses(prevAddresses =>
-            prevAddresses.map(addr => ({
-                ...addr,
-                isDefault: addr.id === addressId
-            }))
+    const setDefaultAddress = async (addressId) => {
+        try {
+            const newAddresses = addresses.map(addr => ({ ...addr, isDefault: addr.id === addressId }));
+            await accountService.updateUser(user._id, { addresses: newAddresses });
+            message.success('Đã cập nhật địa chỉ mặc định!');
+            if (refreshUser) await refreshUser();
+        } catch (e) {
+            message.error('Có lỗi khi cập nhật địa chỉ mặc định!');
+        }
+    };
+
+    // Xử lý khi chọn tỉnh/thành phố
+    const handleCityChange = (value) => {
+        form.setFieldsValue({ district: undefined, ward: undefined });
+        setWards([]);
+
+        if (value && vietnamAddressData[value]) {
+            setDistricts(Object.keys(vietnamAddressData[value]));
+        } else {
+            setDistricts([]);
+        }
+    };
+
+    // Xử lý khi chọn quận/huyện
+    const handleDistrictChange = (value) => {
+        form.setFieldsValue({ ward: undefined });
+        const city = form.getFieldValue('city');
+
+        if (city && value && vietnamAddressData[city]?.[value]) {
+            setWards(vietnamAddressData[city][value]);
+        } else {
+            setWards([]);
+        }
+    };
+
+    // Tìm kiếm địa chỉ tự động
+    const handleAddressSearch = (value) => {
+        if (!value || value.length < 3) {
+            setAutoCompleteResults([]);
+            return;
+        }
+
+        if (autoCompleteService.current) {
+            autoCompleteService.current.getPlacePredictions(
+                {
+                    input: value,
+                    componentRestrictions: { country: 'vn' }
+                },
+                (predictions, status) => {
+                    if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+                        setAutoCompleteResults(
+                            predictions.map(prediction => ({
+                                value: prediction.description,
+                                label: (
+                                    <div>
+                                        <EnvironmentOutlined style={{ marginRight: 8 }} />
+                                        {prediction.description}
+                                    </div>
+                                )
+                            }))
+                        );
+                    } else {
+                        setAutoCompleteResults([]);
+                    }
+                }
+            );
+        }
+    };
+
+    // Xử lý khi chọn địa chỉ tự động
+    const handleAddressSelect = (value) => {
+        // Phân tích địa chỉ (đơn giản hóa)
+        const addressParts = value.split(', ');
+        if (addressParts.length >= 4) {
+            const newValues = {
+                address: addressParts[0],
+                ward: addressParts[1],
+                district: addressParts[2],
+                city: addressParts[3]
+            };
+
+            form.setFieldsValue(newValues);
+
+            // Cập nhật districts và wards
+            if (vietnamAddressData[newValues.city]) {
+                setDistricts(Object.keys(vietnamAddressData[newValues.city]));
+                if (vietnamAddressData[newValues.city][newValues.district]) {
+                    setWards(vietnamAddressData[newValues.city][newValues.district]);
+                }
+            }
+        }
+    };
+
+    // Sử dụng vị trí hiện tại
+    const getCurrentLocation = () => {
+        if (!navigator.geolocation) {
+            message.error('Trình duyệt của bạn không hỗ trợ định vị');
+            return;
+        }
+
+        setMapLoading(true);
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    const { latitude, longitude } = position.coords;
+
+                    // Sử dụng Geocoding API để lấy địa chỉ
+                    const geocoder = new window.google.maps.Geocoder();
+                    geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results, status) => {
+                        if (status === 'OK' && results[0]) {
+                            const addressComponents = results[0].address_components;
+                            let city = '';
+                            let district = '';
+                            let ward = '';
+                            let street = '';
+
+                            addressComponents.forEach(component => {
+                                const types = component.types;
+                                if (types.includes('administrative_area_level_1')) {
+                                    city = component.long_name;
+                                } else if (types.includes('administrative_area_level_2')) {
+                                    district = component.long_name;
+                                } else if (types.includes('sublocality_level_1') || types.includes('ward')) {
+                                    ward = component.long_name;
+                                } else if (types.includes('route')) {
+                                    street = component.long_name;
+                                } else if (types.includes('street_number') && !street) {
+                                    street = component.long_name;
+                                }
+                            });
+
+                            form.setFieldsValue({
+                                address: street,
+                                ward: ward,
+                                district: district,
+                                city: city
+                            });
+
+                            // Cập nhật districts và wards
+                            if (city && vietnamAddressData[city]) {
+                                setDistricts(Object.keys(vietnamAddressData[city]));
+                                if (district && vietnamAddressData[city][district]) {
+                                    setWards(vietnamAddressData[city][district]);
+                                }
+                            }
+                        } else {
+                            message.error('Không thể lấy địa chỉ từ vị trí hiện tại');
+                        }
+                        setMapLoading(false);
+                    });
+                } catch (error) {
+                    message.error('Có lỗi khi lấy vị trí');
+                    setMapLoading(false);
+                }
+            },
+            (error) => {
+                message.error('Không thể lấy vị trí: ' + error.message);
+                setMapLoading(false);
+            }
         );
-        message.success('Đã cập nhật địa chỉ mặc định!');
+    };
+
+    // Mở bản đồ để chọn địa chỉ
+    const openMapPicker = () => {
+        setMapModalVisible(true);
     };
 
     return (
@@ -173,70 +371,143 @@ const AddressManagement = () => {
                 open={isModalVisible}
                 onCancel={handleCancel}
                 footer={null}
-                width={600}
+                width={700}
+                bodyStyle={{ padding: 24 }}
             >
+                <div style={{ marginBottom: 12, color: '#888' }}>
+                    Vui lòng nhập đầy đủ thông tin để đảm bảo giao hàng chính xác.
+                </div>
                 <Form
                     form={form}
                     layout="vertical"
                     onFinish={handleSubmit}
                     initialValues={editingAddress}
                 >
-                    <Form.Item
-                        name="fullName"
-                        label="Họ và tên"
-                        rules={[{ required: true, message: 'Vui lòng nhập họ và tên!' }]}
-                    >
-                        <Input />
-                    </Form.Item>
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item
+                                name="fullName"
+                                label="Họ và tên"
+                                rules={[{ required: true, message: 'Vui lòng nhập họ và tên!' }]}
+                            >
+                                <Input prefix={<UserOutlined />} placeholder="Nhập họ và tên" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                name="phoneNumber"
+                                label="Số điện thoại"
+                                rules={[{
+                                    required: true,
+                                    message: 'Vui lòng nhập số điện thoại!'
+                                }, {
+                                    pattern: /(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/,
+                                    message: 'Số điện thoại không hợp lệ!'
+                                }]}
+                            >
+                                <Input prefix={<PhoneOutlined />} placeholder="Nhập số điện thoại" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
 
                     <Form.Item
-                        name="phoneNumber"
-                        label="Số điện thoại"
-                        rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }]}
+                        label="Tìm kiếm địa chỉ"
+                        help="Nhập địa chỉ để tự động điền thông tin"
                     >
-                        <Input />
+                        <AutoComplete
+                            options={autoCompleteResults}
+                            onSelect={handleAddressSelect}
+                            onSearch={handleAddressSearch}
+                            placeholder="Nhập địa chỉ để tự động điền"
+                        >
+                            <Input
+                                prefix={<SearchOutlined />}
+                                suffix={
+                                    <Button
+                                        type="text"
+                                        icon={<AimOutlined />}
+                                        onClick={getCurrentLocation}
+                                        loading={mapLoading}
+                                    />
+                                }
+                            />
+                        </AutoComplete>
                     </Form.Item>
 
-                    <Form.Item
-                        name="city"
-                        label="Tỉnh/Thành phố"
-                        rules={[{ required: true, message: 'Vui lòng chọn Tỉnh/Thành phố!' }]}
-                    >
-                        <Select placeholder="Chọn Tỉnh/Thành phố">
-                            <Option value="TP Hồ Chí Minh">TP Hồ Chí Minh</Option>
-                            <Option value="Hà Nội">Hà Nội</Option>
-                        </Select>
-                    </Form.Item>
-
-                    <Form.Item
-                        name="district"
-                        label="Quận/Huyện"
-                        rules={[{ required: true, message: 'Vui lòng chọn Quận/Huyện!' }]}
-                    >
-                        <Select placeholder="Chọn Quận/Huyện">
-                            <Option value="Quận 1">Quận 1</Option>
-                            <Option value="Quận Bình Thạnh">Quận Bình Thạnh</Option>
-                        </Select>
-                    </Form.Item>
-
-                    <Form.Item
-                        name="ward"
-                        label="Phường/Xã"
-                        rules={[{ required: true, message: 'Vui lòng chọn Phường/Xã!' }]}
-                    >
-                        <Select placeholder="Chọn Phường/Xã">
-                            <Option value="Phường Bến Nghé">Phường Bến Nghé</Option>
-                            <Option value="Phường 25">Phường 25</Option>
-                        </Select>
-                    </Form.Item>
-
-                    <Form.Item
-                        name="address"
-                        label="Địa chỉ chi tiết"
-                        rules={[{ required: true, message: 'Vui lòng nhập địa chỉ chi tiết!' }]}
-                    >
-                        <Input.TextArea rows={2} />
-                    </Form.Item>
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item
+                                name="city"
+                                label="Tỉnh/Thành phố"
+                                rules={[{ required: true, message: 'Vui lòng chọn Tỉnh/Thành phố!' }]}
+                            >
+                                <Select
+                                    showSearch
+                                    placeholder="Chọn Tỉnh/Thành phố"
+                                    onChange={handleCityChange}
+                                    filterOption={(input, option) =>
+                                        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                                    }
+                                >
+                                    {Object.keys(vietnamAddressData).map(city => (
+                                        <Option key={city} value={city}>{city}</Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                name="district"
+                                label="Quận/Huyện"
+                                rules={[{ required: true, message: 'Vui lòng chọn Quận/Huyện!' }]}
+                            >
+                                <Select
+                                    showSearch
+                                    placeholder="Chọn Quận/Huyện"
+                                    onChange={handleDistrictChange}
+                                    disabled={!districts.length}
+                                    filterOption={(input, option) =>
+                                        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                                    }
+                                >
+                                    {districts.map(district => (
+                                        <Option key={district} value={district}>{district}</Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item
+                                name="ward"
+                                label="Phường/Xã"
+                                rules={[{ required: true, message: 'Vui lòng chọn Phường/Xã!' }]}
+                            >
+                                <Select
+                                    showSearch
+                                    placeholder="Chọn Phường/Xã"
+                                    disabled={!wards.length}
+                                    filterOption={(input, option) =>
+                                        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                                    }
+                                >
+                                    {wards.map(ward => (
+                                        <Option key={ward} value={ward}>{ward}</Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                name="address"
+                                label="Địa chỉ chi tiết"
+                                rules={[{ required: true, message: 'Vui lòng nhập địa chỉ chi tiết!' }]}
+                            >
+                                <Input prefix={<HomeOutlined />} placeholder="Số nhà, tên đường..." />
+                            </Form.Item>
+                        </Col>
+                    </Row>
 
                     {!editingAddress && addresses.length > 0 && (
                         <Form.Item
@@ -247,18 +518,48 @@ const AddressManagement = () => {
                         </Form.Item>
                     )}
 
-                    <Form.Item>
-                        <Space>
-                            <Button type="primary" htmlType="submit">
-                                {editingAddress ? 'Cập nhật' : 'Thêm mới'}
-                            </Button>
-                            <Button onClick={handleCancel}>Hủy</Button>
-                        </Space>
+                    <Form.Item style={{ textAlign: 'center', marginTop: 24 }}>
+                        <Button type="primary" htmlType="submit" size="large" style={{ minWidth: 160 }}>
+                            {editingAddress ? 'Cập nhật' : 'Thêm mới'}
+                        </Button>
+                        <Button onClick={handleCancel} style={{ marginLeft: 16 }}>
+                            Hủy
+                        </Button>
                     </Form.Item>
                 </Form>
+            </Modal>
+
+            {/* Modal chọn địa chỉ trên bản đồ */}
+            <Modal
+                title="Chọn địa chỉ trên bản đồ"
+                open={mapModalVisible}
+                onCancel={() => setMapModalVisible(false)}
+                width={800}
+                footer={null}
+            >
+                <div style={{ height: '500px', position: 'relative' }}>
+                    <Spin tip="Đang tải bản đồ..." spinning={mapLoading}>
+                        <div id="map-container" style={{ height: '100%', width: '100%' }} />
+                    </Spin>
+                    <div style={{
+                        position: 'absolute',
+                        top: 10,
+                        left: 10,
+                        background: 'white',
+                        padding: 10,
+                        borderRadius: 4,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                    }}>
+                        <Input.Search
+                            placeholder="Tìm kiếm địa chỉ..."
+                            enterButton={<SearchOutlined />}
+                            onSearch={value => console.log('Search:', value)}
+                        />
+                    </div>
+                </div>
             </Modal>
         </div>
     );
 };
 
-export default AddressManagement; 
+export default AddressManagement;

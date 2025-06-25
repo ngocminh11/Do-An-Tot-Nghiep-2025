@@ -12,7 +12,8 @@ import {
     Col,
     Card,
     Divider,
-    Tag
+    Tag,
+    Modal
 } from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
 import { UploadOutlined, PlusOutlined } from '@ant-design/icons';
@@ -31,9 +32,12 @@ const EditProduct = () => {
     const [loading, setLoading] = useState(true);
     const [categories, setCategories] = useState([]);
     const [tags, setTags] = useState([]);
-    const [fileList, setFileList] = useState([]);
+    const [mainImageList, setMainImageList] = useState([]);
+    const [galleryList, setGalleryList] = useState([]);
     const [loadingCategories, setLoadingCategories] = useState(false);
     const [loadingTags, setLoadingTags] = useState(false);
+    const [previewVisible, setPreviewVisible] = useState(false);
+    const [previewImage, setPreviewImage] = useState('');
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -47,17 +51,57 @@ const EditProduct = () => {
 
                 const product = response.data;
 
-                // Xử lý media files
-                if (product.mediaFiles && product.mediaFiles.images) {
-                    const mediaFiles = product.mediaFiles.images.map((file, index) => ({
-                        uid: `-${index}`,
-                        name: file.filename || `image-${index}`,
-                        status: 'done',
-                        url: file.path,
-                        type: file.mimetype
-                    }));
-                    setFileList(mediaFiles);
+                // Phân biệt mainImage và gallery
+                let mainPath = '';
+                let galleryPaths = [];
+                if (product.mediaFiles && Array.isArray(product.mediaFiles.images) && product.mediaFiles.images.length > 0) {
+                    mainPath = product.mediaFiles.images[0].path;
+                    galleryPaths = product.mediaFiles.images.slice(1).map(img => img.path);
+                } else {
+                    if (product.media && product.media.mainImage) {
+                        mainPath = product.media.mainImage;
+                    }
+                    if (product.media && Array.isArray(product.media.imageGallery)) {
+                        galleryPaths = product.media.imageGallery;
+                    }
                 }
+                // Main image
+                let mainImageArr = [];
+                if (mainPath) {
+                    try {
+                        const blob = await productService.getImageById(mainPath.replace('/media/', ''));
+                        const objectUrl = URL.createObjectURL(blob);
+                        mainImageArr = [{
+                            uid: '-main',
+                            name: 'main-image',
+                            status: 'done',
+                            url: objectUrl,
+                            type: blob.type,
+                            originFileObj: blob
+                        }];
+                    } catch {
+                        mainImageArr = [];
+                    }
+                }
+                setMainImageList(mainImageArr);
+                // Gallery images
+                const galleryArr = await Promise.all(galleryPaths.map(async (path, index) => {
+                    try {
+                        const blob = await productService.getImageById(path.replace('/media/', ''));
+                        const objectUrl = URL.createObjectURL(blob);
+                        return {
+                            uid: `-gallery-${index}`,
+                            name: `gallery-image-${index}`,
+                            status: 'done',
+                            url: objectUrl,
+                            type: blob.type,
+                            originFileObj: blob
+                        };
+                    } catch {
+                        return null;
+                    }
+                }));
+                setGalleryList(galleryArr.filter(Boolean));
 
                 // Xử lý categoryIds và tagIds
                 const categoryIds = product.basicInformation?.categoryIds?.map(cat =>
@@ -74,7 +118,7 @@ const EditProduct = () => {
                     basicInformation: {
                         productName: product.basicInformation?.productName || '',
                         sku: product.basicInformation?.sku || '',
-                        brand: product.basicInformation?.brand || '',
+                        brand: 'CoCo',
                         categoryIds: categoryIds,
                         tagIds: tagIds
                     },
@@ -176,7 +220,7 @@ const EditProduct = () => {
                 formData.append('basicInformation', JSON.stringify({
                     productName: values.basicInformation.productName,
                     sku: values.basicInformation.sku,
-                    brand: values.basicInformation.brand,
+                    brand: 'CoCo',
                     categoryIds: values.basicInformation.categoryIds,
                     tagIds: values.basicInformation.tagIds,
                     status: 'active'
@@ -232,22 +276,20 @@ const EditProduct = () => {
                 }));
             }
 
-            // Append media files
-            if (values.media) {
-                if (values.media.mainImage && values.media.mainImage.length > 0) {
-                    const mainImageFile = values.media.mainImage[0].originFileObj;
-                    if (mainImageFile) {
-                        formData.append('images', mainImageFile);
+            // Append images: mainImage trước, sau đó gallery
+            if (mainImageList && mainImageList.length > 0) {
+                const mainImageFile = mainImageList[0].originFileObj;
+                if (mainImageFile) {
+                    formData.append('images', mainImageFile);
+                }
+            }
+            if (galleryList && galleryList.length > 0) {
+                galleryList.forEach(fileItem => {
+                    const imageFile = fileItem.originFileObj;
+                    if (imageFile) {
+                        formData.append('images', imageFile);
                     }
-                }
-                if (values.media.imageGallery && values.media.imageGallery.length > 0) {
-                    values.media.imageGallery.forEach(fileItem => {
-                        const imageFile = fileItem.originFileObj;
-                        if (imageFile) {
-                            formData.append('images', imageFile);
-                        }
-                    });
-                }
+                });
             }
 
             await productService.updateProduct(id, formData);
@@ -261,6 +303,20 @@ const EditProduct = () => {
                 message.error('Cập nhật sản phẩm thất bại');
             }
         }
+    };
+
+    // Hàm xóa ảnh khỏi mainImageList
+    const handleRemoveMainImage = (file) => {
+        setMainImageList([]);
+    };
+    // Hàm xóa ảnh khỏi galleryList
+    const handleRemoveGalleryImage = (file) => {
+        setGalleryList((prev) => prev.filter((f) => f.uid !== file.uid));
+    };
+    // Hàm preview ảnh
+    const handlePreview = async (file) => {
+        setPreviewImage(file.url || file.thumbUrl);
+        setPreviewVisible(true);
     };
 
     if (loading) {
@@ -303,11 +359,11 @@ const EditProduct = () => {
                     </Col>
                     <Col span={12}>
                         <Form.Item
-                            name={['basicInformation', 'brand']}
-                            label="Thương hiệu"
-                            rules={[{ required: true }]}
+                            name={["basicInformation", "brand"]}
+                            label="Thương hiệu (Mặc định: CoCo)"
+                            tooltip="Thương hiệu này không thể thay đổi, mặc định là CoCo"
                         >
-                            <Input />
+                            <Input value="CoCo" disabled placeholder="CoCo" />
                         </Form.Item>
                     </Col>
                     <Col span={12}>
@@ -417,42 +473,95 @@ const EditProduct = () => {
                 <Divider orientation="left">Hình ảnh</Divider>
                 <Row gutter={24}>
                     <Col span={12}>
-                        <Form.Item
-                            name={['media', 'mainImage']}
-                            label="Hình ảnh chính"
-                            valuePropName="fileList"
-                            getValueFromEvent={e => Array.isArray(e) ? e : e?.fileList}
-                        >
-                            <Upload
-                                listType="picture-card"
-                                maxCount={1}
-                                beforeUpload={() => false}
+                        <Card bordered={false} bodyStyle={{ padding: 0 }}>
+                            <div style={{ marginBottom: 16 }}>
+                                <b>Hình ảnh chính</b>
+                                <Upload
+                                    listType="picture-card"
+                                    fileList={mainImageList}
+                                    onPreview={handlePreview}
+                                    onRemove={handleRemoveMainImage}
+                                    beforeUpload={(file) => {
+                                        const isImage = file.type.startsWith('image/');
+                                        if (!isImage) {
+                                            message.error('Chỉ chấp nhận file hình ảnh!');
+                                            return Upload.LIST_IGNORE;
+                                        }
+                                        const isLt5M = file.size / 1024 / 1024 < 5;
+                                        if (!isLt5M) {
+                                            message.error('Hình ảnh không được vượt quá 5MB!');
+                                            return Upload.LIST_IGNORE;
+                                        }
+                                        setMainImageList([{
+                                            uid: file.uid,
+                                            name: file.name,
+                                            status: 'done',
+                                            url: URL.createObjectURL(file),
+                                            originFileObj: file,
+                                            type: file.type
+                                        }]);
+                                        return false;
+                                    }}
+                                    maxCount={1}
+                                >
+                                    {mainImageList.length >= 1 ? null : (
+                                        <div>
+                                            <PlusOutlined />
+                                            <div style={{ marginTop: 8 }}>Upload</div>
+                                        </div>
+                                    )}
+                                </Upload>
+                            </div>
+                            <div>
+                                <b>Hình ảnh phụ</b>
+                                <Upload
+                                    listType="picture-card"
+                                    fileList={galleryList}
+                                    onPreview={handlePreview}
+                                    onRemove={handleRemoveGalleryImage}
+                                    beforeUpload={(file) => {
+                                        const isImage = file.type.startsWith('image/');
+                                        if (!isImage) {
+                                            message.error('Chỉ chấp nhận file hình ảnh!');
+                                            return Upload.LIST_IGNORE;
+                                        }
+                                        const isLt5M = file.size / 1024 / 1024 < 5;
+                                        if (!isLt5M) {
+                                            message.error('Hình ảnh không được vượt quá 5MB!');
+                                            return Upload.LIST_IGNORE;
+                                        }
+                                        if (galleryList.length >= 4) {
+                                            message.error('Chỉ được tải lên tối đa 4 ảnh phụ!');
+                                            return Upload.LIST_IGNORE;
+                                        }
+                                        setGalleryList((prev) => ([...prev, {
+                                            uid: file.uid,
+                                            name: file.name,
+                                            status: 'done',
+                                            url: URL.createObjectURL(file),
+                                            originFileObj: file,
+                                            type: file.type
+                                        }]));
+                                        return false;
+                                    }}
+                                    maxCount={4}
+                                >
+                                    {galleryList.length >= 4 ? null : (
+                                        <div>
+                                            <PlusOutlined />
+                                            <div style={{ marginTop: 8 }}>Upload</div>
+                                        </div>
+                                    )}
+                                </Upload>
+                            </div>
+                            <Modal
+                                open={previewVisible}
+                                footer={null}
+                                onCancel={() => setPreviewVisible(false)}
                             >
-                                <div>
-                                    <PlusOutlined />
-                                    <div style={{ marginTop: 8 }}>Upload</div>
-                                </div>
-                            </Upload>
-                        </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                        <Form.Item
-                            name={['media', 'imageGallery']}
-                            label="Thư viện ảnh"
-                            valuePropName="fileList"
-                            getValueFromEvent={e => Array.isArray(e) ? e : e?.fileList}
-                        >
-                            <Upload
-                                listType="picture-card"
-                                multiple
-                                beforeUpload={() => false}
-                            >
-                                <div>
-                                    <PlusOutlined />
-                                    <div style={{ marginTop: 8 }}>Upload</div>
-                                </div>
-                            </Upload>
-                        </Form.Item>
+                                <img src={previewImage} alt="Preview" style={{ width: '100%' }} />
+                            </Modal>
+                        </Card>
                     </Col>
                 </Row>
 

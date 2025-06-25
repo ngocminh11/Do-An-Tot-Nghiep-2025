@@ -1,8 +1,10 @@
 import React from 'react';
-import { Layout, Menu, Button, Avatar, Dropdown } from 'antd';
+import { Layout, Menu, Button, Avatar, Dropdown, Badge } from 'antd';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { UserOutlined, ShoppingCartOutlined, LogoutOutlined } from '@ant-design/icons';
+import { UserOutlined, ShoppingCartOutlined, LogoutOutlined, BellOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSelector } from 'react-redux';
+import { selectUnreadCount } from '../../store/slices/notificationSlice';
 import './AppHeader.scss';
 
 const { Header } = Layout;
@@ -11,6 +13,7 @@ const AppHeader = () => {
     const { user, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
+    const unreadNotificationCount = useSelector(selectUnreadCount);
 
     const menuItems = [
         {
@@ -20,6 +23,10 @@ const AppHeader = () => {
         {
             key: '/products',
             label: <Link to="/products">Sản phẩm</Link>
+        },
+        {
+            key: '/blog',
+            label: <Link to="/blog">Blog</Link>
         },
         {
             key: '/about',
@@ -83,6 +90,13 @@ const AppHeader = () => {
                         </Button>
                     </div>
                 )}
+                <Badge count={unreadNotificationCount} offset={[5, 0]} className="notification-badge">
+                    <Button
+                        type="text"
+                        icon={<BellOutlined style={{ fontSize: '20px' }} />}
+                    // onClick={...}
+                    />
+                </Badge>
             </div>
         </Header>
     );

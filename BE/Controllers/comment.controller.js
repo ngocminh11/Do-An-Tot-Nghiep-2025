@@ -83,12 +83,14 @@ exports.getCommentById = async (req, res) => {
 
 exports.createComment = async (req, res) => {
   try {
-    const { userId, productId, rating, content } = req.body;
+    const { userId, productId, orderId, rating, content } = req.body;
+    console.log('=== DEBUG CREATE COMMENT ===');
+    console.log('Request body:', { userId, productId, orderId, rating, content });
 
-    if (!userId || !productId || !content || rating == null)
+    if (!userId || !productId || !orderId || !content || rating == null)
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Thiếu thông tin bắt buộc.');
 
-    if (!isValidObjectId(userId) || !isValidObjectId(productId))
+    if (![userId, productId, orderId].every(isValidObjectId))
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
 
     if (typeof rating !== 'number' || rating < 1 || rating > 5)
@@ -97,26 +99,40 @@ exports.createComment = async (req, res) => {
     if (typeof content !== 'string' || content.trim().length < 3)
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Nội dung bình luận quá ngắn.');
 
-    const [product, user] = await Promise.all([
-      Product.findById(productId),
-      User.findById(userId),
-    ]);
+    // Kiểm tra orderId thuộc về userId, có chứa productId, trạng thái hoàn thành
+    const Order = mongoose.model('Order');
+    const orderQuery = {
+      _id: orderId,
+      user: userId,
+      'items.product': productId,
+      status: { $in: ['Đã hoàn thành', 'completed', 'hoanthanh', 'done', 'thanhcong', 'success'] }
+    };
+    console.log('Order query:', JSON.stringify(orderQuery, null, 2));
 
-    if (!product || !user)
-      return sendError(res, StatusCodes.ERROR_NOT_FOUND, 'Không tìm thấy người dùng hoặc sản phẩm.');
+    const order = await Order.findOne(orderQuery);
+    console.log('Order found:', order ? 'YES' : 'NO');
+    if (order) {
+      console.log('Order status:', order.status);
+      console.log('Order user:', order.user);
+      console.log('Order items:', order.items.map(item => ({ product: item.product, productName: item.productName })));
+    }
 
-    const existed = await Comment.findOne({ userId, productId });
+    if (!order)
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Bạn chỉ có thể đánh giá sản phẩm đã mua và đơn đã hoàn thành.');
+
+    // Kiểm tra đã bình luận chưa
+    const existed = await Comment.findOne({ userId, productId, orderId });
     if (existed)
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Bạn đã bình luận sản phẩm này rồi.');
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Bạn đã bình luận sản phẩm này trong đơn hàng này rồi.');
 
     const comment = new Comment({
       userId,
       productId,
+      orderId,
       rating,
       content: content.trim(),
-      status: 'pending', 
+      status: 'pending',
     });
-
     const saved = await comment.save();
     return sendSuccess(res, StatusCodes.SUCCESS_CREATED, saved, 'Bình luận đã được gửi.');
   } catch (error) {
@@ -124,7 +140,6 @@ exports.createComment = async (req, res) => {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
-
 
 exports.updateComment = async (req, res) => {
   try {
@@ -209,6 +224,59 @@ exports.replyToComment = async (req, res) => {
     return sendSuccess(res, StatusCodes.SUCCESS_OK, updated, 'Phản hồi bình luận thành công');
   } catch (error) {
     console.error('[ReplyToComment]', error);
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
+  }
+};
+
+// Lấy đánh giá theo sản phẩm
+exports.getCommentsByProduct = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const {
+      page = 1,
+      limit = 10,
+      rating,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = req.query;
+
+    if (!isValidObjectId(productId)) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+    }
+
+    const query = {
+      productId: productId, // Chỉ lấy comment của sản phẩm này
+      status: { $in: ['visible', 'pending'] }, // Chỉ lấy comment visible hoặc pending
+      userId: { $exists: true, $ne: null } // Chỉ lấy comment có userId hợp lệ
+    };
+
+    if (rating) query.rating = Number(rating);
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const sortField = ['createdAt', 'updatedAt', 'rating'].includes(sortBy) ? sortBy : 'createdAt';
+    const sortDirection = sortOrder === 'asc' ? 1 : -1;
+
+    const [comments, totalItems] = await Promise.all([
+      Comment.find(query)
+        .sort({ [sortField]: sortDirection, createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .populate('userId', 'fullName email')
+        .populate('productId', 'basicInformation.name'),
+
+      Comment.countDocuments(query),
+    ]);
+
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, {
+      data: comments,
+      totalItems,
+      currentPage: Number(page),
+      totalPages: Math.ceil(totalItems / limit),
+      perPage: Number(limit),
+      productId: productId
+    }, Messages.COMMENT_FETCH_SUCCESS);
+  } catch (error) {
+    console.error('[GetCommentsByProduct]', error);
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
