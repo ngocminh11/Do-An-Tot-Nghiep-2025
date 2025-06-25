@@ -74,8 +74,24 @@ exports.createUser = async (req, res) => {
     const ip = req.headers['x-forwarded-for']?.split(',').shift() || req.socket?.remoteAddress || null;
     const userAgent = req.headers['user-agent'] || null;
 
+    // Validate addresses nếu có
+    let addresses = req.body.addresses;
+    if (addresses && Array.isArray(addresses)) {
+      addresses = addresses.map(addr => ({
+        id: addr.id,
+        fullName: addr.fullName,
+        phoneNumber: addr.phoneNumber,
+        city: addr.city,
+        district: addr.district,
+        ward: addr.ward,
+        address: addr.address,
+        isDefault: !!addr.isDefault
+      }));
+    }
+
     const user = new User({
       ...req.body,
+      addresses,
       registrationIP: ip,
       userAgent: userAgent
     });
@@ -101,11 +117,25 @@ exports.updateUser = async (req, res) => {
     const updates = { ...req.body };
     delete updates._id;
 
+    // Validate addresses nếu có
+    if (updates.addresses && Array.isArray(updates.addresses)) {
+      updates.addresses = updates.addresses.map(addr => ({
+        id: addr.id,
+        fullName: addr.fullName,
+        phoneNumber: addr.phoneNumber,
+        city: addr.city,
+        district: addr.district,
+        ward: addr.ward,
+        address: addr.address,
+        isDefault: !!addr.isDefault
+      }));
+    }
+
     const updatedUser = await User.findByIdAndUpdate(id, updates, {
       new: true,
       runValidators: true
     });
-
+    console.log("updatedUser",updatedUser)
     if (!updatedUser) {
       return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.USER_NOT_FOUND);
     }

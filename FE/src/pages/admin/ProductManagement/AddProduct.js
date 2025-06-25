@@ -75,65 +75,97 @@ const AddProduct = () => {
     { type: 'number', min: 0, message: 'Số lượng không được âm' }
   ];
 
-  // Thêm các options cho các trường select
+  // Thêm các options cho các trường select (bổ sung nhiều lựa chọn tiếng Việt)
   const skinTypes = [
-    'Da mụn',
-    'Da nhạy cảm',
-    'Da khô',
     'Da dầu',
+    'Da khô',
     'Da hỗn hợp',
+    'Da nhạy cảm',
     'Da thường',
     'Da lão hóa',
+    'Da mụn',
     'Da nám',
     'Da mất nước',
     'Da dầu nhạy cảm',
     'Da khô nhạy cảm',
-    'Da mụn nhạy cảm'
+    'Da mụn nhạy cảm',
+    'Da dễ kích ứng',
+    'Da sạm màu',
+    'Da có tàn nhang',
+    'Da đỏ',
+    'Da bị tổn thương',
+    'Da hỗn hợp thiên dầu',
+    'Da hỗn hợp thiên khô',
+    'Da nhờn',
   ];
 
   const units = [
-    'bottle',
-    'tube',
-    'jar',
-    'box',
-    'set',
-    'piece',
-    'pack',
+    'Chai',
+    'Tuýp',
+    'Lọ',
+    'Hộp',
+    'Bộ',
+    'Miếng',
+    'Gói',
     'ml',
     'g',
     'kg',
     'l',
-    'pair'
+    'Cặp',
+    'Hũ',
+    'Thỏi',
+    'Túi',
+    'Bịch',
+    'Set',
+    'Combo',
+    'Thanh',
+    'Ống',
   ];
 
   const certifications = [
-    'FDA',
-    'CE',
+    'Chứng nhận FDA',
+    'Chứng nhận CE',
     'ISO 9001',
     'ISO 22716',
     'GMP',
     'Halal',
-    'Cruelty Free',
+    'Không thử nghiệm trên động vật',
     'Vegan',
-    'Organic',
-    'Made in Vietnam',
-    'Made in Korea',
-    'Made in Japan'
+    'Hữu cơ',
+    'Sản xuất tại Việt Nam',
+    'Sản xuất tại Hàn Quốc',
+    'Sản xuất tại Nhật Bản',
+    'Chứng nhận ECOCERT',
+    'Chứng nhận USDA',
+    'Chứng nhận Cosmos',
+    'Chứng nhận Organic',
+    'Chứng nhận GMP-WHO',
+    'Chứng nhận ISO 14001',
+    'Chứng nhận ISO 22717',
+    'Chứng nhận ISO 22718',
   ];
 
   const commonIngredients = [
     'Niacinamide',
-    'Hyaluronic Acid',
+    'Axit Hyaluronic',
     'Vitamin C',
     'Vitamin E',
-    'Salicylic Acid',
-    'Glycolic Acid',
+    'Axit Salicylic',
+    'Axit Glycolic',
     'Retinol',
     'Peptide',
     'Ceramide',
-    'Centella Asiatica',
-    'Snail Mucin',
-    'Green Tea Extract'
+    'Chiết xuất rau má',
+    'Dịch nhầy ốc sên',
+    'Chiết xuất trà xanh',
+    'Chiết xuất cam thảo',
+    'Chiết xuất hoa cúc',
+    'Chiết xuất lô hội',
+    'Chiết xuất hoa hồng',
+    'Chiết xuất nghệ',
+    'Chiết xuất tràm trà',
+    'Chiết xuất yến mạch',
+    'Chiết xuất dưa leo',
   ];
 
   const commonUsageInstructions = [
@@ -146,7 +178,17 @@ const AddProduct = () => {
     'Không sử dụng khi da đang bị tổn thương',
     'Thử nghiệm trên vùng da nhỏ trước khi sử dụng',
     'Bảo quản nơi khô ráo, thoáng mát',
-    'Tránh ánh nắng trực tiếp'
+    'Tránh ánh nắng trực tiếp',
+    'Dùng sau bước toner',
+    'Dùng trước khi đi ngủ',
+    'Dùng cho cả mặt và cổ',
+    'Không rửa lại với nước',
+    'Lắc đều trước khi sử dụng',
+    'Dùng cho da mặt đã làm sạch',
+    'Dùng cho vùng da cần điều trị',
+    'Dùng kết hợp với sản phẩm khác',
+    'Dùng hàng ngày',
+    'Dùng theo chỉ dẫn của bác sĩ',
   ];
 
   const expirationOptions = [
@@ -159,7 +201,12 @@ const AddProduct = () => {
     '18 tháng sau khi mở nắp',
     '24 tháng sau khi mở nắp',
     'Không có hạn sử dụng',
-    'Xem ngày trên bao bì'
+    'Xem ngày trên bao bì',
+    'Hạn sử dụng in trên bao bì',
+    'Hạn sử dụng 2 năm',
+    'Hạn sử dụng 3 năm',
+    'Hạn sử dụng 6 tháng',
+    'Hạn sử dụng 1 năm',
   ];
 
   const sizeWeightOptions = [
@@ -172,20 +219,40 @@ const AddProduct = () => {
     '50g',
     '100g',
     '150g',
-    '200g'
+    '200g',
+    '250ml',
+    '500ml',
+    '1L',
+    '20g',
+    '10ml',
+    '5ml',
+    '15g',
+    '75ml',
+    '300ml',
+    '400ml',
   ];
 
   const commonKeywords = [
-    'skincare',
-    'dưỡng da',
-    'trị mụn',
-    'dưỡng ẩm',
-    'làm sáng da',
-    'chống lão hóa',
-    'se khít lỗ chân lông',
-    'làm mờ thâm',
-    'dưỡng trắng',
-    'cấp ẩm'
+    'Chăm sóc da',
+    'Dưỡng da',
+    'Trị mụn',
+    'Dưỡng ẩm',
+    'Làm sáng da',
+    'Chống lão hóa',
+    'Se khít lỗ chân lông',
+    'Làm mờ thâm',
+    'Dưỡng trắng',
+    'Cấp ẩm',
+    'Chống nắng',
+    'Tẩy tế bào chết',
+    'Làm dịu da',
+    'Phục hồi da',
+    'Chống viêm',
+    'Ngăn ngừa mụn',
+    'Làm sạch sâu',
+    'Kiểm soát dầu',
+    'Bảo vệ da',
+    'Tái tạo da',
   ];
 
   const shippingReturnOptions = [
@@ -198,7 +265,17 @@ const AddProduct = () => {
     'Bảo hành chính hãng 12 tháng',
     'Hỗ trợ đổi size',
     'Hỗ trợ đổi màu',
-    'Không áp dụng đổi trả với sản phẩm đã mở'
+    'Không áp dụng đổi trả với sản phẩm đã mở',
+    'Đổi trả miễn phí',
+    'Bảo hành 6 tháng',
+    'Bảo hành 24 tháng',
+    'Giao hàng nhanh',
+    'Giao hàng tiết kiệm',
+    'Hỗ trợ khách hàng 24/7',
+    'Đổi trả miễn phí trong 15 ngày',
+    'Đổi trả miễn phí trong 30 ngày',
+    'Bảo hành trọn đời',
+    'Đổi trả linh hoạt',
   ];
 
   const additionalOptions = [
@@ -211,7 +288,17 @@ const AddProduct = () => {
     'Tặng kèm khăn mặt',
     'Tặng kèm bàn chải',
     'Tặng kèm túi đựng',
-    'Tặng kèm sổ tay'
+    'Tặng kèm sổ tay',
+    'Tặng kèm phiếu bảo hành',
+    'Tặng kèm túi giấy',
+    'Tặng kèm túi vải',
+    'Tặng kèm móc khóa',
+    'Tặng kèm gương nhỏ',
+    'Tặng kèm lược',
+    'Tặng kèm băng đô',
+    'Tặng kèm sticker',
+    'Tặng kèm thiệp cảm ơn',
+    'Tặng kèm túi zip',
   ];
 
   // Hàm lưu form data vào localStorage
@@ -269,16 +356,15 @@ const AddProduct = () => {
       setLoadingCategories(true);
       try {
         const response = await categoryService.getAllCategories();
-        if (response && response.data && response.data.data) {
-          setCategories(response.data.data);
+        if (response && Array.isArray(response.data)) {
+          setCategories(response.data);
         } else {
           setCategories([]);
           message.error('Không thể tải danh mục sản phẩm');
         }
       } catch (error) {
-        console.error('Error fetching categories:', error);
-        message.error('Không thể tải danh mục sản phẩm');
         setCategories([]);
+        message.error('Không thể tải danh mục sản phẩm');
       } finally {
         setLoadingCategories(false);
       }
@@ -304,16 +390,15 @@ const AddProduct = () => {
       setLoadingTags(true);
       try {
         const response = await tagService.getAllTags();
-        if (response && response.data && response.data.data) {
-          setTags(response.data.data);
+        if (response && Array.isArray(response.data)) {
+          setTags(response.data);
         } else {
           setTags([]);
           message.error('Không thể tải danh sách tags');
         }
       } catch (error) {
-        console.error('Error fetching tags:', error);
-        message.error('Không thể tải danh sách tags');
         setTags([]);
+        message.error('Không thể tải danh sách tags');
       } finally {
         setLoadingTags(false);
       }
@@ -350,7 +435,7 @@ const AddProduct = () => {
         productName: values.basicInformation.productName,
         sku: values.basicInformation.sku,
         status: 'active',
-        brand: values.basicInformation.brand,
+        brand: 'CoCo',
         categoryIds: values.basicInformation.categoryIds || [],
         tagIds: values.basicInformation.tagIds || []
       };
@@ -533,22 +618,10 @@ const AddProduct = () => {
             <Col span={12}>
               <Form.Item
                 name={['basicInformation', 'brand']}
-                label="Thương hiệu"
-                rules={[{ required: true, message: 'Vui lòng nhập thương hiệu' }]}
-                tooltip="Chọn hoặc nhập tên thương hiệu sản phẩm"
+                label="Thương hiệu (Mặc định: CoCo)"
+                tooltip="Thương hiệu này không thể thay đổi, mặc định là CoCo"
               >
-                <Select
-                  showSearch
-                  placeholder="Chọn hoặc nhập thương hiệu"
-                  optionFilterProp="children"
-                  filterOption={(input, option) =>
-                    option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                  }
-                >
-                  {brands.map(brand => (
-                    <Option key={brand} value={brand}>{brand}</Option>
-                  ))}
-                </Select>
+                <Input value="CoCo" disabled placeholder="CoCo" />
               </Form.Item>
             </Col>
             <Col span={12}>

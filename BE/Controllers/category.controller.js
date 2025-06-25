@@ -57,6 +57,62 @@ exports.getCategoryById = async (req, res) => {
   }
 };
 
+// Lấy danh mục kèm theo danh sách sản phẩm
+exports.getCategoryWithProducts = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { page = 1, limit = 10, status } = req.query;
+
+    if (!isValidId(id)) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+    }
+
+    // Lấy thông tin danh mục
+    const category = await Category.findById(id);
+    if (!category) {
+      return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CATEGORY_NOT_FOUND);
+    }
+
+    // Xây dựng query cho sản phẩm
+    const query = {
+      'basicInformation.categoryIds': id
+    };
+
+    // Thêm filter status nếu có
+    if (status) {
+      query['basicInformation.status'] = status;
+    }
+
+    const skip = (page - 1) * limit;
+    const [products, totalItems] = await Promise.all([
+      Product.find(query)
+        .populate('basicInformation.categoryIds', 'name')
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .skip(Number(skip))
+        .limit(Number(limit)),
+      Product.countDocuments(query),
+    ]);
+
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, {
+      category: {
+        id: category._id,
+        name: category.name,
+        description: category.description,
+        status: category.status,
+        slug: category.slug
+      },
+      products: {
+        data: products,
+        currentPage: Number(page),
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+        perPage: Number(limit)
+      }
+    });
+  } catch (err) {
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
+  }
+};
 
 exports.createCategory = async (req, res) => {
   try {

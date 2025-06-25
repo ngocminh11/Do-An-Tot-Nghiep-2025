@@ -1,5 +1,5 @@
-import React from 'react';
-import { Layout, Menu, Input, Avatar, Dropdown, Space, Badge, message, Button } from 'antd';
+import React, { useState } from 'react';
+import { Layout, Menu, Input, Avatar, Dropdown, Space, Badge, message, Button, Tooltip } from 'antd';
 import {
     HomeOutlined,
     ShoppingCartOutlined,
@@ -12,23 +12,20 @@ import {
     ContainerOutlined, // For Orders
     GiftOutlined,      // For Reward Points
     SkinOutlined,      // Changed from SkincareOutlined
-    EnvironmentOutlined // Added for Addresses
+    EnvironmentOutlined, // Added for Addresses
+    SettingOutlined,
+    HeartOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Link
 } from 'react-router-dom';
 import './AppHeader.scss';
+import { useAuth } from '../../../contexts/AuthContext';
+import { LoginModal, RegisterModal } from '../AuthModals';
 
 const { Header } = Layout;
 const { Search } = Input;
-
-// Mock user data
-const mockUser = {
-    name: 'Nguyễn Văn A',
-    email: 'nguyenvana@example.com',
-    avatar: 'https://via.placeholder.com/150' // Placeholder image
-};
 
 // Mock notifications
 const mockNotifications = [
@@ -42,6 +39,10 @@ const mockCartItemCount = 3; // Giả lập có 3 sản phẩm trong giỏ hàng
 const AppHeader = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchVisible, setSearchVisible] = useState(false);
+    const { user, logout } = useAuth();
+    const [showLogin, setShowLogin] = useState(false);
+    const [showRegister, setShowRegister] = useState(false);
 
     const handleSearch = (value) => {
         console.log('Tìm kiếm:', value);
@@ -70,108 +71,130 @@ const AppHeader = () => {
     const userMenuItems = [
         {
             key: 'profile',
-            label: (
-                <Link to="/profile">Hồ sơ của tôi</Link>
-            ),
+            label: <Link to="/profile">Hồ sơ của tôi</Link>,
             icon: <UserOutlined />,
-        },
-        {
-            key: 'addresses',
-            label: (
-                <Link to="/addresses">Địa chỉ giao hàng</Link>
-            ),
-            icon: <EnvironmentOutlined />,
-        },
-        {
-            key: 'orders',
-            label: (
-                <Link to="/orders">Đơn hàng của tôi</Link>
-            ),
-            icon: <ContainerOutlined />,
-        },
-        {
-            key: 'rewards',
-            label: (
-                <Link to="/rewards">Điểm thưởng</Link>
-            ),
-            icon: <GiftOutlined />,
-        },
-        {
-            key: 'my-skincare-set',
-            label: (
-                <Link to="/my-skincare">Bộ sản phẩm chăm da của tôi</Link>
-            ),
-            icon: <SkinOutlined />,
         },
         { type: 'divider' },
         {
             key: 'logout',
             label: 'Đăng xuất',
             icon: <LogoutOutlined />,
-            onClick: () => {
-                message.success('Đăng xuất thành công!');
-                navigate('/login'); // Redirect to login page
-            }
+            onClick: logout
         },
     ];
 
+    // Function to get user initials for avatar
+    const getUserInitials = (name) => {
+        return name
+            .split(' ')
+            .map(word => word[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+    };
+
     return (
-        <Header className="app-header">
-            <div className="header-left">
-                <Link to="/" className="logo">CoCoo</Link>
-                <Menu
-                    mode="horizontal"
-                    defaultSelectedKeys={[location.pathname.split('/')[1] || 'home']}
-                    onClick={handleMenuClick}
-                    className="main-menu"
-                >
-                    <Menu.Item key="home" icon={<HomeOutlined />}>Trang chủ</Menu.Item>
-                    <Menu.Item key="products" icon={<ShoppingCartOutlined />}>Sản phẩm</Menu.Item>
-                    <Menu.Item key="blog" icon={<ReadOutlined />}>Blog</Menu.Item>
-                    <Menu.Item key="contact" icon={<PhoneOutlined />}>Liên hệ chúng tôi</Menu.Item>
-                </Menu>
-            </div>
+        <>
+            <Header className="app-header">
+                <div className="header-left">
+                    <Link to="/" className="logo">CoCoo</Link>
+                    <Menu
+                        mode="horizontal"
+                        defaultSelectedKeys={[location.pathname.split('/')[1] || 'home']}
+                        onClick={handleMenuClick}
+                        className="main-menu"
+                    >
+                        <Menu.Item key="home" icon={<HomeOutlined />}>Trang chủ</Menu.Item>
+                        <Menu.Item key="products" icon={<ShoppingCartOutlined />}>Sản phẩm</Menu.Item>
+                        <Menu.Item key="blog" icon={<ReadOutlined />}>Blog</Menu.Item>
+                        <Menu.Item key="contact" icon={<PhoneOutlined />}>Liên hệ chúng tôi</Menu.Item>
+                    </Menu>
+                </div>
 
-            <div className="header-right">
-                <Search
-                    placeholder="Tìm kiếm sản phẩm..."
-                    onSearch={handleSearch}
-                    style={{ width: 250, marginRight: 20 }}
-                    className="header-search"
-                />
+                <div className="header-right">
+                    <div className="search-container">
+                        {searchVisible ? (
+                            <Search
+                                placeholder="Tìm kiếm sản phẩm..."
+                                onSearch={handleSearch}
+                                className="header-search"
+                                allowClear
+                                onBlur={() => setSearchVisible(false)}
+                                autoFocus
+                            />
+                        ) : (
+                            <Tooltip title="Tìm kiếm">
+                                <Button
+                                    type="text"
+                                    icon={<SearchOutlined style={{ fontSize: '20px' }} />}
+                                    onClick={() => setSearchVisible(true)}
+                                    className="search-icon-button"
+                                />
+                            </Tooltip>
+                        )}
+                    </div>
 
-                <Badge count={mockNotifications.length} offset={[5, 0]} className="notification-badge">
-                    <Button
-                        type="text"
-                        icon={<BellOutlined style={{ fontSize: '20px', color: '#333' }} />}
-                        onClick={() => handleMenuClick({ key: 'notifications' })}
-                    />
-                </Badge>
+                    <Tooltip title="Thông báo">
+                        <Badge count={mockNotifications.length} offset={[5, 0]} className="notification-badge">
+                            <Button
+                                type="text"
+                                icon={<BellOutlined style={{ fontSize: '20px' }} />}
+                                onClick={() => handleMenuClick({ key: 'notifications' })}
+                            />
+                        </Badge>
+                    </Tooltip>
 
-                <Badge count={mockCartItemCount} offset={[5, 0]} className="cart-badge">
-                    <Button
-                        type="text"
-                        icon={<ShoppingCartOutlined style={{ fontSize: '20px', color: '#333' }} />}
-                        onClick={() => handleMenuClick({ key: 'cart' })}
-                    />
-                </Badge>
+                    <Tooltip title="Giỏ hàng">
+                        <Badge count={mockCartItemCount} offset={[5, 0]} className="cart-badge">
+                            <Button
+                                type="text"
+                                icon={<ShoppingCartOutlined style={{ fontSize: '20px' }} />}
+                                onClick={() => handleMenuClick({ key: 'cart' })}
+                            />
+                        </Badge>
+                    </Tooltip>
 
-                <Dropdown
-                    menu={{ items: userMenuItems }}
-                    trigger={['click']}
-                    placement="bottomRight"
-                    arrow
-                >
-                    <Space className="user-profile-dropdown">
-                        <Avatar src={mockUser.avatar} icon={<UserOutlined />} />
-                        <div className="user-info">
-                            <span className="user-name">{mockUser.name}</span>
-                            <span className="user-email">{mockUser.email}</span>
-                        </div>
-                    </Space>
-                </Dropdown>
-            </div>
-        </Header>
+                    {user ? (
+                        <Dropdown
+                            menu={{ items: userMenuItems }}
+                            trigger={['click']}
+                            placement="bottomRight"
+                            arrow
+                        >
+                            <Space className="user-profile-dropdown">
+                                <Avatar
+                                    size={40}
+                                    src={user.avatar}
+                                    style={{
+                                        backgroundColor: user.avatar ? 'var(--cocoon-white)' : 'var(--cocoon-brown)',
+                                        border: '2px solid var(--cocoon-gold)',
+                                        boxShadow: '0 2px 8px rgba(199, 161, 90, 0.15)',
+                                        color: 'var(--cocoon-gold)',
+                                        fontSize: 22,
+                                        fontWeight: 700,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        marginRight: 12
+                                    }}
+                                    icon={!user.avatar ? <UserOutlined /> : undefined}
+                                />
+                                <div className="user-info">
+                                    <span className="user-name">{user.name || user.fullName || user.email}</span>
+                                </div>
+                            </Space>
+                        </Dropdown>
+                    ) : (
+                        <>
+                            <Button style={{ marginRight: 8 }} onClick={() => setShowLogin(true)}>Đăng nhập</Button>
+                            <Button type="primary" onClick={() => setShowRegister(true)}>Đăng ký</Button>
+                        </>
+                    )}
+                </div>
+            </Header>
+            <LoginModal open={showLogin} onClose={() => setShowLogin(false)} />
+            <RegisterModal open={showRegister} onClose={() => setShowRegister(false)} />
+        </>
     );
 };
 

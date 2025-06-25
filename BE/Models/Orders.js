@@ -2,6 +2,16 @@
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
+  idOrder: {
+    type: String,
+    unique: true,
+    default: function () {
+      // Tạo ID tự động với format: ORD + timestamp + random number
+      const timestamp = Date.now().toString().slice(-8);
+      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      return `ORD${timestamp}${random}`;
+    }
+  },
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   items: [
     {

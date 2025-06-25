@@ -24,11 +24,11 @@ const TagManagement = () => {
                 limit,
                 name
             });
-            setTags(response.data.data);
+            setTags(response.data);
             setPagination({
-                current: response.data.currentPage,
-                pageSize: response.data.perPage,
-                total: response.data.totalItems
+                current: response.currentPage,
+                pageSize: response.perPage,
+                total: response.totalItems
             });
         } catch (error) {
             message.error(error.message || 'Không thể tải danh sách tag');

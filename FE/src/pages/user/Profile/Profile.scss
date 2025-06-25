@@ -1,11 +1,16 @@
+@import '../../../styles/variables.scss';
+
 .profile-page {
     max-width: 800px;
     margin: 0 auto;
     padding: 24px;
+    background: var(--cocoon-bg);
+    color: var(--cocoon-brown);
 
     .ant-card {
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        background: var(--cocoon-white);
     }
 
     .ant-tabs-nav {

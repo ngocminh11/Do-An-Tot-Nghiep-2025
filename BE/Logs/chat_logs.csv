@@ -10,3 +10,5 @@ timestamp,type,chatId,message,response,intent,score
 Nếu bạn đã trót mix, để ý dấu hiệu châm chích và phục hồi với kem chứa ceramide.,ingredient_incompatibility,0.5
 2025-06-17T18:21:17.355Z,start,ef6fb44e-2083-410e-ba63-482f4b79aa71,Chat started,Welcome message,greeting,1
 2025-06-17T18:21:22.891Z,message,,da khô nên dùng gì,Cho tôi biết 4 yếu tố: (1) loại da, (2) vấn đề ưu tiên, (3) ngân sách, (4) sở thích texture. Tôi sẽ shortlist 3 sản phẩm có giá tại VN + link mua chính hãng.,product_recommendation,2.6
+2025-06-23T08:43:15.611Z,start,3dfeb7a1-d8d4-42a4-9bfb-4e8fe9d10ea6,Chat started,Welcome message,greeting,1
+2025-06-23T08:43:16.281Z,start,34f91e83-b147-48a7-ab44-133af3340eb0,Chat started,Welcome message,greeting,1

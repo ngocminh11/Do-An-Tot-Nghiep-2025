@@ -18,36 +18,76 @@ exports.createOrder = async (req, res) => {
     const { items, paymentMethod, notes, promotionCode } = req.body;
     const userId = req.user._id;
 
+    console.log('Received order data:', { items, paymentMethod, notes, promotionCode }); // Debug log
+
     if (!items || !Array.isArray(items) || items.length === 0) {
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Đơn hàng không có sản phẩm');
     }
 
-    const enrichedItems = await Promise.all(items.map(async (item) => {
-      const product = await Product.findById(item.product);
-      if (!product) throw new Error('Sản phẩm không tồn tại');
+    // Validate each item has required fields
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (!item.product) {
+        return sendError(res, StatusCodes.ERROR_BAD_REQUEST, `Item ${i + 1} thiếu product ID`);
+      }
+      if (!item.quantity || item.quantity <= 0) {
+        return sendError(res, StatusCodes.ERROR_BAD_REQUEST, `Item ${i + 1} có số lượng không hợp lệ`);
+      }
+    }
+
+    const enrichedItems = await Promise.all(items.map(async (item, index) => {
+      console.log(`Processing item ${index}:`, item); // Debug log
+
+      // Convert string ID to ObjectId if needed
+      const productId = typeof item.product === 'string' ? item.product : item.product.toString();
+      console.log(`Looking for product with ID: ${productId}`); // Debug log
+
+      const product = await Product.findById(productId);
+      console.log(`Product found for item ${index}:`, product ? {
+        _id: product._id,
+        productName: product.basicInformation?.productName,
+        hasBasicInfo: !!product.basicInformation
+      } : 'NOT FOUND'); // Debug log
+
+      if (!product) {
+        throw new Error(`Sản phẩm với ID ${productId} không tồn tại`);
+      }
+
+      if (!product.basicInformation || !product.basicInformation.productName) {
+        throw new Error(`Sản phẩm ${product._id} thiếu thông tin tên sản phẩm`);
+      }
 
       const stock = product.pricingAndInventory.stockQuantity;
-      if (item.quantity > stock) throw new Error(`Sản phẩm "${product.basicInformation.name}" không đủ hàng`);
+      if (item.quantity > stock) {
+        throw new Error(`Sản phẩm "${product.basicInformation.productName}" không đủ hàng`);
+      }
 
       const price = getEffectivePrice(product);
 
-      return {
+      const enrichedItem = {
         product: product._id,
-        productName: product.basicInformation.name,
+        productName: product.basicInformation.productName,
         unit: product.pricingAndInventory.unit,
         currency: product.pricingAndInventory.currency,
         quantity: item.quantity,
         price,
         discount: item.discount || 0
       };
+
+      console.log(`Enriched item ${index}:`, enrichedItem); // Debug log
+
+      return enrichedItem;
     }));
+
+    console.log('All enriched items:', enrichedItems); // Debug log
 
     const totalAmount = enrichedItems.reduce((sum, item) => {
       const discountedPrice = item.price * (1 - (item.discount || 0) / 100);
       return sum + discountedPrice * item.quantity;
     }, 0);
 
-    const newOrder = new Order({
+    // Tạo order object trực tiếp thay vì sử dụng mongoose constructor
+    const orderData = {
       user: userId,
       items: enrichedItems,
       totalAmount,
@@ -55,12 +95,30 @@ exports.createOrder = async (req, res) => {
       notes,
       promotionCode,
       statusHistory: [{ status: 'Chờ xác nhận' }],
-    });
+    };
 
-    const savedOrder = await newOrder.save();
+    console.log('Order data to save:', orderData); // Debug log
+
+    const order = new Order(orderData);
+    const savedOrder = await order.save();
+
+    // Sau khi tạo đơn hàng thành công, kiểm tra trạng thái
+    if (savedOrder.status === 'completed') {
+      // Trừ số lượng tồn kho cho từng sản phẩm
+      for (const item of savedOrder.items) {
+        const product = await Product.findById(item.product);
+        if (product && product.pricingAndInventory && typeof product.pricingAndInventory.stockQuantity === 'number') {
+          product.pricingAndInventory.stockQuantity = Math.max(0, product.pricingAndInventory.stockQuantity - item.quantity);
+          await product.save();
+        }
+      }
+    }
+
     return sendSuccess(res, StatusCodes.SUCCESS_CREATED, savedOrder, Messages.ORDER_CREATED);
   } catch (error) {
-    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, error.message);
+    console.error('Order creation error:', error); // Debug log
+    console.error('Error stack:', error.stack); // Debug log
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, error.message);
   }
 };
 
@@ -153,22 +211,60 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    if (!mongoose.Types.ObjectId.isValid(id)) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
 
-    const order = await Order.findById(id);
-    if (!order) return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.ORDER_NOT_FOUND);
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
 
-    if (order.status === status) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Trạng thái không thay đổi');
+    // Lấy cả items + stock hiện tại
+    const order = await Order.findById(id)
+      .populate('items.product', 'pricingAndInventory.stockQuantity');
 
+    if (!order)
+      return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.ORDER_NOT_FOUND);
+
+    // Không thay đổi
+    if (order.status === status)
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Trạng thái không thay đổi.');
+
+    // Chỉ trừ kho LẦN ĐẦU khi chuyển sang "Xác nhận"
+    const willConfirm = status === 'Xác nhận' && order.status === 'Chờ xác nhận';
+
+    if (willConfirm) {
+      // 1. Kiểm tra đủ kho
+      for (const it of order.items) {
+        const inStock = it.product.pricingAndInventory.stockQuantity;
+        if (inStock < it.quantity) {
+          return sendError(
+            res,
+            StatusCodes.ERROR_BAD_REQUEST,
+            `Sản phẩm ${it.product._id} chỉ còn ${inStock} trong kho.`
+          );
+        }
+      }
+
+      // 2. Trừ kho (bulk)
+      const bulk = order.items.map(it => ({
+        updateOne: {
+          filter: { _id: it.product._id },
+          update: { $inc: { 'pricingAndInventory.stockQuantity': -it.quantity } }
+        }
+      }));
+
+      if (bulk.length) await Product.bulkWrite(bulk);
+    }
+
+    // 3. Cập nhật trạng thái + lịch sử
     order.status = status;
     order.statusHistory.push({ status });
     await order.save();
 
     return sendSuccess(res, StatusCodes.SUCCESS_OK, order, Messages.ORDER_STATUS_UPDATED);
-  } catch (error) {
+  } catch (err) {
+    console.error(err);
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
+
 
 exports.respondCancelRequest = async (req, res) => {
   try {

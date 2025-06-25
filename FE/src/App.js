@@ -1,6 +1,5 @@
-import React, { useEffect, Suspense, lazy } from 'react';
+import React, { useEffect, Suspense, lazy, useMemo, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { startTokenRefresh } from './components/common/TokenService';
 import Cookies from 'js-cookie';
 import AdminLayout from './layouts/admin/AdminLayout';
 import { Layout } from 'antd';
@@ -21,8 +20,13 @@ import EditProduct from './pages/admin/ProductManagement/EditProduct';
 import AppFooter from './components/common/AppFooter/AppFooter';
 import AppHeader from './components/common/AppHeader/AppHeader';
 import ChatBot from './components/ChatBot/ChatBot';
+import { Modal, Form, Input, Button, message } from 'antd';
+import { MailOutlined } from '@ant-design/icons';
+import OrderManagement from './pages/admin/OrderManagement/OrderManagement';
+import PromotionManagement from './pages/admin/PromotionManagement/PromotionManagement';
+import CommentManagement from './pages/admin/CommentManagement/CommentManagement';
 
-// Lazy load user components
+// Lazy load user components with preloading hints
 const Home = lazy(() => import('./pages/user/Home/Home'));
 const AllProducts = lazy(() => import('./pages/user/AllProducts/AllProducts'));
 const ProductDetail = lazy(() => import('./pages/user/ProductDetail/ProductDetail'));
@@ -32,9 +36,10 @@ const Contact = lazy(() => import('./pages/user/Contact/Contact'));
 const Privacy = lazy(() => import('./pages/user/Privacy/Privacy'));
 const TermsOfService = lazy(() => import('./pages/user/Terms/Terms'));
 const FAQ = lazy(() => import('./pages/user/FAQ/FAQ'));
-const Login = lazy(() => import('./pages/user/Login/Login'));
+const Blog = lazy(() => import('./pages/user/Blog/Blog'));
+const BlogDetail = lazy(() => import('./pages/user/Blog/BlogDetail'));
 
-// Import Cart and Checkout directly
+// Import Cart and Checkout directly (frequently used)
 import Cart from './pages/user/Cart/Cart';
 import Checkout from './pages/user/Checkout/Checkout';
 
@@ -45,8 +50,8 @@ const UserManagement = lazy(() => import('./pages/admin/UserManagement/UserManag
 const ContentManagement = lazy(() => import('./pages/admin/ContentManagement/ContentManagement'));
 const Settings = lazy(() => import('./pages/admin/Settings/Settings'));
 
-// Protected Route component
-const ProtectedRoute = ({ children, isAdmin }) => {
+// Memoized Protected Route component
+const ProtectedRoute = React.memo(({ children, isAdmin }) => {
   const { isAuthenticated } = useAuth();
 
   // Remove authentication check for admin routes
@@ -60,7 +65,10 @@ const ProtectedRoute = ({ children, isAdmin }) => {
   }
 
   return children;
-};
+});
+
+// Memoized Loading component
+const LoadingFallback = React.memo(() => <Loading />);
 
 // Import styles
 import './App.scss';
@@ -78,10 +86,8 @@ const App = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
   const token = Cookies.get('token');
-  if (token) {
-    startTokenRefresh();
-  }
 
   return (
     <Router>
@@ -90,12 +96,14 @@ const App = () => {
   );
 };
 
-// New component to handle conditional header rendering
-const AppContent = () => {
+// Memoized AppContent component
+const AppContent = React.memo(() => {
   const location = useLocation();
-  const isAdminRoute = location.pathname.startsWith('/admin');
+  const isAdminRoute = useMemo(() => location.pathname.startsWith('/admin'), [location.pathname]);
+  const { user } = useAuth();
 
-  const userRoutes = [
+  // Memoized route configurations
+  const userRoutes = useMemo(() => [
     { path: '/', element: <Home /> },
     { path: '/products', element: <AllProducts /> },
     { path: '/products/:productId', element: <ProductDetail /> },
@@ -109,10 +117,11 @@ const AppContent = () => {
     { path: '/privacy', element: <Privacy /> },
     { path: '/terms', element: <TermsOfService /> },
     { path: '/faq', element: <FAQ /> },
-    { path: '/login', element: <Login /> },
-  ];
+    { path: '/blog', element: <Blog /> },
+    { path: '/posts/:id', element: <BlogDetail /> },
+  ], []);
 
-  const adminRoutes = [
+  const adminRoutes = useMemo(() => [
     { path: '/admin', element: <AdminLayout><Dashboard /></AdminLayout> },
     { path: '/admin/products', element: <AdminLayout><ProductManagement /></AdminLayout> },
     { path: '/admin/products/add', element: <AdminLayout><AddProduct /></AdminLayout> },
@@ -129,12 +138,20 @@ const AppContent = () => {
     { path: '/admin/posts', element: <AdminLayout><PostList /></AdminLayout> },
     { path: '/admin/posts/add', element: <AdminLayout><AddPost /></AdminLayout> },
     { path: '/admin/posts/edit/:id', element: <AdminLayout><EditPost /></AdminLayout> },
-  ];
+    { path: '/admin/orders', element: <AdminLayout><OrderManagement /></AdminLayout> },
+    { path: '/admin/promotion', element: <AdminLayout><PromotionManagement /></AdminLayout> },
+    { path: '/admin/comments', element: <AdminLayout><CommentManagement /></AdminLayout> },
+  ], []);
+
+  // Memoized conditional rendering
+  const shouldShowHeader = useMemo(() => !isAdminRoute, [isAdminRoute]);
+  const shouldShowFooter = useMemo(() => !isAdminRoute, [isAdminRoute]);
+  const shouldShowChatBot = useMemo(() => !isAdminRoute, [isAdminRoute]);
 
   return (
     <>
-      {!isAdminRoute && <AppHeader />}
-      <Suspense fallback={<Loading />}>
+      {shouldShowHeader && <AppHeader />}
+      <Suspense fallback={<LoadingFallback />}>
         <Routes>
           {/* User Routes */}
           {userRoutes.map((route, index) => (
@@ -173,11 +190,11 @@ const AppContent = () => {
           ))}
         </Routes>
       </Suspense>
-      {!isAdminRoute && <AppFooter />}
+      {shouldShowFooter && <AppFooter />}
       {/* Show ChatBot for all non-admin routes */}
-      {!isAdminRoute && <ChatBot />}
+      {shouldShowChatBot && <ChatBot />}
     </>
   );
-};
+});
 
 export default App;

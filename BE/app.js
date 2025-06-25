@@ -1,4 +1,3 @@
-
 require('dotenv').config(); // Load biến môi trường sớm nhất
 
 const express = require('express');
@@ -17,10 +16,10 @@ const cookieParser = require('cookie-parser');
 const mongoSanitize = require('mongo-sanitize');
 
 // Routes
-const chatRoutes = require('./Routes/chat.routes');
 const adminRoutes = require('./Routes/admin.routes');
 const userRoutes = require('./Routes/user.routes');
 const authRoutes = require('./Routes/auth.routes');
+const chatbotOpenAIRoutes = require('./Routes/chatbotOpenAI.routes');
 
 const app = express();
 const server = http.createServer(app);
@@ -117,10 +116,10 @@ app.use('/api/', limiter);
 
 //============================== ROUTES ====================================
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/api/chat', chatRoutes);
 app.use('/admin/', adminRoutes);
 app.use('/', userRoutes);
 app.use('/', authRoutes);
+app.use('/api/chatbot', chatbotOpenAIRoutes);
 
 //============================= 404 HANDLER ================================
 app.use((req, res, next) => {

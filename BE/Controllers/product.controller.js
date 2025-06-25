@@ -21,7 +21,7 @@ const helperGetFilterFromQuery = query => {
   if (!all) {
     if (name) filter['basicInformation.productName'] = new RegExp(name, 'i');
     if (status) filter['basicInformation.status'] = status;
-    if (brand) filter['basicInformation.brand'] = brand;
+    if (brand) filter['basicInformation.brand'] = "CoCo";
     if (categoryId) filter['basicInformation.categoryIds'] = categoryId;
   }
   return filter;
@@ -61,7 +61,6 @@ exports.getProductById = async (req, res) => {
   const { id } = req.params;
   if (!isValidId(id))
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
-
   try {
     const product = await Product.findById(id)
       .populate('basicInformation.categoryIds', 'name');
@@ -91,6 +90,11 @@ exports.createProduct = async (req, res) => {
     policy = JSON.parse(req.body.policy || '{}');
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Dữ liệu JSON không hợp lệ: ' + err.message);
+  }
+
+  // Gán brand mặc định là 'CoCo' nếu không có
+  if (!basicInformation.brand) {
+    basicInformation.brand = 'CoCo';
   }
 
   // Validate required fields
@@ -204,6 +208,11 @@ exports.updateProduct = async (req, res) => {
       seo,
       policy
     } = parsedData;
+
+    // Gán brand mặc định là 'CoCo' nếu không có
+    if (!basicInformation.brand) {
+      basicInformation.brand = 'CoCo';
+    }
 
     const { productName, sku, tagIds } = basicInformation;
 
@@ -319,7 +328,6 @@ exports.exportProductsToExcel = async (req, res) => {
     worksheet.columns = [
       { header: 'ProductName', key: 'productName', width: 30 },
       { header: 'SKU', key: 'sku', width: 20 },
-      { header: 'Brand', key: 'brand', width: 20 },
       { header: 'Status', key: 'status', width: 12 },
       { header: 'Origin', key: 'origin', width: 15 },
       { header: 'Price', key: 'price', width: 15 },
@@ -379,5 +387,58 @@ exports.exportProductsToExcel = async (req, res) => {
   } catch (error) {
     console.error('[Excel Export Error]', error);
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, 'Xuất Excel thất bại. Vui lòng thử lại.');
+  }
+};
+
+// Lấy sản phẩm theo danh mục
+exports.getProductsByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const { page = 1, limit = 10, status } = req.query;
+
+    if (!isValidId(categoryId)) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+    }
+
+    // Kiểm tra category có tồn tại không
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CATEGORY_NOT_FOUND);
+    }
+
+    // Xây dựng query
+    const query = {
+      'basicInformation.categoryIds': categoryId
+    };
+
+    // Thêm filter status nếu có
+    if (status) {
+      query['basicInformation.status'] = status;
+    }
+
+    const skip = (page - 1) * limit;
+    const [products, totalItems] = await Promise.all([
+      Product.find(query)
+        .populate('basicInformation.categoryIds', 'name')
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .skip(Number(skip))
+        .limit(Number(limit)),
+      Product.countDocuments(query),
+    ]);
+
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, {
+      data: products,
+      currentPage: Number(page),
+      totalPages: Math.ceil(totalItems / limit),
+      totalItems,
+      perPage: Number(limit),
+      category: {
+        id: category._id,
+        name: category.name,
+        description: category.description
+      }
+    });
+  } catch (err) {
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
   }
 };

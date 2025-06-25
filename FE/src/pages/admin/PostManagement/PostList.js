@@ -1,67 +1,67 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Table, Button, Space, Popconfirm, Tooltip, message } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-
-// Dữ liệu mẫu
-const mockPosts = [
-    {
-        _id: '1',
-        title: 'Cách chăm sóc da mụn hiệu quả',
-        slug: 'cach-cham-soc-da-mun',
-        excerpt: 'Hướng dẫn chi tiết cách chăm sóc da mụn tại nhà...',
-        status: 'published',
-        category: 'skincare',
-        tags: ['skincare', 'acne'],
-        createdAt: '2024-03-15'
-    },
-    {
-        _id: '2',
-        title: 'Top 10 sản phẩm dưỡng da tốt nhất 2024',
-        slug: 'top-10-san-pham-duong-da',
-        excerpt: 'Danh sách các sản phẩm dưỡng da được đánh giá cao...',
-        status: 'published',
-        category: 'reviews',
-        tags: ['skincare', 'reviews'],
-        createdAt: '2024-03-14'
-    },
-    {
-        _id: '3',
-        title: 'Hướng dẫn trang điểm cơ bản',
-        slug: 'huong-dan-trang-diem-co-ban',
-        excerpt: 'Các bước trang điểm cơ bản cho người mới bắt đầu...',
-        status: 'draft',
-        category: 'makeup',
-        tags: ['makeup', 'tutorial'],
-        createdAt: '2024-03-13'
-    }
-];
+import postService from '../../../services/postService';
 
 const PostList = () => {
     const navigate = useNavigate();
-    const [posts, setPosts] = useState(mockPosts);
+    const [posts, setPosts] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
-    const handleDelete = (id) => {
-        setPosts(posts.filter(post => post._id !== id));
-        message.success('Xóa bài viết thành công!');
+    const fetchPosts = async (page = 1, pageSize = 10) => {
+        setLoading(true);
+        try {
+            const response = await postService.getAllPosts({ page, limit: pageSize });
+            setPosts(response.data);
+            setPagination({
+                current: response.currentPage,
+                pageSize: response.perPage,
+                total: response.totalItems
+            });
+        } catch (error) {
+            setPosts([]);
+            setPagination({ current: 1, pageSize: 10, total: 0 });
+            message.error('Không thể tải danh sách bài viết');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchPosts(pagination.current, pagination.pageSize);
+        // eslint-disable-next-line
+    }, []);
+
+    const handleTableChange = (pag) => {
+        fetchPosts(pag.current, pag.pageSize);
+    };
+
+    const handleDelete = async (id) => {
+        try {
+            await postService.deletePost(id);
+            message.success('Xóa bài viết thành công!');
+            fetchPosts(pagination.current, pagination.pageSize);
+        } catch (error) {
+            message.error('Không thể xóa bài viết!');
+        }
     };
 
     const handleEdit = (id) => {
-        const postId = id.trim();
-        console.log('Navigating to edit post:', postId);
-        navigate(`/admin/posts/edit/${postId}`);
+        navigate(`/admin/posts/edit/${id}`);
     };
 
     const getStatusColor = (status) => {
         switch (status) {
             case 'published':
-                return 'success';
+                return 'green';
             case 'draft':
-                return 'warning';
+                return 'orange';
             case 'archived':
-                return 'error';
+                return 'red';
             default:
-                return 'default';
+                return 'gray';
         }
     };
 
@@ -100,23 +100,20 @@ const PostList = () => {
             title: 'Danh mục',
             dataIndex: 'category',
             key: 'category',
-            render: (text) => text.charAt(0).toUpperCase() + text.slice(1)
+            render: (text) => text ? text.charAt(0).toUpperCase() + text.slice(1) : 'N/A'
         },
         {
             title: 'Tags',
             dataIndex: 'tags',
             key: 'tags',
-            render: (tags) => tags.join(', ')
+            render: (tags) => Array.isArray(tags) ? tags.join(', ') : 'N/A'
         },
         {
             title: 'Trạng thái',
             dataIndex: 'status',
             key: 'status',
             render: (status) => (
-                <span style={{
-                    color: getStatusColor(status),
-                    fontWeight: 'bold'
-                }}>
+                <span style={{ color: getStatusColor(status), fontWeight: 'bold' }}>
                     {getStatusText(status)}
                 </span>
             )
@@ -124,7 +121,8 @@ const PostList = () => {
         {
             title: 'Ngày tạo',
             dataIndex: 'createdAt',
-            key: 'createdAt'
+            key: 'createdAt',
+            render: (date) => date ? new Date(date).toLocaleDateString('vi-VN') : 'N/A'
         },
         {
             title: 'Hành động',
@@ -168,11 +166,13 @@ const PostList = () => {
                 columns={columns}
                 dataSource={posts}
                 rowKey="_id"
+                loading={loading}
                 pagination={{
-                    pageSize: 10,
+                    ...pagination,
                     showSizeChanger: true,
                     showTotal: (total) => `Tổng số ${total} bài viết`
                 }}
+                onChange={handleTableChange}
             />
         </div>
     );

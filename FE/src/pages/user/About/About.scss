@@ -1,11 +1,16 @@
+@import '../../../styles/variables.scss';
+
 .about-page {
     max-width: 1200px;
     margin: 0 auto;
     padding: 24px;
+    background: var(--cocoon-bg);
+    color: var(--cocoon-brown);
 
     .ant-card {
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        background: var(--cocoon-white);
     }
 
     .about-header {
@@ -14,7 +19,7 @@
 
         h1 {
             font-size: 36px;
-            color: #1a1a1a;
+            color: var(--cocoon-gold);
             margin-bottom: 16px;
         }
 
@@ -32,7 +37,7 @@
         .feature-item {
             text-align: center;
             padding: 24px;
-            background: #fafafa;
+            background: var(--cocoon-white);
             border-radius: 8px;
             height: 100%;
             transition: transform 0.3s;
@@ -43,13 +48,13 @@
 
             .icon {
                 font-size: 48px;
-                color: #1890ff;
+                color: var(--cocoon-gold);
                 margin-bottom: 16px;
             }
 
             h4 {
                 margin-bottom: 16px;
-                color: #1a1a1a;
+                color: var(--cocoon-brown);
             }
 
             p {
@@ -65,7 +70,7 @@
 
             h2 {
                 font-size: 24px;
-                color: #1a1a1a;
+                color: var(--cocoon-gold);
                 margin-bottom: 16px;
             }
 
