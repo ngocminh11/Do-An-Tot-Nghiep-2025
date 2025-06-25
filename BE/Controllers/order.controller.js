@@ -215,34 +215,52 @@ exports.updateOrderStatus = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id))
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
 
-    const order = await Order.findById(id).populate('items.product'); // Populate để có thông tin sản phẩm
-    if (!order) return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.ORDER_NOT_FOUND);
+    // Lấy cả items + stock hiện tại
+    const order = await Order.findById(id)
+      .populate('items.product', 'pricingAndInventory.stockQuantity');
 
+    if (!order)
+      return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.ORDER_NOT_FOUND);
+
+    // Không thay đổi
     if (order.status === status)
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Trạng thái không thay đổi');
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Trạng thái không thay đổi.');
 
-    // === Giảm tồn kho nếu xác nhận đơn hàng ===
-    if (status === 'Xác nhận' && order.status !== 'Xác nhận') {
-      for (const item of order.items) {
-        const product = item.product;
-        const quantityOrdered = item.quantity;
+    // Chỉ trừ kho LẦN ĐẦU khi chuyển sang "Xác nhận"
+    const willConfirm = status === 'Xác nhận' && order.status === 'Chờ xác nhận';
 
-        if (!product || product.pricingAndInventory.stock < quantityOrdered) {
-          return sendError(res, StatusCodes.ERROR_BAD_REQUEST, `Sản phẩm ${product?.basicInformation?.name || ''} không đủ hàng tồn kho.`);
+    if (willConfirm) {
+      // 1. Kiểm tra đủ kho
+      for (const it of order.items) {
+        const inStock = it.product.pricingAndInventory.stockQuantity;
+        if (inStock < it.quantity) {
+          return sendError(
+            res,
+            StatusCodes.ERROR_BAD_REQUEST,
+            `Sản phẩm ${it.product._id} chỉ còn ${inStock} trong kho.`
+          );
         }
-
-        product.pricingAndInventory.stock -= quantityOrdered;
-        await product.save();
       }
+
+      // 2. Trừ kho (bulk)
+      const bulk = order.items.map(it => ({
+        updateOne: {
+          filter: { _id: it.product._id },
+          update: { $inc: { 'pricingAndInventory.stockQuantity': -it.quantity } }
+        }
+      }));
+
+      if (bulk.length) await Product.bulkWrite(bulk);
     }
 
+    // 3. Cập nhật trạng thái + lịch sử
     order.status = status;
     order.statusHistory.push({ status });
     await order.save();
 
     return sendSuccess(res, StatusCodes.SUCCESS_OK, order, Messages.ORDER_STATUS_UPDATED);
-  } catch (error) {
-    console.error('Lỗi cập nhật trạng thái đơn hàng:', error);
+  } catch (err) {
+    console.error(err);
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
