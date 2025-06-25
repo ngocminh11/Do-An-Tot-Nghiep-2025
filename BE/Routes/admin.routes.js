@@ -10,6 +10,8 @@ const mediaController = require('../Controllers/media.controller');
 const promotionController = require('../Controllers/promotion.controller');
 const postController = require('../Controllers/post.controller');
 const orderController = require('../Controllers/order.controller');
+const dashboardController = require('../Controllers/dashboard.controller');
+const { authenticateUser, authorizeAdmin } = require('../Middlewares/auth.middleware');
 const validateImageUpload = require('../Middlewares/upload.middleware');
 
 // Routes for Product
@@ -78,5 +80,13 @@ router.get('/posts/:id', postController.getPostById);
 router.post('/posts', postController.createPost);
 router.put('/posts/:id', postController.updatePost);
 router.delete('/posts/:id', postController.deletePost);
+
+// Routes for Dashboard (admin)
+router.get('/revenue-by-month', dashboardController.revenueByMonth);
+router.get('/top-products', dashboardController.topProducts);
+router.get('/low-stock',  dashboardController.lowStockProducts);
+router.get('/order-status-ratio',dashboardController.orderStatusRatio);
+router.get('/user-growth',      dashboardController.userGrowth);
+
 
 module.exports = router;
