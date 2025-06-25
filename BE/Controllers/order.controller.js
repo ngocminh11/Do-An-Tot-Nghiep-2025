@@ -165,6 +165,12 @@ exports.cancelRequestByUser = async (req, res) => {
     if (isPaid || !within3Hours || order.status !== 'Chờ xác nhận') {
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Không thể gửi yêu cầu hủy đơn hàng');
     }
+    // Chặn luôn nếu đơn đã xác nhận trở lên
+    if (['Xác nhận', 'Đang giao', 'Đã hoàn thành', 'Hủy'].includes(order.status)) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST,
+        'Đơn hàng đã được xử lý, không thể hủy.');
+    }
+
 
     order.isCancelRequested = true;
     order.cancelRequestTime = new Date();
@@ -215,45 +221,52 @@ exports.updateOrderStatus = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id))
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
 
-    // Lấy cả items + stock hiện tại
     const order = await Order.findById(id)
       .populate('items.product', 'pricingAndInventory.stockQuantity');
 
     if (!order)
       return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.ORDER_NOT_FOUND);
 
-    // Không thay đổi
+    //  ▸ Không đổi
     if (order.status === status)
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Trạng thái không thay đổi.');
 
-    // Chỉ trừ kho LẦN ĐẦU khi chuyển sang "Xác nhận"
-    const willConfirm = status === 'Xác nhận' && order.status === 'Chờ xác nhận';
+    /** ============= 1. Trừ kho khi XÁC NHẬN lần đầu ============= */
+    const deductStock = (order.status === 'Chờ xác nhận') && status === 'Xác nhận';
 
-    if (willConfirm) {
-      // 1. Kiểm tra đủ kho
+    if (deductStock) {
+      // Kiểm kho
       for (const it of order.items) {
+        if (!it.product)
+          return sendError(res, 400, 'Sản phẩm đã bị xóa khỏi hệ thống.');
         const inStock = it.product.pricingAndInventory.stockQuantity;
-        if (inStock < it.quantity) {
-          return sendError(
-            res,
-            StatusCodes.ERROR_BAD_REQUEST,
-            `Sản phẩm ${it.product._id} chỉ còn ${inStock} trong kho.`
-          );
-        }
+        if (inStock < it.quantity)
+          return sendError(res, 400,
+            `Sản phẩm ${it.product._id} chỉ còn ${inStock} trong kho.`);
       }
-
-      // 2. Trừ kho (bulk)
-      const bulk = order.items.map(it => ({
+      // Trừ kho
+      await Product.bulkWrite(order.items.map(it => ({
         updateOne: {
           filter: { _id: it.product._id },
           update: { $inc: { 'pricingAndInventory.stockQuantity': -it.quantity } }
         }
-      }));
-
-      if (bulk.length) await Product.bulkWrite(bulk);
+      })));
     }
 
-    // 3. Cập nhật trạng thái + lịch sử
+    /** ============= 2. Hoàn kho khi HỦY sau khi đã trừ ============= */
+    const restoreStock =
+      ['Xác nhận', 'Đang giao'].includes(order.status) && status === 'Hủy';
+
+    if (restoreStock) {
+      await Product.bulkWrite(order.items.map(it => ({
+        updateOne: {
+          filter: { _id: it.product._id },
+          update: { $inc: { 'pricingAndInventory.stockQuantity': it.quantity } }
+        }
+      })));
+    }
+
+    /** ============= 3. Cập nhật trạng thái & lịch sử ============= */
     order.status = status;
     order.statusHistory.push({ status });
     await order.save();
@@ -266,29 +279,53 @@ exports.updateOrderStatus = async (req, res) => {
 };
 
 
+
 exports.respondCancelRequest = async (req, res) => {
   try {
     const { id } = req.params;
     const { accept, reason } = req.body;
-    if (!mongoose.Types.ObjectId.isValid(id)) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
 
     const order = await Order.findById(id);
-    if (!order || !order.isCancelRequested) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Không có yêu cầu hủy đơn');
+    if (!order || !order.isCancelRequested)
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Không có yêu cầu hủy đơn');
+
+    // ❌ Nếu đơn đã xác nhận trở đi thì không được hủy
+    const notCancelableStatuses = ['Xác nhận', 'Đang giao', 'Hoàn thành'];
+    if (accept && notCancelableStatuses.includes(order.status)) {
+      return sendError(
+        res,
+        StatusCodes.ERROR_BAD_REQUEST,
+        'Đơn hàng đã được xác nhận, không thể hủy.'
+      );
+    }
 
     if (accept) {
       order.status = 'Hủy';
       order.statusHistory.push({ status: 'Hủy' });
       order.cancellationReason = reason || 'Người bán chấp nhận hủy đơn';
+
+      // (Tùy chọn) Nếu muốn hoàn kho nếu trạng thái trước đó là "Chờ xác nhận"
+      // hoặc kiểm tra theo logic bạn đã có
     } else {
       order.isCancelRequested = false;
       order.cancelRequestTime = null;
     }
+
     await order.save();
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, order, accept ? Messages.ORDER_CANCELED : Messages.ORDER_CANCEL_REQUEST_DECLINED);
+    return sendSuccess(
+      res,
+      StatusCodes.SUCCESS_OK,
+      order,
+      accept ? Messages.ORDER_CANCELED : Messages.ORDER_CANCEL_REQUEST_DECLINED
+    );
   } catch (error) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
+
 
 exports.updateOrder = async (req, res) => {
   try {
