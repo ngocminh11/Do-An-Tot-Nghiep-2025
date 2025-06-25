@@ -215,41 +215,45 @@ exports.updateOrderStatus = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id))
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
 
-    const order = await Order.findById(id).populate('items.product', 'pricingAndInventory.stockQuantity');
+    // Lấy cả items + stock hiện tại
+    const order = await Order.findById(id)
+      .populate('items.product', 'pricingAndInventory.stockQuantity');
+
     if (!order)
       return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.ORDER_NOT_FOUND);
 
-    // 1) Không làm gì nếu không đổi trạng thái
+    // Không thay đổi
     if (order.status === status)
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Trạng thái không thay đổi.');
 
-    // 2) Nếu chuyển sang "Xác nhận" lần đầu → kiểm tra & trừ tồn kho
-    const goingToConfirm = status === 'Xác nhận' && order.status !== 'Xác nhận';
+    // Chỉ trừ kho LẦN ĐẦU khi chuyển sang "Xác nhận"
+    const willConfirm = status === 'Xác nhận' && order.status === 'Chờ xác nhận';
 
-    if (goingToConfirm) {
-      // a. Kiểm tra đủ kho?
+    if (willConfirm) {
+      // 1. Kiểm tra đủ kho
       for (const it of order.items) {
-        const available = it.product.pricingAndInventory.stockQuantity;
-        if (available < it.quantity) {
+        const inStock = it.product.pricingAndInventory.stockQuantity;
+        if (inStock < it.quantity) {
           return sendError(
             res,
             StatusCodes.ERROR_BAD_REQUEST,
-            `Sản phẩm ${it.product._id} chỉ còn ${available} trong kho.`
+            `Sản phẩm ${it.product._id} chỉ còn ${inStock} trong kho.`
           );
         }
       }
 
-      // b. Trừ kho
-      const bulkOps = order.items.map(it => ({
+      // 2. Trừ kho (bulk)
+      const bulk = order.items.map(it => ({
         updateOne: {
           filter: { _id: it.product._id },
           update: { $inc: { 'pricingAndInventory.stockQuantity': -it.quantity } }
         }
       }));
-      await Product.bulkWrite(bulkOps);
+
+      if (bulk.length) await Product.bulkWrite(bulk);
     }
 
-    // 3) Cập nhật trạng thái đơn
+    // 3. Cập nhật trạng thái + lịch sử
     order.status = status;
     order.statusHistory.push({ status });
     await order.save();
@@ -260,6 +264,7 @@ exports.updateOrderStatus = async (req, res) => {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
+
 
 exports.respondCancelRequest = async (req, res) => {
   try {
