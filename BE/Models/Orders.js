@@ -1,72 +1,78 @@
-// models/Orders.js
+// models/Order.js
 const mongoose = require('mongoose');
 
-const orderSchema = new mongoose.Schema({
-  idOrder: {
-    type: String,
-    unique: true,
-    default: function () {
-      // Tạo ID tự động với format: ORD + timestamp + random number
-      const timestamp = Date.now().toString().slice(-8);
-      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-      return `ORD${timestamp}${random}`;
-    }
+const orderItemSchema = new mongoose.Schema(
+  {
+    product      : { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    productName  : { type: String, required: true },
+    unit         : { type: String, required: true },
+    currency     : { type: String, default: 'VND' },
+    quantity     : { type: Number, required: true, min: 1 },
+    price        : { type: Number, required: true, min: 0 },
+    discount     : { type: Number, default: 0 }
   },
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  items: [
-    {
-      product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-      productName: { type: String, required: true },
-      unit: { type: String, required: true },
-      currency: { type: String, default: 'VND' },
-      quantity: { type: Number, required: true, min: 1 },
-      price: { type: Number, required: true, min: 0 },
-      discount: { type: Number, default: 0 },
-    }
-  ],
-  totalAmount: { type: Number, required: true, min: 0 },
-  status: {
-    type: String,
-    enum: ['Chờ xác nhận', 'Xác nhận', 'Đang giao hàng', 'Đã hoàn thành', 'Hủy'],
-    default: 'Chờ xác nhận',
-  },
-  statusHistory: [
-    {
-      status: {
-        type: String,
-        enum: ['Chờ xác nhận', 'Xác nhận', 'Đang giao hàng', 'Đã hoàn thành', 'Hủy'],
-      },
-      timestamp: { type: Date, default: Date.now },
-    }
-  ],
-  paymentMethod: {
-    type: String,
-    enum: ['COD', 'BankTransfer', 'Momo', 'ZaloPay'],
-    default: 'COD',
-  },
-  paymentStatus: {
-    type: String,
-    enum: ['Chưa thanh toán', 'Đã thanh toán', 'Đã hoàn tiền'],
-    default: 'Chưa thanh toán',
-  },
-  cancellationReason: { type: String, maxlength: 1000, default: null },
-  promotionCode: { type: String, default: null },
-  estimatedDeliveryDate: { type: Date, default: null },
-  notes: { type: String, maxlength: 1000 },
+  { _id: false }
+);
 
-  // Thông tin giao hàng (shipper/hãng vận chuyển)
-  shippingInfo: {
-    carrier: { type: String, default: null }, // Tên hãng vận chuyển (GHN, Viettel Post...)
-    shipperName: { type: String, default: null }, // Tên người giao hàng (nếu có)
-    shipperPhone: { type: String, default: null },
-    trackingNumber: { type: String, default: null }, // Mã vận đơn
-    extra: { type: String, default: null } // Thông tin bổ sung nếu cần
-  },
+const orderSchema = new mongoose.Schema(
+  {
+    /** ID hiển thị cho người dùng – auto theo format ORD + time + rand */
+    idOrder: {
+      type   : String,
+      unique : true,
+      default() {
+        const ts  = Date.now().toString().slice(-8);
+        const rnd = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        return `ORD${ts}${rnd}`;
+      }
+    },
 
-  isCancelRequested: { type: Boolean, default: false },
-  cancelRequestTime: { type: Date, default: null },
-}, {
-  timestamps: true,
-});
+    /** Chủ sở hữu đơn */
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+
+    /** Danh sách item snapshot (không phụ thuộc thay đổi giá sau này) */
+    items: { type: [orderItemSchema], required: true },
+
+    /** Tổng tiền sau chiết khấu từng dòng */
+    totalAmount: { type: Number, required: true, min: 0 },
+
+    /** Workflow */
+    status: {
+      type   : String,
+      enum   : ['Chờ xác nhận', 'Xác nhận', 'Đang giao hàng', 'Đã hoàn thành', 'Hủy'],
+      default: 'Chờ xác nhận'
+    },
+    statusHistory: [
+      {
+        status   : {
+          type : String,
+          enum : ['Chờ xác nhận', 'Xác nhận', 'Đang giao hàng', 'Đã hoàn thành', 'Hủy']
+        },
+        timestamp: { type: Date, default: Date.now }
+      }
+    ],
+
+    /** Thanh toán */
+    paymentMethod: {
+      type   : String,
+      enum   : ['COD', 'BankTransfer', 'Momo', 'ZaloPay'],
+      default: 'COD'
+    },
+    paymentStatus: {
+      type   : String,
+      enum   : ['Chưa thanh toán', 'Đã thanh toán', 'Đã hoàn tiền', 'Chưa hoàn tiền'],
+      default: 'Chưa thanh toán'
+    },
+
+    /** Mã KM / ghi chú … */
+    promotionCode        : { type: String },
+    notes                : { type: String, maxlength: 1_000 },
+
+    /** Flag/yêu cầu huỷ của user */
+    isCancelRequested    : { type: Boolean, default: false },
+    cancelRequestTime    : { type: Date }
+  },
+  { timestamps: true, versionKey: false }
+);
 
 module.exports = mongoose.model('Order', orderSchema);

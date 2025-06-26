@@ -1,382 +1,421 @@
-// controllers/order.controller.js
+/* ------------------------------------------------------------- *
+ *  controllers/order.controller.js                              *
+ *  (C) 2024 – COCOO SHOP – Back-end team                        *
+ * ------------------------------------------------------------- */
 
-const mongoose = require('mongoose');
-const Order = require('../Models/Orders');
-const Product = require('../Models/Products');
-const { sendSuccess, sendError } = require('../Utils/responseHelper');
+const mongoose  = require('mongoose');
+const Order     = require('../Models/Orders');
+const OrderDetail = require('../Models/OrderDetails');
+const Product   = require('../Models/Products');
+
+const {
+  sendSuccess,
+  sendError
+} = require('../Utils/responseHelper');
 const StatusCodes = require('../Constants/ResponseCode');
-const Messages = require('../Constants/ResponseMessage');
+const Messages    = require('../Constants/ResponseMessage');
 
-const getEffectivePrice = (product) => {
-  return product.pricingAndInventory.salePrice ?? product.pricingAndInventory.originalPrice;
+/* ========================= CONSTANTS ========================= */
+const FLOW      = ['Chờ xác nhận', 'Xác nhận', 'Đang giao hàng', 'Đã hoàn thành'];
+const ADMIN_PIN = process.env.ADMIN_PIN || '878889';
+
+const priceOf = p =>
+  p.pricingAndInventory.salePrice ?? p.pricingAndInventory.originalPrice;
+
+/* ======================= HELPERS ======================= */
+
+// luôn tạo OrderDetail nếu chưa có (upsert)
+const addLog = async (orderId, payload) => {
+  try {
+    await OrderDetail.updateOne(
+      { order: orderId },
+      { $push: { logs: { ...payload, at: new Date() } } },
+      { upsert: true }
+    );
+  } catch (e) {
+    console.error('[LOG ERROR]', e.message);
+  }
 };
 
-// ================= USER ================= //
+// factor = +1 (trả kho) | -1 (trừ kho)
+const updateStock = async (items, factor) => {
+  if (!items.length) return;
+  await Product.bulkWrite(
+    items.map(it => ({
+      updateOne: {
+        filter: { _id: it.product },
+        update: {
+          $inc: { 'pricingAndInventory.stockQuantity': factor * it.quantity }
+        }
+      }
+    }))
+  );
+};
 
+const validateFlow = (curr, next, pin) => {
+  if (!FLOW.includes(next))
+    return { ok: false, msg: 'Trạng thái không hợp lệ.' };
+
+  const cur = FLOW.indexOf(curr), nxt = FLOW.indexOf(next);
+  if (nxt - cur > 1)
+    return { ok: false, msg: `Đơn hàng chưa qua bước "${FLOW[cur + 1]}".` };
+  if (nxt < cur && pin !== ADMIN_PIN)
+    return { ok: false, msg: 'PIN không hợp lệ để quay lùi trạng thái.' };
+
+  return { ok: true };
+};
+
+/* ============================================================ *
+ * 1. CREATE ORDER (USER)                                        *
+ * ============================================================ */
 exports.createOrder = async (req, res) => {
   try {
     const { items, paymentMethod, notes, promotionCode } = req.body;
-    const userId = req.user._id;
 
-    console.log('Received order data:', { items, paymentMethod, notes, promotionCode }); // Debug log
+    if (!Array.isArray(items) || items.length === 0)
+      return sendError(res, 400, 'Đơn hàng không có sản phẩm.');
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Đơn hàng không có sản phẩm');
+    /* ----- Enrich + Kiểm kho ----- */
+    const cart = [];
+    for (const row of items) {
+      if (!row.product || !row.quantity)
+        return sendError(res, 400, 'Thiếu product / quantity.');
+
+      const product = await Product.findById(row.product).lean();
+      if (!product)
+        return sendError(res, 404, `Sản phẩm ${row.product} không tồn tại.`);
+      if (row.quantity > product.pricingAndInventory.stockQuantity)
+        return sendError(
+          res,
+          400,
+          `${product.basicInformation.productName} không đủ hàng.`
+        );
+
+      cart.push({
+        product     : product._id,
+        productName : product.basicInformation.productName,
+        unit        : product.pricingAndInventory.unit,
+        currency    : product.pricingAndInventory.currency,
+        quantity    : row.quantity,
+        price       : priceOf(product),
+        discount    : row.discount ?? 0
+      });
     }
 
-    // Validate each item has required fields
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (!item.product) {
-        return sendError(res, StatusCodes.ERROR_BAD_REQUEST, `Item ${i + 1} thiếu product ID`);
-      }
-      if (!item.quantity || item.quantity <= 0) {
-        return sendError(res, StatusCodes.ERROR_BAD_REQUEST, `Item ${i + 1} có số lượng không hợp lệ`);
-      }
-    }
+    const totalAmount = cart.reduce(
+      (sum, i) => sum + i.quantity * i.price * (1 - i.discount / 100),
+      0
+    );
 
-    const enrichedItems = await Promise.all(items.map(async (item, index) => {
-      console.log(`Processing item ${index}:`, item); // Debug log
-
-      // Convert string ID to ObjectId if needed
-      const productId = typeof item.product === 'string' ? item.product : item.product.toString();
-      console.log(`Looking for product with ID: ${productId}`); // Debug log
-
-      const product = await Product.findById(productId);
-      console.log(`Product found for item ${index}:`, product ? {
-        _id: product._id,
-        productName: product.basicInformation?.productName,
-        hasBasicInfo: !!product.basicInformation
-      } : 'NOT FOUND'); // Debug log
-
-      if (!product) {
-        throw new Error(`Sản phẩm với ID ${productId} không tồn tại`);
-      }
-
-      if (!product.basicInformation || !product.basicInformation.productName) {
-        throw new Error(`Sản phẩm ${product._id} thiếu thông tin tên sản phẩm`);
-      }
-
-      const stock = product.pricingAndInventory.stockQuantity;
-      if (item.quantity > stock) {
-        throw new Error(`Sản phẩm "${product.basicInformation.productName}" không đủ hàng`);
-      }
-
-      const price = getEffectivePrice(product);
-
-      const enrichedItem = {
-        product: product._id,
-        productName: product.basicInformation.productName,
-        unit: product.pricingAndInventory.unit,
-        currency: product.pricingAndInventory.currency,
-        quantity: item.quantity,
-        price,
-        discount: item.discount || 0
-      };
-
-      console.log(`Enriched item ${index}:`, enrichedItem); // Debug log
-
-      return enrichedItem;
-    }));
-
-    console.log('All enriched items:', enrichedItems); // Debug log
-
-    const totalAmount = enrichedItems.reduce((sum, item) => {
-      const discountedPrice = item.price * (1 - (item.discount || 0) / 100);
-      return sum + discountedPrice * item.quantity;
-    }, 0);
-
-    // Tạo order object trực tiếp thay vì sử dụng mongoose constructor
-    const orderData = {
-      user: userId,
-      items: enrichedItems,
+    const order = await Order.create({
+      user          : req.user._id,
+      items         : cart,
       totalAmount,
       paymentMethod,
       notes,
       promotionCode,
-      statusHistory: [{ status: 'Chờ xác nhận' }],
-    };
+      statusHistory : [{ status: 'Chờ xác nhận' }]
+    });
 
-    console.log('Order data to save:', orderData); // Debug log
+    /* ----- Tạo OrderDetail + log ----- */
+    await OrderDetail.create({
+      order           : order._id,
+      shippingAddress : req.user.addresses.find(a => a.isDefault) || {},
+      logs            : [{
+        type   : 'create',
+        message: 'Tạo đơn hàng',
+        actor  : req.user._id,
+        role   : 'user'
+      }]
+    });
 
-    const order = new Order(orderData);
-    const savedOrder = await order.save();
-
-    // Sau khi tạo đơn hàng thành công, kiểm tra trạng thái
-    if (savedOrder.status === 'completed') {
-      // Trừ số lượng tồn kho cho từng sản phẩm
-      for (const item of savedOrder.items) {
-        const product = await Product.findById(item.product);
-        if (product && product.pricingAndInventory && typeof product.pricingAndInventory.stockQuantity === 'number') {
-          product.pricingAndInventory.stockQuantity = Math.max(0, product.pricingAndInventory.stockQuantity - item.quantity);
-          await product.save();
-        }
-      }
-    }
-
-    return sendSuccess(res, StatusCodes.SUCCESS_CREATED, savedOrder, Messages.ORDER_CREATED);
-  } catch (error) {
-    console.error('Order creation error:', error); // Debug log
-    console.error('Error stack:', error.stack); // Debug log
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, error.message);
+    return sendSuccess(res, 201, order, Messages.ORDER_CREATED);
+  } catch (err) {
+    console.error('[CREATE ORDER]', err);
+    return sendError(res, 500, err.message);
   }
 };
 
+/* ============================================================ *
+ * 2. USER – GET LIST / DETAIL                                   *
+ * ============================================================ */
 exports.getUserOrders = async (req, res) => {
-  try {
-    const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, orders, Messages.ORDER_FETCH_SUCCESS);
-  } catch (err) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
-  }
+  const list = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
+  return sendSuccess(res, 200, list, Messages.ORDER_FETCH_SUCCESS);
 };
 
 exports.getOrderById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+  const { id } = req.params;
 
-    const order = await Order.findById(id).populate('user', 'fullName email');
-    if (!order) return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.ORDER_NOT_FOUND);
+  if (!mongoose.isValidObjectId(id))
+    return sendError(res, 400, Messages.INVALID_ID);
 
-    if (order.user._id.toString() !== req.user._id.toString() && !req.user.isAdmin) {
-      return sendError(res, StatusCodes.ERROR_FORBIDDEN, Messages.FORBIDDEN);
-    }
+  const order = await Order.findById(id).populate('user', 'fullName email phone');
+  if (!order)
+    return sendError(res, 404, Messages.ORDER_NOT_FOUND);
 
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, order, Messages.ORDER_FETCH_SUCCESS);
-  } catch (error) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
-  }
+  if (!order.user._id.equals(req.user._id) && req.user.role !== 'admin')
+    return sendError(res, 403, Messages.ERROR_FORBIDDEN);
+
+  return sendSuccess(res, 200, order, Messages.ORDER_FETCH_SUCCESS);
 };
 
+/* ============================================================ *
+ * 3. USER – CANCEL (≤3h & Chờ xác nhận)                         *
+ * ============================================================ */
 exports.cancelRequestByUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+  const { id } = req.params;
+  const { reason } = req.body;
 
-    const order = await Order.findById(id);
-    if (!order) return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.ORDER_NOT_FOUND);
+  if (!mongoose.isValidObjectId(id))
+    return sendError(res, 400, Messages.INVALID_ID);
 
-    if (order.user.toString() !== req.user._id.toString()) return sendError(res, StatusCodes.ERROR_FORBIDDEN, Messages.FORBIDDEN);
+  const order = await Order.findById(id);
+  if (!order) return sendError(res, 404, Messages.ORDER_NOT_FOUND);
+  if (!order.user.equals(req.user._id))
+    return sendError(res, 403, Messages.ERROR_FORBIDDEN);
 
-    // Kiểm tra trạng thái đơn hàng
-    if (order.status === 'Chờ xác nhận') {
-      // Cho phép hủy đơn hàng ở trạng thái chờ xác nhận
-      const within3Hours = (new Date() - new Date(order.createdAt)) / (1000 * 60 * 60) <= 3;
-      if (!within3Hours) {
-        return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Chỉ có thể hủy đơn hàng trong vòng 3 giờ sau khi đặt.');
-      }
-    } else if (order.status === 'Xác nhận') {
-      // Đơn hàng đã xác nhận, yêu cầu liên hệ email
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST,
-        'Đơn hàng đã được xác nhận. Vui lòng liên hệ email support@example.com để được hỗ trợ hủy đơn.');
-    } else if (order.status === 'Đang giao hàng') {
-      // Đơn hàng đang giao, không cho phép hủy
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST,
-        'Đơn hàng đang được giao. Không thể hủy đơn hàng lúc này.');
-    } else if (['Đã hoàn thành', 'Hủy'].includes(order.status)) {
-      // Đơn hàng đã hoàn thành hoặc đã hủy
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST,
-        'Đơn hàng đã hoàn thành hoặc đã hủy. Không thể thực hiện thao tác này.');
-    }
+  const diffHours = (Date.now() - order.createdAt) / 36e5;
+  if (order.status !== 'Chờ xác nhận' || diffHours > 3)
+    return sendError(res, 400, 'Chỉ huỷ được đơn Chờ xác nhận trong 3 giờ.');
 
-    order.isCancelRequested = true;
-    order.cancelRequestTime = new Date();
-    await order.save();
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, order, Messages.ORDER_CANCEL_REQUEST_SENT);
-  } catch (error) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
-  }
+  order.status            = 'Hủy';
+  order.paymentStatus     = 'Đã hoàn tiền';
+  order.cancellationReason = reason || 'User huỷ';
+  order.statusHistory.push({ status: 'Hủy' });
+  await order.save();
+
+  await addLog(order._id, {
+    type   : 'cancel',
+    message: order.cancellationReason,
+    actor  : req.user._id,
+    role   : 'user'
+  });
+
+  return sendSuccess(res, 200, order, 'Huỷ đơn hàng thành công.');
 };
 
-// ================= ADMIN ================= //
-
+/* ============================================================ *
+ * 4. ADMIN – GET ALL                                            *
+ * ============================================================ */
 exports.getAllOrders = async (req, res) => {
-  try {
-    const { page = 1, limit = 10, idUser, status, paymentStatus, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-    const query = {};
-    if (idUser && mongoose.Types.ObjectId.isValid(idUser)) query.user = idUser;
-    if (status) query.status = status;
-    if (paymentStatus) query.paymentStatus = paymentStatus;
+  const { page = 1, limit = 10, status, paymentStatus } = req.query;
+  const query = { ...(status && { status }), ...(paymentStatus && { paymentStatus }) };
 
-    const skip = (page - 1) * limit;
-    const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
+  const orders = await Order.find(query)
+    .populate('user', 'fullName email')
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(+limit);
 
-    const orders = await Order.find(query)
-      .populate('user', 'fullName email')
-      .sort(sort)
-      .skip(Number(skip))
-      .limit(Number(limit));
+  const total = await Order.countDocuments(query);
 
-    const total = await Order.countDocuments(query);
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, {
+  return sendSuccess(
+    res,
+    200,
+    {
       total,
-      currentPage: Number(page),
-      totalPages: Math.ceil(total / limit),
-      perPage: Number(limit),
-      data: orders
-    }, Messages.ORDER_FETCH_SUCCESS);
-  } catch (err) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
-  }
+      currentPage: +page,
+      perPage    : +limit,
+      totalPages : Math.ceil(total / limit),
+      data       : orders
+    },
+    Messages.ORDER_FETCH_SUCCESS
+  );
 };
 
+/* ============================================================ *
+ * 5. ADMIN – UPDATE STATUS                                      *
+ * ============================================================ */
 exports.updateOrderStatus = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status, shippingInfo, pin } = req.body;
+    const { id }                        = req.params;
+    const { status, shippingInfo,
+            pin, reason }               = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+    // 1. validate id ------------------------------------------------
+    if (!mongoose.isValidObjectId(id))
+      return sendError(res, 400, Messages.INVALID_ID);
 
-    const order = await Order.findById(id)
-      .populate('items.product', 'pricingAndInventory.stockQuantity');
-
+    // 2. lấy đơn hàng (KHÔNG lean) ---------------------------------
+    const order = await Order.findById(id).populate(
+      'items.product',
+      'pricingAndInventory.stockQuantity'
+    );
     if (!order)
-      return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.ORDER_NOT_FOUND);
-
-    //  ▸ Không đổi
+      return sendError(res, 404, Messages.ORDER_NOT_FOUND);
     if (order.status === status)
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Trạng thái không thay đổi.');
+      return sendError(res, 400, 'Trạng thái không thay đổi.');
 
-    // 1. Nếu chuyển từ 'Xác nhận' về 'Chờ xác nhận' thì phải nhập đúng mã PIN
-    if (order.status === 'Xác nhận' && status === 'Chờ xác nhận') {
-      // Giả sử mã PIN đúng là '123456' (bạn có thể thay đổi logic xác thực này)
-      if (pin !== '878889') {
-        return sendError(res, StatusCodes.ERROR_FORBIDDEN, 'Mã PIN không đúng. Không thể chuyển trạng thái.');
-      }
-    }
-
-    /** ============= 1. Trừ kho khi XÁC NHẬN lần đầu ============= */
-    const deductStock = (order.status === 'Chờ xác nhận') && status === 'Xác nhận';
-
-    if (deductStock) {
-      // Kiểm kho
-      for (const it of order.items) {
-        if (!it.product)
-          return sendError(res, 400, 'Sản phẩm đã bị xóa khỏi hệ thống.');
-        const inStock = it.product.pricingAndInventory.stockQuantity;
-        if (inStock < it.quantity)
-          return sendError(res, 400,
-            `Sản phẩm ${it.product._id} chỉ còn ${inStock} trong kho.`);
-      }
-      // Trừ kho
-      await Product.bulkWrite(order.items.map(it => ({
-        updateOne: {
-          filter: { _id: it.product._id },
-          update: { $inc: { 'pricingAndInventory.stockQuantity': -it.quantity } }
-        }
-      })));
-    }
-
-    /** ============= 2. Hoàn kho khi HỦY sau khi đã trừ ============= */
-    const restoreStock =
-      ['Xác nhận', 'Đang giao'].includes(order.status) && status === 'Hủy';
-
-    if (restoreStock) {
-      await Product.bulkWrite(order.items.map(it => ({
-        updateOne: {
-          filter: { _id: it.product._id },
-          update: { $inc: { 'pricingAndInventory.stockQuantity': it.quantity } }
-        }
-      })));
-    }
-
-    /** ============= 3. Cập nhật trạng thái & lịch sử ============= */
-    order.status = status;
-    order.statusHistory.push({ status });
-    // Nếu chuyển sang Đang giao hàng thì lưu shippingInfo
-    if (status === 'Đang giao hàng' && shippingInfo) {
-      order.shippingInfo = shippingInfo;
-    }
-    // 2. Nếu hủy đơn hàng, xử lý trạng thái thanh toán
+    /* ========================================================== */
+    /* A. HỦY  –  luôn cho phép, cần lý do                        */
+    /* ========================================================== */
     if (status === 'Hủy') {
-      if (order.paymentStatus === 'Đã thanh toán') {
-        order.paymentStatus = 'Đã hoàn tiền';
-      } // nếu chưa thanh toán thì giữ nguyên paymentStatus
+      if (!reason) return sendError(res, 400, 'Vui lòng nhập lý do hủy.');
+
+      if (['Xác nhận', 'Đang giao hàng'].includes(order.status))
+        await updateStock(order.items, +1);          // hoàn kho
+
+      order.status             = 'Hủy';
+      order.cancellationReason = reason;
+      order.paymentStatus      =
+        order.paymentStatus === 'Đã thanh toán' ? 'Chưa hoàn tiền'
+                                                : 'Đã hoàn tiền';
+      order.statusHistory.push({ status: 'Hủy' });
+      await order.save();
+
+      await addLog(order._id, {
+        type   : 'cancel',
+        message: reason,
+        actor  : req.user?._id,
+        role   : req.user?.role || 'system'
+      });
+
+      return sendSuccess(res, 200, order, Messages.ORDER_STATUS_UPDATED);
     }
-    await order.save();
 
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, order, Messages.ORDER_STATUS_UPDATED);
-  } catch (err) {
-    console.error(err);
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
-  }
-};
+    /* ========================================================== */
+    /* B. Các trạng thái trong FLOW                              */
+    /* ========================================================== */
+    const flowChk = validateFlow(order.status, status, pin);
+    if (!flowChk.ok) return sendError(res, 400, flowChk.msg);
 
-exports.respondCancelRequest = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { accept, reason } = req.body;
+    // B1. Chuyển sang “Xác nhận” → trừ kho
+    if (order.status === 'Chờ xác nhận' && status === 'Xác nhận') {
+      const lack = order.items.find(it =>
+        it.product.pricingAndInventory.stockQuantity < it.quantity
+      );
+      if (lack)
+        return sendError(res, 400,
+          `Sản phẩm ${lack.product} không đủ hàng.`);
+      await updateStock(order.items, -1);
+    }
 
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
-
-    const order = await Order.findById(id);
-    if (!order || !order.isCancelRequested)
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Không có yêu cầu hủy đơn');
-
-    // ❌ Nếu đơn đã xác nhận trở đi thì không được hủy
-    const notCancelableStatuses = ['Xác nhận', 'Đang giao', 'Hoàn thành'];
-    if (accept && notCancelableStatuses.includes(order.status)) {
-      return sendError(
-        res,
-        StatusCodes.ERROR_BAD_REQUEST,
-        'Đơn hàng đã được xác nhận, không thể hủy.'
+    // B2. Sang “Đang giao hàng” → cần shippingInfo
+    if (status === 'Đang giao hàng') {
+      if (!shippingInfo?.trackingNumber)
+        return sendError(res, 400, 'Thiếu thông tin vận chuyển.');
+      await OrderDetail.updateOne(
+        { order: order._id },
+        { $set: { shippingInfo } },
+        { upsert: true }
       );
     }
 
-    if (accept) {
-      order.status = 'Hủy';
-      order.statusHistory.push({ status: 'Hủy' });
-      order.cancellationReason = reason || 'Người bán chấp nhận hủy đơn';
-
-      // (Tùy chọn) Nếu muốn hoàn kho nếu trạng thái trước đó là "Chờ xác nhận"
-      // hoặc kiểm tra theo logic bạn đã có
-    } else {
-      order.isCancelRequested = false;
-      order.cancelRequestTime = null;
-    }
-
+    // B3. cập nhật & log
+    order.status = status;
+    order.statusHistory.push({ status });
     await order.save();
-    return sendSuccess(
-      res,
-      StatusCodes.SUCCESS_OK,
-      order,
-      accept ? Messages.ORDER_CANCELED : Messages.ORDER_CANCEL_REQUEST_DECLINED
-    );
-  } catch (error) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
+
+    await addLog(order._id, {
+      type   : 'status-change',
+      message: `→ ${status}`,
+      actor  : req.user?._id,
+      role   : req.user?.role || 'system'
+    });
+
+    return sendSuccess(res, 200, order, Messages.ORDER_STATUS_UPDATED);
+
+  } catch (err) {
+    console.error('[UPDATE STATUS]', err.message);
+    console.error(err.stack);
+    /* Trả về lỗi chi tiết để dễ debug – production nên ẩn đi */
+    return sendError(res, 500, err.message);
   }
 };
 
+/* ============================================================ *
+ * 6. ADMIN – RESPOND CANCEL REQUEST                              *
+ * ============================================================ */
+exports.respondCancelRequest = async (req, res) => {
+  const { id } = req.params;
+  const { accept, reason } = req.body;
+
+  if (!mongoose.isValidObjectId(id))
+    return sendError(res, 400, Messages.INVALID_ID);
+
+  const order = await Order.findById(id);
+  if (!order || !order.isCancelRequested)
+    return sendError(res, 400, 'Không có yêu cầu hủy đơn.');
+
+  if (accept) {
+    if (!reason) return sendError(res, 400, 'Phải nhập lý do hủy.');
+    if (['Xác nhận', 'Đang giao hàng'].includes(order.status))
+      await updateStock(order.items, +1);             // Trả kho
+
+    order.status             = 'Hủy';
+    order.cancellationReason = reason;
+    order.paymentStatus      =
+      order.paymentStatus === 'Đã thanh toán' ? 'Chưa hoàn tiền' : 'Đã hoàn tiền';
+    order.statusHistory.push({ status: 'Hủy' });
+  } else {
+    order.isCancelRequested = false;
+    order.cancelRequestTime = null;
+  }
+
+  await order.save();
+
+  await addLog(id, {
+    type   : accept ? 'cancel' : 'reject-cancel',
+    message: accept ? reason : 'Từ chối yêu cầu hủy',
+    actor  : req.user._id,
+    role   : 'admin'
+  });
+
+  const msg = accept ? 'Đã hủy đơn hàng' : 'Đã từ chối yêu cầu hủy';
+  return sendSuccess(res, 200, order, msg);
+};
+
+/* ============================================================ *
+ * 7. ADMIN – UPDATE MISC FIELD                                  *
+ * ============================================================ */
 exports.updateOrder = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id))
+    return sendError(res, 400, Messages.INVALID_ID);
 
-    const updates = { ...req.body };
-    delete updates._id;
+  const allowed = ['paymentMethod', 'paymentStatus', 'notes',
+                   'promotionCode', 'shippingInfo', 'estimatedDeliveryDate'];
 
-    const updatedOrder = await Order.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
-    if (!updatedOrder) return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.ORDER_NOT_FOUND);
+  const updates = Object.fromEntries(
+    Object.entries(req.body).filter(([k]) => allowed.includes(k))
+  );
+  if (!Object.keys(updates).length)
+    return sendError(res, 400, 'Không có trường hợp lệ.');
 
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, updatedOrder, Messages.ORDER_UPDATED);
-  } catch (error) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
+  const order = await Order.findById(id);
+  if (!order) return sendError(res, 404, Messages.ORDER_NOT_FOUND);
+
+  const changes = [];
+  for (const f of allowed) {
+    if (updates[f] !== undefined && updates[f] !== order[f]) {
+      changes.push(`"${f}": "${order[f]}" → "${updates[f]}"`);
+      order[f] = updates[f];
+    }
   }
+  await order.save();
+
+  if (changes.length)
+    await addLog(id, {
+      type   : 'update',
+      message: changes.join(', '),
+      actor  : req.user._id,
+      role   : 'admin'
+    });
+
+  return sendSuccess(res, 200, order, Messages.ORDER_UPDATED);
 };
 
+/* ============================================================ *
+ * 8. ADMIN – DELETE ORDER                                       *
+ * ============================================================ */
 exports.deleteOrder = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id))
+    return sendError(res, 400, Messages.INVALID_ID);
 
-    const deletedOrder = await Order.findByIdAndDelete(id);
-    if (!deletedOrder) return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.ORDER_NOT_FOUND);
+  await Order.findByIdAndDelete(id);
+  await OrderDetail.findOneAndDelete({ order: id });
 
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, null, Messages.ORDER_DELETED);
-  } catch (error) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
-  }
+  return sendSuccess(res, 200, null, Messages.ORDER_DELETED);
 };

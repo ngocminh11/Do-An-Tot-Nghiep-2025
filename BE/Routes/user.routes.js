@@ -21,26 +21,26 @@ router.get('/carts/my-cart', authenticateUser, cartController.getMyCart);
 router.delete('/carts/clear', authenticateUser, cartController.clearMyCart);
 
 // Routes for Order (user & admin)
-router.post('/orders', authenticateUser, orderController.createOrder);
-router.get('/orders/my-orders', authenticateUser, orderController.getUserOrders);
+router.post('/orders',authenticateUser, orderController.createOrder);
+router.get('/orders/my-orders',authenticateUser, authenticateUser, orderController.getUserOrders);
 router.get('/orders/:id', authenticateUser, orderController.getOrderById);
 router.post('/orders/:id/cancel-request', authenticateUser, orderController.cancelRequestByUser);
 
 // Routes for Categories (public access)
-router.get('/categories', categoryController.getAllCategories);
-router.get('/categories/:id', categoryController.getCategoryById);
-router.get('/categories/:id/products', categoryController.getCategoryWithProducts);
+router.get('/categories', authenticateUser,categoryController.getAllCategories);
+router.get('/categories/:id',authenticateUser, categoryController.getCategoryById);
+router.get('/categories/:id/products',authenticateUser, categoryController.getCategoryWithProducts);
 
 // Routes for Products (public access)
-router.get('/products', productController.getAllProducts);
-router.get('/products/category/:categoryId', productController.getProductsByCategory);
-router.get('/products/:id', productController.getProductById);
+router.get('/products',authenticateUser, productController.getAllProducts);
+router.get('/products/category/:categoryId',authenticateUser, productController.getProductsByCategory);
+router.get('/products/:id',authenticateUser, productController.getProductById);
 
 // Routes for Comment (user)
-router.get('/comments', commentController.getAllComments);
+router.get('/comments',authenticateUser, commentController.getAllComments);
 router.post('/comments', authenticateUser, commentController.createComment);
 router.get('/comments/product/:productId', commentController.getCommentsByProduct);
-router.get('/comments/:id', commentController.getCommentById);
+router.get('/comments/:id',authenticateUser, commentController.getCommentById);
 router.put('/comments/:id', authenticateUser, commentController.updateComment);
 router.delete('/comments/:id', authenticateUser, commentController.deleteComment);
 router.put('/comments/:id/reply', authenticateUser, commentController.replyToComment);

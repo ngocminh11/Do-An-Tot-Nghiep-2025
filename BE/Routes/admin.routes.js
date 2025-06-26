@@ -69,6 +69,7 @@ router.delete('/promotions/:id', promotionController.deletePromotion);
 
 // Routes for Order (admin)
 router.get('/orders', orderController.getAllOrders);
+router.get('/orders/:id', orderController.getOrderById);
 router.patch('/orders/:id/status', orderController.updateOrderStatus);
 router.post('/orders/:id/respond-cancel', orderController.respondCancelRequest);
 router.put('/orders/:id', orderController.updateOrder);
