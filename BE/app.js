@@ -34,19 +34,6 @@ const io = socketIo(server, {
 });
 app.set('io', io);
 
-io.on('connection', (socket) => {
-  console.log('🟢 New client connected');
-
-  socket.on('chat message', (msg) => {
-    io.emit('chat message', msg);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('🔴 Client disconnected');
-  });
-});
-
-//========================= MIDDLEWARE SETUP ===============================
 
 // Enable CORS
 app.use(cors({

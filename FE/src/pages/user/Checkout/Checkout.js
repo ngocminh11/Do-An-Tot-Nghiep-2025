@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Form,
     Input,
@@ -21,7 +21,8 @@ import orderService from '../../../services/orderService';
 import AddressForm from '../../../components/common/AddressForm';
 import { useAuth } from '../../../contexts/AuthContext';
 import accountService from '../../../services/accountService';
-import productService, { getImageUrl } from '../../../services/productService';
+import productService from '../../../services/productService';
+import { getImageUrl } from '../../../services/productService';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -37,6 +38,7 @@ const Checkout = () => {
     const [addresses, setAddresses] = useState([]);
     const [selectedAddress, setSelectedAddress] = useState(null);
     const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
+    const [imageUrls, setImageUrls] = useState({});
 
     useEffect(() => {
         // Lấy địa chỉ giao hàng từ backend khi user thay đổi
@@ -53,31 +55,72 @@ const Checkout = () => {
         fetchAddresses();
     }, [user]);
 
+    const loadProductImages = useCallback(async (items) => {
+        const imagePromises = items.map(async (item) => {
+            const pid = item.productId || item._id;
+            let imgPath = item.imageUrl;
+            if (imgPath && !imageUrls[pid]) {
+                try {
+                    // Nếu imgPath là /media/abc.jpg hoặc /uploads/abc.jpg, chỉ lấy phần sau /media/
+                    const cleanPath = imgPath.replace('/media/', '');
+                    const blob = await productService.getImageById(cleanPath);
+                    const objectUrl = URL.createObjectURL(blob);
+                    return { productId: pid, url: objectUrl };
+                } catch (e) {
+                    return null;
+                }
+            }
+            return null;
+        });
+        const results = await Promise.all(imagePromises);
+        const newImageUrls = {};
+        results.forEach(result => {
+            if (result) {
+                newImageUrls[result.productId] = result.url;
+            }
+        });
+        setImageUrls(prev => ({ ...prev, ...newImageUrls }));
+    }, [imageUrls]);
+
     useEffect(() => {
         // Ưu tiên lấy sản phẩm từ localStorage (checkoutItems)
         const checkoutItems = localStorage.getItem('checkoutItems');
         if (checkoutItems) {
             try {
-                setCartItems(JSON.parse(checkoutItems));
+                const parsed = JSON.parse(checkoutItems);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    // Đảm bảo dữ liệu có đầy đủ thông tin cần thiết
+                    const validatedItems = parsed.map(item => ({
+                        _id: item._id || item.productId,
+                        productId: item.productId,
+                        name: item.name || 'Không có tên',
+                        imageUrl: item.imageUrl || '',
+                        price: item.price || 0,
+                        quantity: item.quantity || 1
+                    }));
+                    setCartItems(validatedItems);
+                    loadProductImages(validatedItems);
+                    return;
+                }
             } catch {
                 setCartItems([]);
             }
-            localStorage.removeItem('checkoutItems');
-            return;
         }
         // Nếu không có, fallback về toàn bộ giỏ hàng
         const fetchCart = async () => {
             try {
                 const cart = await cartService.getMyCart();
                 if (cart && Array.isArray(cart.items)) {
-                    setCartItems(cart.items.map(item => ({
+                    const mapped = cart.items.map(item => ({
                         _id: item._id || item.productId?._id || item.productId,
                         productId: item.productId?._id || item.productId,
                         name: item.productId?.basicInformation?.productName || item.productId?.name || '',
                         imageUrl: item.productId?.media?.mainImage || '',
                         price: item.productId?.pricingAndInventory?.salePrice || 0,
                         quantity: item.quantity
-                    })));
+                    }));
+                    setCartItems(mapped);
+                    loadProductImages(mapped);
                 } else {
                     setCartItems([]);
                 }
@@ -150,6 +193,8 @@ const Checkout = () => {
             message.success('Đặt hàng thành công! Cảm ơn bạn đã mua sắm tại CoCoo.');
             // Xoá giỏ hàng sau khi đặt hàng thành công
             if (user && user._id) await cartService.clearCartByUserId(user._id);
+            // Xóa checkoutItems từ localStorage sau khi đặt hàng thành công
+            localStorage.removeItem('checkoutItems');
             // Cập nhật lại addresses
             const res = await accountService.getUserById(user._id);
             setAddresses(res.data.addresses || []);
@@ -163,13 +208,25 @@ const Checkout = () => {
     return (
         <div className="checkout-page minimal-checkout">
             <Title level={3} className="page-title" style={{ textAlign: 'center', marginBottom: 16 }}>THANH TOÁN</Title>
+            {/* Hiển thị thông báo nếu đang mua ngay */}
+            {cartItems.length === 1 && localStorage.getItem('checkoutItems') && (
+                <div style={{ textAlign: 'center', marginBottom: 16, color: '#1890ff' }}>
+                    <Text>Bạn đang mua ngay sản phẩm này</Text>
+                </div>
+            )}
             <Row gutter={[18, 18]} justify="center">
                 <Col xs={24} lg={11}>
                     <Card className="order-summary-card minimal-order-list" bodyStyle={{ padding: 18 }}>
                         <Title level={5} style={{ marginBottom: 8 }}>Sản phẩm</Title>
                         {cartItems.map(item => (
                             <div key={item._id} className="order-item minimal-order-item" style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                                <img width={54} height={54} src={getImageUrl(item.imageUrl) || '/images/products/default.jpg'} alt={item.name} style={{ borderRadius: 8, objectFit: 'cover', marginRight: 12 }} />
+                                <img
+                                    width={54}
+                                    height={54}
+                                    src={imageUrls[item.productId || item._id] || item.imageUrl || '/images/products/default.jpg'}
+                                    alt={item.name}
+                                    style={{ borderRadius: 8, objectFit: 'cover', marginRight: 12 }}
+                                />
                                 <div style={{ flex: 1 }}>
                                     <Text strong>{item.name}</Text>
                                     <div style={{ fontSize: 13, color: '#888' }}>x{item.quantity}</div>

@@ -1,7 +1,12 @@
 import axios from 'axios';
 import config from '../config';
+import { io } from 'socket.io-client';
 
 const API_URL = config.API_BASE_URL;
+
+const socket = io('http://localhost:5000', {
+    withCredentials: true
+});
 
 const cartService = {
     // ADMIN: Lấy tất cả giỏ hàng
@@ -128,6 +133,11 @@ const cartService = {
         } catch (error) {
             throw error.response?.data || error;
         }
+    },
+    // Lắng nghe realtime cập nhật giỏ hàng
+    listenCartUpdates: (callback) => {
+        socket.on('cart-update', callback);
+        return () => socket.off('cart-update', callback);
     }
 };
 

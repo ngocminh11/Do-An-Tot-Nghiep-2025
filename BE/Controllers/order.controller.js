@@ -159,18 +159,26 @@ exports.cancelRequestByUser = async (req, res) => {
 
     if (order.user.toString() !== req.user._id.toString()) return sendError(res, StatusCodes.ERROR_FORBIDDEN, Messages.FORBIDDEN);
 
-    const isPaid = order.paymentStatus === 'Đã thanh toán';
-    const within3Hours = (new Date() - new Date(order.createdAt)) / (1000 * 60 * 60) <= 3;
-
-    if (isPaid || !within3Hours || order.status !== 'Chờ xác nhận') {
-      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Không thể gửi yêu cầu hủy đơn hàng');
-    }
-    // Chặn luôn nếu đơn đã xác nhận trở lên
-    if (['Xác nhận', 'Đang giao', 'Đã hoàn thành', 'Hủy'].includes(order.status)) {
+    // Kiểm tra trạng thái đơn hàng
+    if (order.status === 'Chờ xác nhận') {
+      // Cho phép hủy đơn hàng ở trạng thái chờ xác nhận
+      const within3Hours = (new Date() - new Date(order.createdAt)) / (1000 * 60 * 60) <= 3;
+      if (!within3Hours) {
+        return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Chỉ có thể hủy đơn hàng trong vòng 3 giờ sau khi đặt.');
+      }
+    } else if (order.status === 'Xác nhận') {
+      // Đơn hàng đã xác nhận, yêu cầu liên hệ email
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST,
-        'Đơn hàng đã được xử lý, không thể hủy.');
+        'Đơn hàng đã được xác nhận. Vui lòng liên hệ email support@example.com để được hỗ trợ hủy đơn.');
+    } else if (order.status === 'Đang giao hàng') {
+      // Đơn hàng đang giao, không cho phép hủy
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST,
+        'Đơn hàng đang được giao. Không thể hủy đơn hàng lúc này.');
+    } else if (['Đã hoàn thành', 'Hủy'].includes(order.status)) {
+      // Đơn hàng đã hoàn thành hoặc đã hủy
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST,
+        'Đơn hàng đã hoàn thành hoặc đã hủy. Không thể thực hiện thao tác này.');
     }
-
 
     order.isCancelRequested = true;
     order.cancelRequestTime = new Date();
@@ -216,7 +224,7 @@ exports.getAllOrders = async (req, res) => {
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, shippingInfo, pin } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id))
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
@@ -230,6 +238,14 @@ exports.updateOrderStatus = async (req, res) => {
     //  ▸ Không đổi
     if (order.status === status)
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Trạng thái không thay đổi.');
+
+    // 1. Nếu chuyển từ 'Xác nhận' về 'Chờ xác nhận' thì phải nhập đúng mã PIN
+    if (order.status === 'Xác nhận' && status === 'Chờ xác nhận') {
+      // Giả sử mã PIN đúng là '123456' (bạn có thể thay đổi logic xác thực này)
+      if (pin !== '878889') {
+        return sendError(res, StatusCodes.ERROR_FORBIDDEN, 'Mã PIN không đúng. Không thể chuyển trạng thái.');
+      }
+    }
 
     /** ============= 1. Trừ kho khi XÁC NHẬN lần đầu ============= */
     const deductStock = (order.status === 'Chờ xác nhận') && status === 'Xác nhận';
@@ -269,6 +285,16 @@ exports.updateOrderStatus = async (req, res) => {
     /** ============= 3. Cập nhật trạng thái & lịch sử ============= */
     order.status = status;
     order.statusHistory.push({ status });
+    // Nếu chuyển sang Đang giao hàng thì lưu shippingInfo
+    if (status === 'Đang giao hàng' && shippingInfo) {
+      order.shippingInfo = shippingInfo;
+    }
+    // 2. Nếu hủy đơn hàng, xử lý trạng thái thanh toán
+    if (status === 'Hủy') {
+      if (order.paymentStatus === 'Đã thanh toán') {
+        order.paymentStatus = 'Đã hoàn tiền';
+      } // nếu chưa thanh toán thì giữ nguyên paymentStatus
+    }
     await order.save();
 
     return sendSuccess(res, StatusCodes.SUCCESS_OK, order, Messages.ORDER_STATUS_UPDATED);
@@ -277,8 +303,6 @@ exports.updateOrderStatus = async (req, res) => {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
-
-
 
 exports.respondCancelRequest = async (req, res) => {
   try {
@@ -325,7 +349,6 @@ exports.respondCancelRequest = async (req, res) => {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };
-
 
 exports.updateOrder = async (req, res) => {
   try {

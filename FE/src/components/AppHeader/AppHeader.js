@@ -3,8 +3,10 @@ import { Layout, Menu, Button, Avatar, Dropdown, Badge } from 'antd';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { UserOutlined, ShoppingCartOutlined, LogoutOutlined, BellOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { selectUnreadCount } from '../../store/slices/notificationSlice';
+import { selectCartItemCount, setCartItems } from '../../store/slices/cartSlice';
+import cartService from '../../services/cartService';
 import './AppHeader.scss';
 
 const { Header } = Layout;
@@ -14,6 +16,8 @@ const AppHeader = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const unreadNotificationCount = useSelector(selectUnreadCount);
+    const cartItemCount = useSelector(selectCartItemCount);
+    const dispatch = useDispatch();
 
     const menuItems = [
         {
@@ -60,6 +64,45 @@ const AppHeader = () => {
         }
     ];
 
+    // Real-time: fetch cart when user changes
+    React.useEffect(() => {
+        const fetchCart = async () => {
+            if (user) {
+                try {
+                    const cart = await cartService.getMyCart();
+                    if (cart && Array.isArray(cart.items)) {
+                        const items = cart.items.map(item => ({
+                            id: item.productId?._id || item.productId,
+                            name: item.productId?.basicInformation?.productName || item.productId?.name || '',
+                            price: item.productId?.pricingAndInventory?.salePrice || 0,
+                            image: item.productId?.media?.mainImage || '',
+                            quantity: item.quantity
+                        }));
+                        dispatch(setCartItems(items));
+                    } else {
+                        dispatch(setCartItems([]));
+                    }
+                } catch {
+                    dispatch(setCartItems([]));
+                }
+            } else {
+                dispatch(setCartItems([]));
+            }
+        };
+        fetchCart();
+
+        // Lắng nghe realtime cart update qua socket
+        let unsubscribe;
+        if (user) {
+            unsubscribe = cartService.listenCartUpdates(() => {
+                fetchCart();
+            });
+        }
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [user, dispatch]);
+
     return (
         <Header className="app-header">
             <div className="logo">
@@ -90,6 +133,13 @@ const AppHeader = () => {
                         </Button>
                     </div>
                 )}
+                <Badge count={cartItemCount} offset={[5, 0]} className="cart-badge">
+                    <Button
+                        type="text"
+                        icon={<ShoppingCartOutlined style={{ fontSize: '20px' }} />}
+                        onClick={() => navigate('/cart')}
+                    />
+                </Badge>
                 <Badge count={unreadNotificationCount} offset={[5, 0]} className="notification-badge">
                     <Button
                         type="text"

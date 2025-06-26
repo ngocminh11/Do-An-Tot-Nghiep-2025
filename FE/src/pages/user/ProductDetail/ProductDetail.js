@@ -114,8 +114,32 @@ const ProductDetail = () => {
     }, [id, quantity]);
 
     const handleBuyNow = useCallback(() => {
+        // Kiểm tra nếu product chưa được load
+        if (!product) {
+            message.error('Vui lòng đợi thông tin sản phẩm được tải xong');
+            return;
+        }
+
+        // Tính giá trực tiếp từ product thay vì sử dụng discountInfo
+        const originalPrice = product?.pricingAndInventory?.originalPrice || 0;
+        const salePrice = product?.pricingAndInventory?.salePrice || originalPrice;
+        const finalPrice = salePrice;
+
+        // Lưu thông tin sản phẩm vào localStorage để checkout có thể đọc
+        const checkoutItem = {
+            _id: id,
+            productId: id,
+            name: product?.basicInformation?.productName || 'Không có tên',
+            imageUrl: mainImageUrl || '/images/products/default.jpg',
+            price: finalPrice,
+            quantity: quantity
+        };
+
+        // Lưu vào localStorage với key 'checkoutItems' (dạng array)
+        localStorage.setItem('checkoutItems', JSON.stringify([checkoutItem]));
+
         navigate(`/checkout?productId=${id}&quantity=${quantity}`);
-    }, [navigate, id, quantity]);
+    }, [navigate, id, quantity, product, mainImageUrl]);
 
     const handleImageSelect = useCallback((index) => {
         setSelectedImage(index);

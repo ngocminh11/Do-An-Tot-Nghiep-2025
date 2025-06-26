@@ -52,6 +52,9 @@ exports.addToCart = async (req, res) => {
     }
 
     await cart.save();
+    // Emit realtime event
+    const io = req.app.get('io');
+    io && io.emit('cart-updated', { userId });
     return sendSuccess(res, StatusCodes.SUCCESS_OK, cart, Messages.CART_UPDATED);
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
@@ -98,7 +101,9 @@ exports.updateQuantity = async (req, res) => {
     // 6) Cập nhật & lưu
     item.quantity = quantity;
     await cart.save();
-
+    // Emit realtime event
+    const io = req.app.get('io');
+    io && io.emit('cart-updated', { userId });
     return sendSuccess(res, StatusCodes.SUCCESS_OK, cart, Messages.CART_UPDATED);
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
@@ -119,6 +124,9 @@ exports.removeFromCart = async (req, res) => {
 
     cart.items = cart.items.filter(item => !item.productId.equals(productId));
     await cart.save();
+    // Emit realtime event
+    const io = req.app.get('io');
+    io && io.emit('cart-updated', { userId });
     return sendSuccess(res, StatusCodes.SUCCESS_OK, cart, Messages.CART_UPDATED);
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
@@ -143,6 +151,9 @@ exports.clearMyCart = async (req, res) => {
     if (!cart) return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CART_NOT_FOUND);
     cart.items = [];
     await cart.save();
+    // Emit realtime event
+    const io = req.app.get('io');
+    io && io.emit('cart-updated', { userId });
     return sendSuccess(res, StatusCodes.SUCCESS_OK, null, Messages.CART_CLEARED);
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
@@ -180,6 +191,9 @@ exports.clearCartByUserId = async (req, res) => {
     if (!cart) return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CART_NOT_FOUND);
     cart.items = [];
     await cart.save();
+    // Emit realtime event
+    const io = req.app.get('io');
+    io && io.emit('cart-updated', { userId });
     return sendSuccess(res, StatusCodes.SUCCESS_OK, null, Messages.CART_CLEARED);
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
