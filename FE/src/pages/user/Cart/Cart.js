@@ -10,7 +10,8 @@ import {
     Row,
     Col,
     Typography,
-    Divider
+    Divider,
+    Checkbox
 } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -86,6 +87,8 @@ const Cart = () => {
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [imageUrls, setImageUrls] = useState({}); // key: productId, value: objectURL
+    const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+    const [selectedItems, setSelectedItems] = useState([]);
 
     // Memoized event handlers
     const handleQuantityChange = useCallback(async (value, recordId) => {
@@ -115,22 +118,85 @@ const Cart = () => {
         }
     }, [cartItems]);
 
+    const handleDeleteSelected = async () => {
+        if (selectedRowKeys.length === 0) return;
+        try {
+            await Promise.all(selectedRowKeys.map(id => {
+                const item = cartItems.find(i => i._id === id);
+                if (item) return cartService.removeFromCart(item.productId);
+                return null;
+            }));
+            setCartItems(prev => prev.filter(i => !selectedRowKeys.includes(i._id)));
+            setSelectedRowKeys([]);
+            message.success('Đã xóa các sản phẩm đã chọn!');
+        } catch {
+            message.error('Không thể xóa các sản phẩm đã chọn!');
+        }
+    };
+
+    const handleClearCart = async () => {
+        try {
+            await cartService.clearMyCart();
+            setCartItems([]);
+            setSelectedRowKeys([]);
+            message.success('Đã xóa tất cả sản phẩm trong giỏ hàng!');
+        } catch {
+            message.error('Không thể xóa tất cả sản phẩm!');
+        }
+    };
+
     const handleCheckout = useCallback(() => {
+        const itemsToCheckout = cartItems.filter(i => selectedRowKeys.includes(i._id));
+        if (itemsToCheckout.length === 0) {
+            message.warning('Vui lòng chọn sản phẩm muốn thanh toán!');
+            return;
+        }
+        localStorage.setItem('checkoutItems', JSON.stringify(itemsToCheckout));
         navigate('/checkout');
-    }, [navigate]);
+    }, [navigate, cartItems, selectedRowKeys]);
 
     // Memoized calculations
     const calculateTotals = useCallback(() => {
         let newSubtotal = 0;
         cartItems.forEach(item => {
-            newSubtotal += item.price * item.quantity;
+            if (selectedRowKeys.includes(item._id)) {
+                newSubtotal += item.price * item.quantity;
+            }
         });
         setSubtotal(newSubtotal);
         setTotal(newSubtotal);
-    }, [cartItems]);
+    }, [cartItems, selectedRowKeys]);
 
     // Memoized table columns
     const columns = useMemo(() => [
+        {
+            title: <Checkbox
+                checked={selectedRowKeys.length === cartItems.length && cartItems.length > 0}
+                indeterminate={selectedRowKeys.length > 0 && selectedRowKeys.length < cartItems.length}
+                onChange={e => {
+                    if (e.target.checked) {
+                        setSelectedRowKeys(cartItems.map(i => i._id));
+                    } else {
+                        setSelectedRowKeys([]);
+                    }
+                }}
+            />,
+            dataIndex: 'checkbox',
+            key: 'checkbox',
+            render: (_, record) => (
+                <Checkbox
+                    checked={selectedRowKeys.includes(record._id)}
+                    onChange={e => {
+                        if (e.target.checked) {
+                            setSelectedRowKeys(keys => [...keys, record._id]);
+                        } else {
+                            setSelectedRowKeys(keys => keys.filter(k => k !== record._id));
+                        }
+                    }}
+                />
+            ),
+            width: 50
+        },
         {
             title: 'Sản phẩm',
             dataIndex: 'name',
@@ -182,7 +248,7 @@ const Cart = () => {
                 </Popconfirm>
             ),
         },
-    ], [imageUrls, handleQuantityChange, handleDelete]);
+    ], [imageUrls, handleQuantityChange, handleDelete, cartItems, selectedRowKeys]);
 
     // Optimized image loading
     const loadProductImages = useCallback(async (items) => {
@@ -270,6 +336,14 @@ const Cart = () => {
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card className="cart-items-card">
+                        <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
+                            <Button danger onClick={handleDeleteSelected} disabled={selectedRowKeys.length === 0}>
+                                Xóa sản phẩm đã chọn
+                            </Button>
+                            <Button danger onClick={handleClearCart} disabled={cartItems.length === 0}>
+                                Xóa tất cả
+                            </Button>
+                        </div>
                         <Table
                             columns={columns}
                             dataSource={cartItems}
@@ -278,7 +352,7 @@ const Cart = () => {
                             summary={pageData => {
                                 return (
                                     <Table.Summary.Row>
-                                        <Table.Summary.Cell index={0} colSpan={3} align="right">
+                                        <Table.Summary.Cell index={0} colSpan={4} align="right">
                                             <Text strong>Tổng phụ:</Text>
                                         </Table.Summary.Cell>
                                         <Table.Summary.Cell index={1} colSpan={2} align="left">
@@ -295,7 +369,7 @@ const Cart = () => {
                         subtotal={subtotal}
                         total={total}
                         onCheckout={handleCheckout}
-                        cartItems={cartItems}
+                        cartItems={cartItems.filter(i => selectedRowKeys.includes(i._id))}
                     />
                 </Col>
             </Row>

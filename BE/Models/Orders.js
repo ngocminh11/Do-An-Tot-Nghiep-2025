@@ -54,6 +54,15 @@ const orderSchema = new mongoose.Schema({
   estimatedDeliveryDate: { type: Date, default: null },
   notes: { type: String, maxlength: 1000 },
 
+  // Thông tin giao hàng (shipper/hãng vận chuyển)
+  shippingInfo: {
+    carrier: { type: String, default: null }, // Tên hãng vận chuyển (GHN, Viettel Post...)
+    shipperName: { type: String, default: null }, // Tên người giao hàng (nếu có)
+    shipperPhone: { type: String, default: null },
+    trackingNumber: { type: String, default: null }, // Mã vận đơn
+    extra: { type: String, default: null } // Thông tin bổ sung nếu cần
+  },
+
   isCancelRequested: { type: Boolean, default: false },
   cancelRequestTime: { type: Date, default: null },
 }, {

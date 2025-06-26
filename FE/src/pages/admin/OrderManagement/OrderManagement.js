@@ -16,7 +16,11 @@ import {
     message,
     Spin,
     Popconfirm,
-    Tooltip
+    Tooltip,
+    List,
+    Avatar,
+    Checkbox,
+    Form
 } from 'antd';
 import {
     EyeOutlined,
@@ -37,6 +41,11 @@ const OrderManagement = () => {
     const [loading, setLoading] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
+    const [isPinModalVisible, setIsPinModalVisible] = useState(false);
+    const [isShippingModalVisible, setIsShippingModalVisible] = useState(false);
+    const [pendingStatusChange, setPendingStatusChange] = useState(null);
+    const [pinForm] = Form.useForm();
+    const [shippingForm] = Form.useForm();
     const [pagination, setPagination] = useState({
         current: 1,
         pageSize: 10,
@@ -49,6 +58,8 @@ const OrderManagement = () => {
         dateRange: null
     });
     const [stats, setStats] = useState({});
+    const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+    const [bulkStatus, setBulkStatus] = useState('');
 
     useEffect(() => {
         fetchOrders();
@@ -91,10 +102,56 @@ const OrderManagement = () => {
         setIsModalVisible(true);
     };
 
-    const handleStatusChange = async (orderId, newStatus) => {
+    const handleStatusChange = async (orderId, newStatus, order) => {
+        if (order.status === 'Xác nhận' && newStatus === 'Chờ xác nhận') {
+            setPendingStatusChange({ orderId, newStatus, order });
+            setIsPinModalVisible(true);
+            return;
+        }
+
+        if (newStatus === 'Đang giao hàng') {
+            setPendingStatusChange({ orderId, newStatus, order });
+            setIsShippingModalVisible(true);
+            return;
+        }
+
         try {
-            await orderService.updateOrderStatus(orderId, newStatus);
+            await orderService.updateOrderStatus(orderId, { status: newStatus });
             message.success('Cập nhật trạng thái thành công');
+            fetchOrders();
+        } catch (error) {
+            message.error('Không thể cập nhật trạng thái');
+        }
+    };
+
+    const handlePinSubmit = async (values) => {
+        try {
+            const { orderId, newStatus } = pendingStatusChange;
+            await orderService.updateOrderStatus(orderId, {
+                status: newStatus,
+                pin: values.pin
+            });
+            message.success('Cập nhật trạng thái thành công');
+            setIsPinModalVisible(false);
+            pinForm.resetFields();
+            setPendingStatusChange(null);
+            fetchOrders();
+        } catch (error) {
+            message.error(error.response?.data?.message || 'Không thể cập nhật trạng thái');
+        }
+    };
+
+    const handleShippingSubmit = async (values) => {
+        try {
+            const { orderId, newStatus } = pendingStatusChange;
+            await orderService.updateOrderStatus(orderId, {
+                status: newStatus,
+                shippingInfo: values
+            });
+            message.success('Cập nhật trạng thái thành công');
+            setIsShippingModalVisible(false);
+            shippingForm.resetFields();
+            setPendingStatusChange(null);
             fetchOrders();
         } catch (error) {
             message.error('Không thể cập nhật trạng thái');
@@ -123,6 +180,22 @@ const OrderManagement = () => {
             message.success('Xuất file thành công');
         } catch (error) {
             message.error('Không thể xuất file');
+        }
+    };
+
+    const handleBulkStatusChange = async (status) => {
+        if (!selectedOrderIds.length) return;
+        setLoading(true);
+        try {
+            await Promise.all(selectedOrderIds.map(orderId => orderService.updateOrderStatus(orderId, { status })));
+            message.success('Cập nhật trạng thái hàng loạt thành công');
+            setSelectedOrderIds([]);
+            setBulkStatus('');
+            fetchOrders();
+        } catch (error) {
+            message.error('Không thể cập nhật trạng thái hàng loạt');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -169,7 +242,7 @@ const OrderManagement = () => {
                 <Select
                     value={status}
                     style={{ width: 120 }}
-                    onChange={(value) => handleStatusChange(record._id, value)}
+                    onChange={(value) => handleStatusChange(record._id, value, record)}
                 >
                     <Option value="Chờ xác nhận">Chờ xác nhận</Option>
                     <Option value="Xác nhận">Xác nhận</Option>
@@ -231,6 +304,24 @@ const OrderManagement = () => {
     const handleFilterChange = (key, value) => {
         setFilters(prev => ({ ...prev, [key]: value }));
         setPagination(prev => ({ ...prev, current: 1 }));
+    };
+
+    // Hàm lấy màu theo trạng thái đơn hàng
+    const getOrderCardStyle = (status) => {
+        switch (status) {
+            case 'Chờ xác nhận':
+                return { border: '2px solid #faad14', background: '#fffbe6' };
+            case 'Xác nhận':
+                return { border: '2px solid #1890ff', background: '#e6f7ff' };
+            case 'Đang giao hàng':
+                return { border: '2px solid #52c41a', background: '#f6ffed' };
+            case 'Đã hoàn thành':
+                return { border: '2px solid #3f8600', background: '#f0fff0' };
+            case 'Hủy':
+                return { border: '2px solid #ff4d4f', background: '#fff1f0' };
+            default:
+                return { border: '2px solid #d9d9d9', background: '#fff' };
+        }
     };
 
     return (
@@ -346,21 +437,104 @@ const OrderManagement = () => {
                 </Row>
             </Card>
 
-            <Table
-                columns={columns}
-                dataSource={orders}
-                rowKey="_id"
-                pagination={{
-                    ...pagination,
-                    showSizeChanger: true,
-                    showQuickJumper: true,
-                    showTotal: (total, range) =>
-                        `${range[0]}-${range[1]} của ${total} đơn hàng`
-                }}
-                onChange={handleTableChange}
-                loading={loading}
-                scroll={{ x: 1200 }}
-            />
+            {/* Bulk action select */}
+            <div style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
+                <Checkbox
+                    checked={selectedOrderIds.length === orders.length && orders.length > 0}
+                    indeterminate={selectedOrderIds.length > 0 && selectedOrderIds.length < orders.length}
+                    onChange={e => {
+                        if (e.target.checked) {
+                            setSelectedOrderIds(orders.map(o => o._id));
+                        } else {
+                            setSelectedOrderIds([]);
+                        }
+                    }}
+                >
+                    Chọn tất cả
+                </Checkbox>
+                <Select
+                    placeholder="Chọn trạng thái hàng loạt"
+                    value={bulkStatus || undefined}
+                    style={{ width: 200 }}
+                    onChange={value => {
+                        setBulkStatus(value);
+                        handleBulkStatusChange(value);
+                    }}
+                    disabled={selectedOrderIds.length === 0}
+                >
+                    <Option value="Chờ xác nhận">Chờ xác nhận</Option>
+                    <Option value="Xác nhận">Xác nhận</Option>
+                    <Option value="Đang giao hàng">Đang giao hàng</Option>
+                    <Option value="Đã hoàn thành">Đã hoàn thành</Option>
+                    <Option value="Hủy">Hủy</Option>
+                </Select>
+                {selectedOrderIds.length > 0 && <span>({selectedOrderIds.length} đơn được chọn)</span>}
+            </div>
+
+            {/* Danh sách đơn hàng dạng menu cart, 3 card 1 dòng */}
+            <Row gutter={[24, 24]}>
+                {orders.map(order => (
+                    <Col xs={24} sm={12} md={8} key={order._id} style={{ display: 'flex' }}>
+                        <Card
+                            className="order-card"
+                            style={{ marginBottom: 16, width: '100%', minHeight: 320, display: 'flex', flexDirection: 'column', ...getOrderCardStyle(order.status) }}
+                            actions={[
+                                <Button type="link" icon={<EyeOutlined />} onClick={() => handleViewOrder(order)}>
+                                    Xem chi tiết
+                                </Button>,
+                                <Select
+                                    value={order.status}
+                                    style={{ width: 140 }}
+                                    onChange={(value) => handleStatusChange(order._id, value, order)}
+                                >
+                                    <Option value="Chờ xác nhận">Chờ xác nhận</Option>
+                                    <Option value="Xác nhận">Xác nhận</Option>
+                                    <Option value="Đang giao hàng">Đang giao hàng</Option>
+                                    <Option value="Đã hoàn thành">Đã hoàn thành</Option>
+                                    <Option value="Hủy">Hủy</Option>
+                                </Select>,
+                                <Popconfirm
+                                    title="Bạn có chắc muốn xóa đơn hàng này?"
+                                    onConfirm={() => handleDeleteOrder(order._id)}
+                                    okText="Có"
+                                    cancelText="Không"
+                                >
+                                    <Button type="link" danger icon={<DeleteOutlined />}>Xóa</Button>
+                                </Popconfirm>
+                            ]}
+                        >
+                            <Checkbox
+                                checked={selectedOrderIds.includes(order._id)}
+                                onChange={e => {
+                                    if (e.target.checked) {
+                                        setSelectedOrderIds(ids => [...ids, order._id]);
+                                    } else {
+                                        setSelectedOrderIds(ids => ids.filter(id => id !== order._id));
+                                    }
+                                }}
+                                style={{ marginBottom: 8 }}
+                            >
+                                Chọn đơn này
+                            </Checkbox>
+                            <Card.Meta
+                                avatar={<Avatar style={{ backgroundColor: '#1890ff' }}>{order.user?.fullName?.charAt(0) || 'U'}</Avatar>}
+                                title={<span>Mã đơn: <b>{order.idOrder}</b> - {order.user?.fullName}</span>}
+                                description={
+                                    <div>
+                                        <div><b>Ngày đặt:</b> {new Date(order.createdAt).toLocaleDateString('vi-VN')}</div>
+                                        <div><b>Số tiền:</b> {order.totalAmount?.toLocaleString('vi-VN')} VNĐ</div>
+                                        <div><b>Trạng thái thanh toán:</b> <Tag color={order.paymentStatus === 'Đã thanh toán' ? 'success' : 'warning'}>{order.paymentStatus}</Tag></div>
+                                        <div><b>Trạng thái đơn hàng:</b> {order.status}</div>
+                                        <div><b>Sản phẩm:</b> {order.items?.map((item, idx) => (
+                                            <span key={idx}>{item.productName} x{item.quantity}{idx < order.items.length - 1 ? ', ' : ''}</span>
+                                        ))}</div>
+                                    </div>
+                                }
+                            />
+                        </Card>
+                    </Col>
+                ))}
+            </Row>
 
             <Modal
                 title="Chi tiết đơn hàng"
@@ -394,6 +568,22 @@ const OrderManagement = () => {
                         <Descriptions.Item label="Mã giảm giá">
                             {selectedOrder.promotionCode || 'Không có'}
                         </Descriptions.Item>
+                        {selectedOrder.shippingInfo && (
+                            <>
+                                <Descriptions.Item label="Hãng vận chuyển">
+                                    {selectedOrder.shippingInfo.carrier || 'Chưa có'}
+                                </Descriptions.Item>
+                                <Descriptions.Item label="Mã vận đơn">
+                                    {selectedOrder.shippingInfo.trackingNumber || 'Chưa có'}
+                                </Descriptions.Item>
+                                <Descriptions.Item label="Tên shipper">
+                                    {selectedOrder.shippingInfo.shipperName || 'Chưa có'}
+                                </Descriptions.Item>
+                                <Descriptions.Item label="SĐT shipper">
+                                    {selectedOrder.shippingInfo.shipperPhone || 'Chưa có'}
+                                </Descriptions.Item>
+                            </>
+                        )}
                         <Descriptions.Item label="Ghi chú" span={2}>
                             {selectedOrder.notes || 'Không có'}
                         </Descriptions.Item>
@@ -407,6 +597,103 @@ const OrderManagement = () => {
                         </Descriptions.Item>
                     </Descriptions>
                 )}
+            </Modal>
+
+            {/* Modal nhập PIN */}
+            <Modal
+                title="Nhập mã PIN"
+                open={isPinModalVisible}
+                onCancel={() => {
+                    setIsPinModalVisible(false);
+                    setPendingStatusChange(null);
+                    pinForm.resetFields();
+                }}
+                footer={null}
+            >
+                <Form form={pinForm} onFinish={handlePinSubmit} layout="vertical">
+                    <Form.Item
+                        label="Mã PIN"
+                        name="pin"
+                        rules={[{ required: true, message: 'Vui lòng nhập mã PIN!' }]}
+                    >
+                        <Input.Password placeholder="Nhập mã PIN để xác nhận" />
+                    </Form.Item>
+                    <Form.Item>
+                        <Space>
+                            <Button type="primary" htmlType="submit">
+                                Xác nhận
+                            </Button>
+                            <Button onClick={() => {
+                                setIsPinModalVisible(false);
+                                setPendingStatusChange(null);
+                                pinForm.resetFields();
+                            }}>
+                                Hủy
+                            </Button>
+                        </Space>
+                    </Form.Item>
+                </Form>
+            </Modal>
+
+            {/* Modal nhập thông tin shipping */}
+            <Modal
+                title="Thông tin giao hàng"
+                open={isShippingModalVisible}
+                onCancel={() => {
+                    setIsShippingModalVisible(false);
+                    setPendingStatusChange(null);
+                    shippingForm.resetFields();
+                }}
+                footer={null}
+            >
+                <Form form={shippingForm} onFinish={handleShippingSubmit} layout="vertical">
+                    <Form.Item
+                        label="Hãng vận chuyển"
+                        name="carrier"
+                        rules={[{ required: true, message: 'Vui lòng nhập hãng vận chuyển!' }]}
+                    >
+                        <Input placeholder="VD: GHN, Viettel Post, Giao hàng nhanh..." />
+                    </Form.Item>
+                    <Form.Item
+                        label="Mã vận đơn"
+                        name="trackingNumber"
+                        rules={[{ required: true, message: 'Vui lòng nhập mã vận đơn!' }]}
+                    >
+                        <Input placeholder="Nhập mã vận đơn" />
+                    </Form.Item>
+                    <Form.Item
+                        label="Tên người giao hàng"
+                        name="shipperName"
+                    >
+                        <Input placeholder="Tên shipper (nếu có)" />
+                    </Form.Item>
+                    <Form.Item
+                        label="Số điện thoại shipper"
+                        name="shipperPhone"
+                    >
+                        <Input placeholder="SĐT shipper (nếu có)" />
+                    </Form.Item>
+                    <Form.Item
+                        label="Thông tin bổ sung"
+                        name="extra"
+                    >
+                        <Input.TextArea placeholder="Thông tin bổ sung (nếu cần)" rows={3} />
+                    </Form.Item>
+                    <Form.Item>
+                        <Space>
+                            <Button type="primary" htmlType="submit">
+                                Xác nhận
+                            </Button>
+                            <Button onClick={() => {
+                                setIsShippingModalVisible(false);
+                                setPendingStatusChange(null);
+                                shippingForm.resetFields();
+                            }}>
+                                Hủy
+                            </Button>
+                        </Space>
+                    </Form.Item>
+                </Form>
             </Modal>
         </div>
     );

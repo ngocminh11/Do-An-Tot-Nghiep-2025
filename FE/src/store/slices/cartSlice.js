@@ -45,6 +45,9 @@ const cartSlice = createSlice({
         setError: (state, action) => {
             state.error = action.payload;
         },
+        setCartItems: (state, action) => {
+            state.items = action.payload;
+        },
     },
 });
 
@@ -55,6 +58,7 @@ export const {
     clearCart,
     setLoading,
     setError,
+    setCartItems,
 } = cartSlice.actions;
 
 // Selectors
