@@ -10,7 +10,12 @@ import {
   Input,
   Select,
   message,
-  Spin
+  Spin,
+  Card,
+  Row,
+  Col,
+  Typography,
+  Divider
 } from 'antd';
 import {
   PlusOutlined,
@@ -18,6 +23,8 @@ import {
   DeleteOutlined,
   SearchOutlined,
   VideoCameraOutlined,
+  FilterOutlined,
+  ReloadOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import productService from '../../../services/productService';
@@ -26,6 +33,7 @@ import debounce from 'lodash/debounce';
 import './ProductManagement.scss';
 
 const { Option } = Select;
+const { Title, Text } = Typography;
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const ProductManagement = () => {
@@ -179,6 +187,16 @@ const ProductManagement = () => {
     setPagination((prev) => ({ ...prev, current: 1 }));
   };
 
+  // Reset tất cả bộ lọc
+  const handleResetFilters = () => {
+    setFilters({
+      search: '',
+      category: undefined,
+      status: undefined
+    });
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  };
+
   // Áp dụng bộ lọc dựa vào tìm kiếm và danh mục
   const filteredProducts = useMemo(() => {
     let data = Array.isArray(allProducts) ? [...allProducts] : [];
@@ -277,50 +295,65 @@ const ProductManagement = () => {
 
   // Hiển thị chi tiết sản phẩm trong hàng mở rộng
   const expandedRowRender = (record) => (
-    <div style={{ margin: 0, padding: '12px' }}>
-      <p>
-        <strong>Mô tả chi tiết:</strong>{' '}
-        {record.description?.detailedDescription || 'N/A'}
-      </p>
-      <p>
-        <strong>Thành phần:</strong> {record.description?.ingredients || 'N/A'}
-      </p>
-      <p>
-        <strong>Hướng dẫn sử dụng:</strong>{' '}
-        {record.description?.usageInstructions || 'N/A'}
-      </p>
-      <p>
-        <strong>Hạn sử dụng:</strong>{' '}
-        {record.description?.expiration || 'N/A'}
-      </p>
+    <div className="expanded-row-content">
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12}>
+          <div className="detail-section">
+            <Text strong>Mô tả chi tiết:</Text>
+            <Text>{record.description?.detailedDescription || 'N/A'}</Text>
+          </div>
+        </Col>
+        <Col xs={24} sm={12}>
+          <div className="detail-section">
+            <Text strong>Thành phần:</Text>
+            <Text>{record.description?.ingredients || 'N/A'}</Text>
+          </div>
+        </Col>
+        <Col xs={24} sm={12}>
+          <div className="detail-section">
+            <Text strong>Hướng dẫn sử dụng:</Text>
+            <Text>{record.description?.usageInstructions || 'N/A'}</Text>
+          </div>
+        </Col>
+        <Col xs={24} sm={12}>
+          <div className="detail-section">
+            <Text strong>Hạn sử dụng:</Text>
+            <Text>{record.description?.expiration || 'N/A'}</Text>
+          </div>
+        </Col>
+      </Row>
+
       {record.mediaFiles?.videos?.length > 0 && (
-        <p>
-          <strong>Videos: </strong>
-          {record.mediaFiles.videos.map((video, index) => (
-            <a
-              key={index}
-              href={video.path}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ marginRight: '10px' }}
-            >
-              Video {index + 1} <VideoCameraOutlined />
-            </a>
-          ))}
-        </p>
+        <div className="media-section">
+          <Text strong>Videos:</Text>
+          <div className="video-links">
+            {record.mediaFiles.videos.map((video, index) => (
+              <a
+                key={index}
+                href={video.path}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="video-link"
+              >
+                Video {index + 1} <VideoCameraOutlined />
+              </a>
+            ))}
+          </div>
+        </div>
       )}
+
       {record.mediaFiles?.images?.length > 1 && (
-        <div>
-          <strong>Hình ảnh bổ sung: </strong>
-          <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+        <div className="media-section">
+          <Text strong>Hình ảnh bổ sung:</Text>
+          <div className="additional-images">
             {record.mediaFiles.images.slice(1).map((image, index) => (
               <Image
                 key={index}
                 src={image.path}
                 alt={`Sản phẩm ${index + 2}`}
-                width={100}
-                height={100}
-                style={{ objectFit: 'cover' }}
+                width={80}
+                height={80}
+                className="additional-image"
               />
             ))}
           </div>
@@ -347,9 +380,9 @@ const ProductManagement = () => {
           <Image
             src={imageUrls[record._id] || `${API_URL}/media${mainImage.path}`}
             alt={mainImage.filename}
-            width={60}
-            height={60}
-            style={{ objectFit: 'cover' }}
+            width={50}
+            height={50}
+            className="product-image"
             preview={{
               src: imageUrls[record._id] || `${API_URL}/media${mainImage.path}`,
             }}
@@ -359,24 +392,12 @@ const ProductManagement = () => {
             }}
           />
         ) : (
-          <div
-            style={{
-              width: 60,
-              height: 60,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: '#f0f0f0',
-              borderRadius: 6,
-              color: '#bbb',
-              fontSize: 12,
-            }}
-          >
-            Không có ảnh
+          <div className="no-image-placeholder">
+            <Text type="secondary">Không có ảnh</Text>
           </div>
         );
       },
-      width: 80,
+      width: 70,
     },
     {
       title: 'Tên sản phẩm',
@@ -385,26 +406,21 @@ const ProductManagement = () => {
       sorter: true,
       render: (productName, record) => (
         <Tooltip title={record.description?.shortDescription || ''}>
-          <span>{productName}</span>
+          <div className="product-name">
+            <Text strong>{productName}</Text>
+            <Text type="secondary" className="product-sku">
+              SKU: {record.basicInformation?.sku || 'N/A'}
+            </Text>
+          </div>
         </Tooltip>
       ),
-      width: 200,
-    },
-    {
-      title: 'SKU',
-      dataIndex: ['basicInformation', 'sku'],
-      key: 'basicInformation.sku',
-      sorter: true,
-      render: (sku) => (
-        <span>{sku || 'N/A'}</span>
-      ),
-      width: 120,
+      width: 250,
     },
     {
       title: 'Thương hiệu',
       dataIndex: ['basicInformation', 'brand'],
       key: 'basicInformation.brand',
-      render: (brand) => <span>{brand}</span>,
+      render: (brand) => <Text>{brand || 'N/A'}</Text>,
       width: 120,
     },
     {
@@ -415,46 +431,39 @@ const ProductManagement = () => {
       render: (salePrice, record) => {
         const currency = record.pricingAndInventory?.currency || 'VND';
         if (salePrice === undefined || salePrice === null)
-          return 'N/A';
-        return `${parseFloat(salePrice).toLocaleString('vi-VN')} ${currency}`;
+          return <Text type="secondary">N/A</Text>;
+        return (
+          <div className="price-info">
+            <Text strong className="price">
+              {parseFloat(salePrice).toLocaleString('vi-VN')} {currency}
+            </Text>
+          </div>
+        );
       },
-      width: 120,
+      width: 130,
     },
     {
       title: 'Tồn kho',
       dataIndex: ['pricingAndInventory', 'stockQuantity'],
       key: 'pricingAndInventory.stockQuantity',
       sorter: true,
-      render: (stockQuantity) => (
-        <Tag
-          color={
-            stockQuantity !== undefined && stockQuantity !== null && stockQuantity > 10
-              ? 'green'
-              : stockQuantity !== undefined && stockQuantity !== null && stockQuantity > 0
-                ? 'orange'
-                : 'red'
-          }
-        >
-          {stockQuantity !== undefined && stockQuantity !== null ? stockQuantity : 0}
-        </Tag>
-      ),
+      render: (stockQuantity) => {
+        const quantity = stockQuantity !== undefined && stockQuantity !== null ? stockQuantity : 0;
+        const color = quantity > 10 ? 'green' : quantity > 0 ? 'orange' : 'red';
+        return (
+          <Tag color={color} className="stock-tag">
+            {quantity}
+          </Tag>
+        );
+      },
       width: 100,
-    },
-    {
-      title: 'Đơn vị',
-      dataIndex: ['pricingAndInventory', 'unit'],
-      key: 'pricingAndInventory.unit',
-      render: (unit) => (
-        <span>{unit || 'N/A'}</span>
-      ),
-      width: 80,
     },
     {
       title: 'Danh mục',
       dataIndex: ['basicInformation', 'categoryIds'],
       key: 'categories',
       render: (categoryIds) => {
-        if (!categoryIds || categoryIds.length === 0) return 'N/A';
+        if (!categoryIds || categoryIds.length === 0) return <Text type="secondary">N/A</Text>;
 
         const names = categoryIds.map((category) => {
           // Nếu category là object (đã populate từ API)
@@ -466,9 +475,19 @@ const ProductManagement = () => {
           return foundCategory ? foundCategory.name : `Unknown (${category})`;
         }).filter(Boolean);
 
-        return names.length > 0 ? names.join(', ') : 'N/A';
+        return names.length > 0 ? (
+          <div className="categories">
+            {names.map((name, index) => (
+              <Tag key={index} color="blue" className="category-tag">
+                {name}
+              </Tag>
+            ))}
+          </div>
+        ) : (
+          <Text type="secondary">N/A</Text>
+        );
       },
-      width: 160,
+      width: 180,
     },
     {
       title: 'Trạng thái',
@@ -481,23 +500,8 @@ const ProductManagement = () => {
           draft: { color: 'orange', text: 'Bản nháp' }
         };
         const config = statusConfig[status] || { color: 'default', text: status || 'N/A' };
-        return <Tag color={config.color}>{config.text}</Tag>;
+        return <Tag color={config.color} className="status-tag">{config.text}</Tag>;
       },
-      width: 120,
-    },
-    {
-      title: 'Mô tả ngắn',
-      dataIndex: ['description', 'shortDescription'],
-      key: 'description.shortDescription',
-      render: (shortDescription) => shortDescription || 'N/A',
-      width: 200,
-    },
-    {
-      title: 'Ngày tạo',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      sorter: true,
-      render: (date) => date ? new Date(date).toLocaleDateString('vi-VN') : 'N/A',
       width: 120,
     },
     {
@@ -505,22 +509,31 @@ const ProductManagement = () => {
       key: 'actions',
       fixed: 'right',
       render: (_, record) => (
-        <Space size="middle">
-          <Tooltip title="Sửa">
+        <Space size="small" className="action-buttons">
+          <Tooltip title="Sửa sản phẩm">
             <Button
               type="primary"
+              size="small"
               icon={<EditOutlined />}
               onClick={() => navigate(`/admin/products/${record._id}`)}
+              className="edit-btn"
             />
           </Tooltip>
           <Popconfirm
             title="Bạn có chắc chắn muốn xóa sản phẩm này?"
+            description="Hành động này không thể hoàn tác."
             onConfirm={() => handleDelete(record._id)}
             okText="Có"
             cancelText="Không"
+            placement="top"
           >
-            <Tooltip title="Xóa">
-              <Button danger icon={<DeleteOutlined />} />
+            <Tooltip title="Xóa sản phẩm">
+              <Button
+                danger
+                size="small"
+                icon={<DeleteOutlined />}
+                className="delete-btn"
+              />
             </Tooltip>
           </Popconfirm>
         </Space>
@@ -531,84 +544,126 @@ const ProductManagement = () => {
 
   return (
     <div className="product-management">
-      <div
-        className="header"
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <h1 style={{ margin: 0 }}>Quản lý sản phẩm</h1>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => navigate('/admin/products/add')}
-        >
-          Thêm sản phẩm
-        </Button>
-      </div>
-      <div
-        className="filters"
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          gap: 16,
-          flexWrap: 'wrap',
-        }}
-      >
-        <Input
-          placeholder="Tìm kiếm sản phẩm..."
-          prefix={<SearchOutlined />}
-          onChange={handleSearchChange}
-          style={{ width: 250 }}
-          allowClear
-        />
-        <Select
-          placeholder="Danh mục"
-          allowClear
-          style={{ width: 200 }}
-          onChange={handleCategoryChange}
-          value={filters.category}
-          disabled={!Array.isArray(categories) || categories.length === 0}
-        >
-          {!Array.isArray(categories) || categories.length === 0 ? (
-            <Option value="" disabled>Không có danh mục</Option>
-          ) : (
-            categories.map((category) => (
-              <Option key={category._id} value={category._id}>
-                {category.name}
-              </Option>
-            ))
-          )}
-        </Select>
-        <Select
-          placeholder="Trạng thái"
-          allowClear
-          style={{ width: 150 }}
-          onChange={handleStatusChange}
-          value={filters.status}
-        >
-          <Option value="active">Hoạt động</Option>
-          <Option value="inactive">Không hoạt động</Option>
-          <Option value="draft">Bản nháp</Option>
-        </Select>
-      </div>
-      <Table
-        columns={columns}
-        dataSource={sortedProducts}
-        rowKey="_id"
-        loading={loading}
-        pagination={{
-          ...pagination,
-          showSizeChanger: true,
-          pageSizeOptions: ['10', '20', '50'],
-        }}
-        onChange={handleTableChange}
-        expandable={{ expandedRowRender }}
-        scroll={{ x: 1300 }}
-      />
+      <Card className="main-card">
+        {/* Header */}
+        <div className="page-header">
+          <div className="header-content">
+            <Title level={2} className="page-title">
+              Quản lý sản phẩm
+            </Title>
+            <Text type="secondary" className="page-subtitle">
+              Quản lý danh sách sản phẩm trong hệ thống
+            </Text>
+          </div>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => navigate('/admin/products/add')}
+            className="add-product-btn"
+            size="large"
+          >
+            Thêm sản phẩm
+          </Button>
+        </div>
+
+        <Divider />
+
+        {/* Filters */}
+        <Card className="filters-card" size="small">
+          <div className="filters-header">
+            <FilterOutlined className="filter-icon" />
+            <Text strong>Bộ lọc tìm kiếm</Text>
+          </div>
+
+          <Row gutter={[16, 16]} className="filters-row">
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Input
+                placeholder="Tìm kiếm sản phẩm..."
+                prefix={<SearchOutlined />}
+                onChange={handleSearchChange}
+                className="search-input"
+                allowClear
+              />
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Select
+                placeholder="Chọn danh mục"
+                allowClear
+                onChange={handleCategoryChange}
+                value={filters.category}
+                disabled={!Array.isArray(categories) || categories.length === 0}
+                className="filter-select"
+                loading={loadingCategories}
+              >
+                {!Array.isArray(categories) || categories.length === 0 ? (
+                  <Option value="" disabled>Không có danh mục</Option>
+                ) : (
+                  categories.map((category) => (
+                    <Option key={category._id} value={category._id}>
+                      {category.name}
+                    </Option>
+                  ))
+                )}
+              </Select>
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Select
+                placeholder="Chọn trạng thái"
+                allowClear
+                onChange={handleStatusChange}
+                value={filters.status}
+                className="filter-select"
+              >
+                <Option value="active">Hoạt động</Option>
+                <Option value="inactive">Không hoạt động</Option>
+                <Option value="draft">Bản nháp</Option>
+              </Select>
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Space>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={handleResetFilters}
+                  className="reset-btn"
+                >
+                  Làm mới
+                </Button>
+                <Button
+                  type="primary"
+                  onClick={fetchProducts}
+                  loading={loading}
+                  className="refresh-btn"
+                >
+                  Tải lại
+                </Button>
+              </Space>
+            </Col>
+          </Row>
+        </Card>
+
+        {/* Table */}
+        <Card className="table-card" size="small">
+          <Table
+            columns={columns}
+            dataSource={sortedProducts}
+            rowKey="_id"
+            loading={loading}
+            pagination={{
+              ...pagination,
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50'],
+              showQuickJumper: true,
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} của ${total} sản phẩm`,
+            }}
+            onChange={handleTableChange}
+            expandable={{ expandedRowRender }}
+            scroll={{ x: 1200 }}
+            className="products-table"
+            size="middle"
+          />
+        </Card>
+      </Card>
     </div>
   );
 };

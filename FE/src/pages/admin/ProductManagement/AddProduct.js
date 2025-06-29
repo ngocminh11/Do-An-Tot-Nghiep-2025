@@ -14,7 +14,7 @@ import {
   Modal,
   Space
 } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, PlusCircleOutlined } from '@ant-design/icons';
 import productService from '../../../services/productService';
 import categoryService from '../../../services/categoryService';
 import tagService from '../../../services/tagService';
@@ -36,6 +36,12 @@ const AddProduct = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const [brands, setBrands] = useState([]);
+  const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
+  const [isTagModalVisible, setIsTagModalVisible] = useState(false);
+  const [categoryForm] = Form.useForm();
+  const [tagForm] = Form.useForm();
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [addingTag, setAddingTag] = useState(false);
 
   // Thêm hàm tạo SKU từ tên sản phẩm
   const generateSKU = (productName) => {
@@ -536,51 +542,126 @@ const AddProduct = () => {
     });
   };
 
+  // Hàm thêm danh mục mới
+  const handleAddCategory = async (values) => {
+    try {
+      setAddingCategory(true);
+      const newCategory = await categoryService.createCategory({
+        name: values.name,
+        description: values.description,
+        status: 'active'
+      });
+
+      if (newCategory) {
+        setCategories(prev => [...prev, newCategory]);
+        message.success('Thêm danh mục thành công!');
+        setIsCategoryModalVisible(false);
+        categoryForm.resetFields();
+
+        // Tự động chọn danh mục mới vừa tạo
+        const currentCategoryIds = form.getFieldValue(['basicInformation', 'categoryIds']) || [];
+        form.setFieldsValue({
+          basicInformation: {
+            ...form.getFieldValue('basicInformation'),
+            categoryIds: [...currentCategoryIds, newCategory._id]
+          }
+        });
+      }
+    } catch (error) {
+      message.error(error.message || 'Thêm danh mục thất bại!');
+    } finally {
+      setAddingCategory(false);
+    }
+  };
+
+  // Hàm thêm tag mới
+  const handleAddTag = async (values) => {
+    try {
+      setAddingTag(true);
+      const newTag = await tagService.createTag({
+        name: values.name,
+        description: values.description,
+        status: 'active'
+      });
+
+      if (newTag) {
+        setTags(prev => [...prev, newTag]);
+        message.success('Thêm tag thành công!');
+        setIsTagModalVisible(false);
+        tagForm.resetFields();
+
+        // Tự động chọn tag mới vừa tạo
+        const currentTagIds = form.getFieldValue(['basicInformation', 'tagIds']) || [];
+        form.setFieldsValue({
+          basicInformation: {
+            ...form.getFieldValue('basicInformation'),
+            tagIds: [...currentTagIds, newTag._id]
+          }
+        });
+      }
+    } catch (error) {
+      message.error(error.message || 'Thêm tag thất bại!');
+    } finally {
+      setAddingTag(false);
+    }
+  };
+
   return (
     <div className="add-product-container">
-      <Card title="Thêm sản phẩm mới" className="add-product-card">
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleFinish}
-          requiredMark={false}
-          scrollToFirstError
-          initialValues={{
-            description: {
-              ingredients: [],
-              usageInstructions: '',
-              expiration: ''
-            },
-            technicalDetails: {
-              sizeOrWeight: '',
-              suitableSkinTypes: [],
-              origin: '',
-              certifications: []
-            },
-            seo: {
-              keywords: [],
-              metaTitle: '',
-              metaDescription: '',
-              urlSlug: ''
-            },
-            policy: {
-              additionalOptions: '',
-              shippingReturnWarranty: ''
-            }
-          }}
-        >
-          {/* Thông tin cơ bản */}
-          <Divider orientation="left">Thông tin cơ bản</Divider>
-          <Row gutter={24}>
-            <Col span={12}>
+      <div className="page-header">
+        <h1>Thêm sản phẩm mới</h1>
+        <p>Tạo sản phẩm mới với thông tin chi tiết</p>
+      </div>
+
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleFinish}
+        requiredMark={false}
+        scrollToFirstError
+        className="product-form"
+        initialValues={{
+          description: {
+            ingredients: [],
+            usageInstructions: '',
+            expiration: ''
+          },
+          technicalDetails: {
+            sizeOrWeight: '',
+            suitableSkinTypes: [],
+            origin: '',
+            certifications: []
+          },
+          seo: {
+            keywords: [],
+            metaTitle: '',
+            metaDescription: '',
+            urlSlug: ''
+          },
+          policy: {
+            additionalOptions: '',
+            shippingReturnWarranty: ''
+          }
+        }}
+      >
+        {/* Thông tin cơ bản */}
+        <div className="form-section">
+          <Divider orientation="left" className="section-divider">
+            Thông tin cơ bản
+          </Divider>
+          <Row gutter={[32, 24]}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name={['basicInformation', 'productName']}
                 label="Tên sản phẩm"
                 rules={productNameRules}
                 tooltip="Tên sản phẩm phải là duy nhất trong hệ thống"
+                className="form-item"
               >
                 <Input
                   placeholder="Acne Clear Gel"
+                  size="large"
+                  className="form-input"
                   onChange={(e) => {
                     const sku = generateSKU(e.target.value);
                     form.setFieldsValue({
@@ -593,15 +674,18 @@ const AddProduct = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name={['basicInformation', 'sku']}
                 label="SKU"
                 rules={skuRules}
                 tooltip="Mã SKU sẽ được tự động tạo từ tên sản phẩm, bạn có thể chỉnh sửa. SKU phải là duy nhất và chỉ chứa chữ cái thường, số và dấu gạch ngang"
+                className="form-item"
               >
                 <Input
                   placeholder="acne-clear-gel"
+                  size="large"
+                  className="form-input"
                   onChange={(e) => {
                     // Chuyển đổi input thành chữ thường và chỉ cho phép các ký tự hợp lệ
                     const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
@@ -615,127 +699,166 @@ const AddProduct = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name={['basicInformation', 'brand']}
                 label="Thương hiệu (Mặc định: CoCo)"
                 tooltip="Thương hiệu này không thể thay đổi, mặc định là CoCo"
+                className="form-item"
               >
-                <Input value="CoCo" disabled placeholder="CoCo" />
+                <Input value="CoCo" disabled placeholder="CoCo" size="large" className="form-input" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name={['basicInformation', 'categoryIds']}
                 label="Danh mục sản phẩm"
                 rules={[{ required: true, message: 'Vui lòng chọn danh mục!' }]}
                 tooltip="Chọn ít nhất một danh mục cho sản phẩm"
+                className="form-item"
               >
-                <Select
-                  mode="multiple"
-                  allowClear
-                  loading={loadingCategories}
-                  placeholder="Chọn danh mục"
-                  optionFilterProp="children"
-                  showSearch
-                  filterOption={(input, option) =>
-                    option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                  }
-                >
-                  {categories.map((category) => (
-                    <Option key={category._id} value={category._id}>
-                      {category.name}
-                    </Option>
-                  ))}
-                </Select>
+                <div className="select-with-icon">
+                  <Select
+                    mode="multiple"
+                    allowClear
+                    loading={loadingCategories}
+                    placeholder="Chọn danh mục"
+                    optionFilterProp="children"
+                    showSearch
+                    className="form-select"
+                    size="large"
+                    filterOption={(input, option) =>
+                      option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                    }
+                  >
+                    {categories.map((category) => (
+                      <Option key={category._id} value={category._id}>
+                        {category.name}
+                      </Option>
+                    ))}
+                  </Select>
+                  <Button
+                    type="dashed"
+                    icon={<PlusCircleOutlined />}
+                    onClick={() => setIsCategoryModalVisible(true)}
+                    title="Thêm danh mục mới"
+                    size="large"
+                    className="add-button"
+                  />
+                </div>
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name={['basicInformation', 'tagIds']}
                 label="Tags"
                 tooltip="Chọn hoặc thêm tags cho sản phẩm"
+                className="form-item"
               >
-                <Select
-                  mode="multiple"
-                  placeholder="Chọn hoặc nhập tags"
-                  allowClear
-                  loading={loadingTags}
-                  optionFilterProp="children"
-                  showSearch
-                  filterOption={(input, option) =>
-                    option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                  }
-                >
-                  {tags.map((tag) => (
-                    <Option key={tag._id} value={tag._id}>
-                      {tag.name}
-                    </Option>
-                  ))}
-                </Select>
+                <div className="select-with-icon">
+                  <Select
+                    mode="multiple"
+                    placeholder="Chọn hoặc nhập tags"
+                    allowClear
+                    loading={loadingTags}
+                    optionFilterProp="children"
+                    showSearch
+                    className="form-select"
+                    size="large"
+                    filterOption={(input, option) =>
+                      option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                    }
+                  >
+                    {tags.map((tag) => (
+                      <Option key={tag._id} value={tag._id}>
+                        {tag.name}
+                      </Option>
+                    ))}
+                  </Select>
+                  <Button
+                    type="dashed"
+                    icon={<PlusCircleOutlined />}
+                    onClick={() => setIsTagModalVisible(true)}
+                    title="Thêm tag mới"
+                    size="large"
+                    className="add-button"
+                  />
+                </div>
               </Form.Item>
             </Col>
             <Form.Item name={['basicInformation', 'status']} hidden>
               <Input />
             </Form.Item>
           </Row>
+        </div>
 
-          {/* Giá và Tồn kho */}
-          <Divider orientation="left">Giá sản phẩm và tồn kho</Divider>
-          <Row gutter={24}>
-            <Col span={6}>
+        {/* Giá và Tồn kho */}
+        <div className="form-section">
+          <Divider orientation="left" className="section-divider">
+            Giá sản phẩm và tồn kho
+          </Divider>
+          <Row gutter={[32, 24]}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item
                 name={['pricingAndInventory', 'originalPrice']}
                 label="Giá gốc"
                 rules={priceRules}
                 tooltip="Giá gốc của sản phẩm trước khi giảm giá"
+                className="form-item"
               >
                 <InputNumber
-                  style={{ width: '100%' }}
+                  className="form-input-number"
                   min={0}
                   placeholder="500000"
+                  size="large"
                   formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                   parser={value => value.replace(/\$\s?|(,*)/g, '')}
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item
                 name={['pricingAndInventory', 'salePrice']}
                 label="Giá bán/Ưu đãi"
                 rules={priceRules}
                 tooltip="Giá bán cuối cùng cho khách hàng, phải nhỏ hơn hoặc bằng giá gốc"
+                className="form-item"
               >
                 <InputNumber
-                  style={{ width: '100%' }}
+                  className="form-input-number"
                   min={0}
                   placeholder="450000"
+                  size="large"
                   formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                   parser={value => value.replace(/\$\s?|(,*)/g, '')}
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item
                 name={['pricingAndInventory', 'stockQuantity']}
                 label="Tồn kho"
                 rules={stockRules}
                 tooltip="Số lượng sản phẩm hiện có trong kho"
+                className="form-item"
               >
-                <InputNumber style={{ width: '100%' }} min={0} placeholder="150" />
+                <InputNumber className="form-input-number" min={0} placeholder="150" size="large" />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item
                 name={['pricingAndInventory', 'unit']}
                 label="Đơn vị"
                 rules={[{ required: true, message: 'Vui lòng nhập đơn vị' }]}
                 tooltip="Đơn vị tính của sản phẩm (ví dụ: chai, hộp, ml, g)"
+                className="form-item"
               >
                 <Select
                   showSearch
                   placeholder="Chọn hoặc nhập đơn vị"
                   optionFilterProp="children"
+                  size="large"
+                  className="form-select"
                   filterOption={(input, option) =>
                     option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
                   }
@@ -750,96 +873,110 @@ const AddProduct = () => {
               <Input />
             </Form.Item>
           </Row>
+        </div>
 
-          {/* Media */}
-          <Divider orientation="left">Hình ảnh</Divider>
-          <Row gutter={24}>
-            <Col span={12}>
-              <Card bordered={false} bodyStyle={{ padding: 0 }}>
-                <Form.Item
-                  label="Hình ảnh chính"
-                  name={['media', 'mainImage']}
-                  rules={[{ required: true, message: 'Vui lòng tải hình ảnh chính' }]}
-                  tooltip="Hình ảnh chính của sản phẩm, kích thước tối đa 5MB"
-                  valuePropName="fileList"
-                  getValueFromEvent={e => {
-                    if (Array.isArray(e)) {
-                      return e;
-                    }
-                    return e?.fileList;
-                  }}
-                >
-                  <Upload
-                    listType="picture-card"
-                    beforeUpload={(file) => {
-                      const isImage = file.type.startsWith('image/');
-                      if (!isImage) {
-                        message.error('Chỉ chấp nhận file hình ảnh!');
-                        return Upload.LIST_IGNORE;
+        {/* Media */}
+        <div className="form-section">
+          <Divider orientation="left" className="section-divider">
+            Hình ảnh
+          </Divider>
+          <Row gutter={[32, 24]}>
+            <Col xs={24} md={12}>
+              <Card bordered={false} className="media-card">
+                <div className="media-section">
+                  <h4>Hình ảnh chính</h4>
+                  <Form.Item
+                    name={['media', 'mainImage']}
+                    rules={[{ required: true, message: 'Vui lòng tải hình ảnh chính' }]}
+                    tooltip="Hình ảnh chính của sản phẩm, kích thước tối đa 5MB"
+                    valuePropName="fileList"
+                    className="form-item"
+                    getValueFromEvent={e => {
+                      if (Array.isArray(e)) {
+                        return e;
                       }
-                      const isLt5M = file.size / 1024 / 1024 < 5;
-                      if (!isLt5M) {
-                        message.error('Hình ảnh không được vượt quá 5MB!');
-                        return Upload.LIST_IGNORE;
-                      }
-                      return false;
+                      return e?.fileList;
                     }}
-                    maxCount={1}
                   >
-                    <div>
-                      <PlusOutlined />
-                      <div style={{ marginTop: 8 }}>Upload</div>
-                    </div>
-                  </Upload>
-                </Form.Item>
+                    <Upload
+                      listType="picture-card"
+                      beforeUpload={(file) => {
+                        const isImage = file.type.startsWith('image/');
+                        if (!isImage) {
+                          message.error('Chỉ chấp nhận file hình ảnh!');
+                          return Upload.LIST_IGNORE;
+                        }
+                        const isLt5M = file.size / 1024 / 1024 < 5;
+                        if (!isLt5M) {
+                          message.error('Hình ảnh không được vượt quá 5MB!');
+                          return Upload.LIST_IGNORE;
+                        }
+                        return false;
+                      }}
+                      maxCount={1}
+                    >
+                      <div className="upload-button">
+                        <PlusOutlined />
+                        <div style={{ marginTop: 8 }}>Tải lên</div>
+                      </div>
+                    </Upload>
+                  </Form.Item>
+                </div>
               </Card>
             </Col>
-            <Col span={12}>
-              <Card bordered={false} bodyStyle={{ padding: 0 }}>
-                <Form.Item
-                  label="Thư viện ảnh"
-                  name={['media', 'galleryImages']}
-                  tooltip="Tối đa 5 ảnh phụ, mỗi ảnh không quá 5MB, tổng dung lượng không quá 30MB"
-                  valuePropName="fileList"
-                  getValueFromEvent={e => {
-                    if (Array.isArray(e)) {
-                      return e;
-                    }
-                    return e?.fileList;
-                  }}
-                >
-                  <Upload
-                    listType="picture-card"
-                    multiple
-                    maxCount={5}
-                    beforeUpload={(file) => {
-                      const isImage = file.type.startsWith('image/');
-                      if (!isImage) {
-                        message.error('Chỉ chấp nhận file hình ảnh!');
-                        return Upload.LIST_IGNORE;
+            <Col xs={24} md={12}>
+              <Card bordered={false} className="media-card">
+                <div className="media-section">
+                  <h4>Thư viện ảnh</h4>
+                  <Form.Item
+                    name={['media', 'galleryImages']}
+                    tooltip="Tối đa 5 ảnh phụ, mỗi ảnh không quá 5MB, tổng dung lượng không quá 30MB"
+                    valuePropName="fileList"
+                    className="form-item"
+                    getValueFromEvent={e => {
+                      if (Array.isArray(e)) {
+                        return e;
                       }
-                      const isLt5M = file.size / 1024 / 1024 < 5;
-                      if (!isLt5M) {
-                        message.error('Hình ảnh không được vượt quá 5MB!');
-                        return Upload.LIST_IGNORE;
-                      }
-                      return false;
+                      return e?.fileList;
                     }}
                   >
-                    <div>
-                      <PlusOutlined />
-                      <div style={{ marginTop: 8 }}>Upload</div>
-                    </div>
-                  </Upload>
-                </Form.Item>
+                    <Upload
+                      listType="picture-card"
+                      multiple
+                      maxCount={5}
+                      beforeUpload={(file) => {
+                        const isImage = file.type.startsWith('image/');
+                        if (!isImage) {
+                          message.error('Chỉ chấp nhận file hình ảnh!');
+                          return Upload.LIST_IGNORE;
+                        }
+                        const isLt5M = file.size / 1024 / 1024 < 5;
+                        if (!isLt5M) {
+                          message.error('Hình ảnh không được vượt quá 5MB!');
+                          return Upload.LIST_IGNORE;
+                        }
+                        return false;
+                      }}
+                    >
+                      <div className="upload-button">
+                        <PlusOutlined />
+                        <div style={{ marginTop: 8 }}>Tải lên</div>
+                      </div>
+                    </Upload>
+                  </Form.Item>
+                </div>
               </Card>
             </Col>
           </Row>
+        </div>
 
-          {/* Mô tả sản phẩm */}
-          <Divider orientation="left">Mô tả sản phẩm</Divider>
-          <Row gutter={24}>
-            <Col span={12}>
+        {/* Mô tả sản phẩm */}
+        <div className="form-section">
+          <Divider orientation="left" className="section-divider">
+            Mô tả sản phẩm
+          </Divider>
+          <Row gutter={[32, 24]}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name={['description', 'shortDescription']}
                 label="Mô tả ngắn"
@@ -848,16 +985,19 @@ const AddProduct = () => {
                   { max: 200, message: 'Mô tả ngắn không được vượt quá 200 ký tự' }
                 ]}
                 tooltip="Mô tả ngắn gọn về sản phẩm, tối đa 200 ký tự"
+                className="form-item"
               >
                 <TextArea
-                  rows={3}
+                  rows={4}
                   maxLength={200}
                   showCount
+                  size="large"
+                  className="form-textarea"
                   placeholder="Kem trị mụn & trị nám giúp làm sạch, ngăn ngừa mụn và giảm thâm nám, phù hợp với da mụn, da nhạy cảm."
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name={['description', 'detailedDescription']}
                 label="Mô tả chi tiết"
@@ -866,16 +1006,19 @@ const AddProduct = () => {
                   { max: 3000, message: 'Mô tả chi tiết không được vượt quá 3000 ký tự' }
                 ]}
                 tooltip="Mô tả chi tiết về công dụng và đặc điểm của sản phẩm, tối đa 3000 ký tự"
+                className="form-item"
               >
                 <TextArea
-                  rows={3}
+                  rows={4}
                   maxLength={3000}
                   showCount
+                  size="large"
+                  className="form-textarea"
                   placeholder="Sản phẩm được chiết xuất từ các thành phần tự nhiên, hỗ trợ điều trị mụn và làm mờ vết nám."
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name={['description', 'features']}
                 label="Đặc điểm"
@@ -884,16 +1027,19 @@ const AddProduct = () => {
                   { max: 1000, message: 'Danh sách đặc điểm không được vượt quá 1000 ký tự' }
                 ]}
                 tooltip="Liệt kê các đặc điểm chính của sản phẩm, phân cách bằng dấu phẩy"
+                className="form-item"
               >
                 <TextArea
-                  rows={2}
+                  rows={3}
                   maxLength={1000}
                   showCount
+                  size="large"
+                  className="form-textarea"
                   placeholder="Trà xanh, Cam thảo, Chiết xuất tràm trà, Vitamin E, và các thành phần tự nhiên khác"
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name={['description', 'ingredients']}
                 label="Thành phần"
@@ -901,12 +1047,15 @@ const AddProduct = () => {
                   { required: true, message: 'Vui lòng nhập thành phần sản phẩm' }
                 ]}
                 tooltip="Liệt kê các thành phần chính của sản phẩm"
+                className="form-item"
               >
                 <Select
                   mode="tags"
                   placeholder="Nhập thành phần"
                   allowClear
                   tokenSeparators={[',']}
+                  size="large"
+                  className="form-select"
                   options={commonIngredients.map(ingredient => ({
                     label: ingredient,
                     value: ingredient
@@ -914,7 +1063,7 @@ const AddProduct = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name={['description', 'usageInstructions']}
                 label="Hướng dẫn sử dụng"
@@ -922,12 +1071,15 @@ const AddProduct = () => {
                   { required: true, message: 'Vui lòng nhập hướng dẫn sử dụng' }
                 ]}
                 tooltip="Hướng dẫn chi tiết cách sử dụng sản phẩm"
+                className="form-item"
               >
                 <Select
                   mode="tags"
                   placeholder="Nhập hướng dẫn sử dụng"
                   allowClear
                   tokenSeparators={[',']}
+                  size="large"
+                  className="form-select"
                   options={commonUsageInstructions.map(instruction => ({
                     label: instruction,
                     value: instruction
@@ -935,7 +1087,7 @@ const AddProduct = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name={['description', 'expiration']}
                 label="Ngày hết hạn"
@@ -943,10 +1095,13 @@ const AddProduct = () => {
                   { required: true, message: 'Vui lòng nhập thời hạn sử dụng' }
                 ]}
                 tooltip="Thời hạn sử dụng của sản phẩm"
+                className="form-item"
               >
                 <Select
                   placeholder="Chọn thời hạn sử dụng"
                   allowClear
+                  size="large"
+                  className="form-select"
                   options={expirationOptions.map(option => ({
                     label: option,
                     value: option
@@ -955,11 +1110,15 @@ const AddProduct = () => {
               </Form.Item>
             </Col>
           </Row>
+        </div>
 
-          {/* Thông số kỹ thuật */}
-          <Divider orientation="left">Thông số kỹ thuật</Divider>
-          <Row gutter={24}>
-            <Col span={8}>
+        {/* Thông số kỹ thuật */}
+        <div className="form-section">
+          <Divider orientation="left" className="section-divider">
+            Thông số kỹ thuật
+          </Divider>
+          <Row gutter={[32, 24]}>
+            <Col xs={24} sm={12} md={8}>
               <Form.Item
                 name={['technicalDetails', 'sizeOrWeight']}
                 label="Kích thước / Trọng lượng"
@@ -967,10 +1126,13 @@ const AddProduct = () => {
                   { required: true, message: 'Vui lòng nhập kích thước hoặc trọng lượng' }
                 ]}
                 tooltip="Ví dụ: 30ml, 50g, 100ml"
+                className="form-item"
               >
                 <Select
                   placeholder="Chọn kích thước/trọng lượng"
                   allowClear
+                  size="large"
+                  className="form-select"
                   options={sizeWeightOptions.map(option => ({
                     label: option,
                     value: option
@@ -978,7 +1140,7 @@ const AddProduct = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col xs={24} sm={12} md={8}>
               <Form.Item
                 name={['technicalDetails', 'suitableSkinTypes']}
                 label="Loại da phù hợp"
@@ -986,11 +1148,14 @@ const AddProduct = () => {
                   { required: true, message: 'Vui lòng chọn loại da phù hợp' }
                 ]}
                 tooltip="Chọn các loại da phù hợp với sản phẩm"
+                className="form-item"
               >
                 <Select
                   mode="multiple"
                   placeholder="Chọn loại da"
                   allowClear
+                  size="large"
+                  className="form-select"
                   options={skinTypes.map(type => ({
                     label: type,
                     value: type
@@ -998,7 +1163,7 @@ const AddProduct = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col xs={24} sm={12} md={8}>
               <Form.Item
                 name={['technicalDetails', 'origin']}
                 label="Xuất xứ"
@@ -1007,20 +1172,24 @@ const AddProduct = () => {
                   { max: 100, message: 'Xuất xứ không được vượt quá 100 ký tự' }
                 ]}
                 tooltip="Nước sản xuất sản phẩm"
+                className="form-item"
               >
-                <Input placeholder="VietNam" />
+                <Input placeholder="VietNam" size="large" className="form-input" />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col xs={24} sm={12} md={8}>
               <Form.Item
                 name={['technicalDetails', 'certifications']}
                 label="Chứng nhận chất lượng"
                 tooltip="Chọn các chứng nhận chất lượng của sản phẩm"
+                className="form-item"
               >
                 <Select
                   mode="multiple"
                   placeholder="Chọn chứng nhận"
                   allowClear
+                  size="large"
+                  className="form-select"
                   options={certifications.map(cert => ({
                     label: cert,
                     value: cert
@@ -1029,11 +1198,15 @@ const AddProduct = () => {
               </Form.Item>
             </Col>
           </Row>
+        </div>
 
-          {/* SEO */}
-          <Divider orientation="left">SEO</Divider>
-          <Row gutter={24}>
-            <Col span={8}>
+        {/* SEO */}
+        <div className="form-section">
+          <Divider orientation="left" className="section-divider">
+            SEO
+          </Divider>
+          <Row gutter={[32, 24]}>
+            <Col xs={24} sm={12} md={8}>
               <Form.Item
                 name={['seo', 'keywords']}
                 label="Từ khóa/Tags"
@@ -1041,12 +1214,15 @@ const AddProduct = () => {
                   { required: true, message: 'Vui lòng nhập từ khóa' }
                 ]}
                 tooltip="Nhập các từ khóa liên quan đến sản phẩm"
+                className="form-item"
               >
                 <Select
                   mode="tags"
                   placeholder="Nhập từ khóa"
                   allowClear
                   tokenSeparators={[',']}
+                  size="large"
+                  className="form-select"
                   options={commonKeywords.map(keyword => ({
                     label: keyword,
                     value: keyword
@@ -1054,32 +1230,38 @@ const AddProduct = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col xs={24} sm={12} md={8}>
               <Form.Item
                 name={['seo', 'metaTitle']}
                 label="Meta Title"
                 rules={[{ max: 60, message: 'Meta title không được vượt quá 60 ký tự' }]}
                 tooltip="Tiêu đề hiển thị trên kết quả tìm kiếm, tối đa 60 ký tự"
+                className="form-item"
               >
-                <Input placeholder="Nhập meta title" />
+                <Input placeholder="Nhập meta title" size="large" className="form-input" />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col xs={24} sm={12} md={8}>
               <Form.Item
                 name={['seo', 'metaDescription']}
                 label="Meta Description"
                 rules={[{ max: 160, message: 'Meta description không được vượt quá 160 ký tự' }]}
                 tooltip="Mô tả ngắn hiển thị trên kết quả tìm kiếm, tối đa 160 ký tự"
+                className="form-item"
               >
-                <Input placeholder="Nhập meta description" />
+                <Input placeholder="Nhập meta description" size="large" className="form-input" />
               </Form.Item>
             </Col>
           </Row>
+        </div>
 
-          {/* Chính sách & Tùy chọn */}
-          <Divider orientation="left">Chính sách & Tùy chọn</Divider>
-          <Row gutter={24}>
-            <Col span={12}>
+        {/* Chính sách & Tùy chọn */}
+        <div className="form-section">
+          <Divider orientation="left" className="section-divider">
+            Chính sách & Tùy chọn
+          </Divider>
+          <Row gutter={[32, 24]}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name={['policy', 'shippingReturnWarranty']}
                 label="Chính sách vận chuyển & Đổi trả"
@@ -1087,12 +1269,15 @@ const AddProduct = () => {
                   { required: true, message: 'Vui lòng nhập chính sách vận chuyển và đổi trả' }
                 ]}
                 tooltip="Mô tả chính sách vận chuyển và đổi trả sản phẩm"
+                className="form-item"
               >
                 <Select
                   mode="tags"
                   placeholder="Nhập chính sách"
                   allowClear
                   tokenSeparators={[',']}
+                  size="large"
+                  className="form-select"
                   options={shippingReturnOptions.map(option => ({
                     label: option,
                     value: option
@@ -1100,7 +1285,7 @@ const AddProduct = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name={['policy', 'additionalOptions']}
                 label="Tùy chọn bổ sung"
@@ -1108,12 +1293,15 @@ const AddProduct = () => {
                   { required: true, message: 'Vui lòng nhập tùy chọn bổ sung' }
                 ]}
                 tooltip="Các tùy chọn hoặc dịch vụ bổ sung khi mua sản phẩm"
+                className="form-item"
               >
                 <Select
                   mode="tags"
                   placeholder="Nhập tùy chọn bổ sung"
                   allowClear
                   tokenSeparators={[',']}
+                  size="large"
+                  className="form-select"
                   options={additionalOptions.map(option => ({
                     label: option,
                     value: option
@@ -1122,19 +1310,141 @@ const AddProduct = () => {
               </Form.Item>
             </Col>
           </Row>
+        </div>
 
-          <Form.Item>
+        <div className="form-actions">
+          <Button type="primary" htmlType="submit" loading={loading} size="large" className="submit-button">
+            Thêm sản phẩm
+          </Button>
+          <Button onClick={() => navigate('/admin/products')} size="large" className="cancel-button">
+            Hủy
+          </Button>
+        </div>
+      </Form>
+
+      {/* Modal thêm danh mục mới */}
+      <Modal
+        title="Thêm danh mục mới"
+        open={isCategoryModalVisible}
+        onCancel={() => {
+          setIsCategoryModalVisible(false);
+          categoryForm.resetFields();
+        }}
+        footer={null}
+        className="custom-modal"
+      >
+        <Form
+          form={categoryForm}
+          layout="vertical"
+          onFinish={handleAddCategory}
+          className="modal-form"
+        >
+          <Form.Item
+            name="name"
+            label="Tên danh mục"
+            rules={[
+              { required: true, message: 'Vui lòng nhập tên danh mục!' },
+              { min: 2, message: 'Tên danh mục phải có ít nhất 2 ký tự!' },
+              { max: 100, message: 'Tên danh mục không được vượt quá 100 ký tự!' }
+            ]}
+            className="form-item"
+          >
+            <Input placeholder="Nhập tên danh mục" size="large" className="form-input" />
+          </Form.Item>
+          <Form.Item
+            name="description"
+            label="Mô tả"
+            rules={[
+              { max: 500, message: 'Mô tả không được vượt quá 500 ký tự!' }
+            ]}
+            className="form-item"
+          >
+            <TextArea
+              rows={3}
+              placeholder="Nhập mô tả danh mục (không bắt buộc)"
+              maxLength={500}
+              showCount
+              size="large"
+              className="form-textarea"
+            />
+          </Form.Item>
+          <Form.Item className="modal-actions">
             <Space>
-              <Button type="primary" htmlType="submit" loading={loading}>
-                Thêm sản phẩm
+              <Button type="primary" htmlType="submit" loading={addingCategory} size="large">
+                Thêm danh mục
               </Button>
-              <Button onClick={() => navigate('/admin/products')}>
+              <Button onClick={() => {
+                setIsCategoryModalVisible(false);
+                categoryForm.resetFields();
+              }} size="large">
                 Hủy
               </Button>
             </Space>
           </Form.Item>
         </Form>
-      </Card>
+      </Modal>
+
+      {/* Modal thêm tag mới */}
+      <Modal
+        title="Thêm tag mới"
+        open={isTagModalVisible}
+        onCancel={() => {
+          setIsTagModalVisible(false);
+          tagForm.resetFields();
+        }}
+        footer={null}
+        className="custom-modal"
+      >
+        <Form
+          form={tagForm}
+          layout="vertical"
+          onFinish={handleAddTag}
+          className="modal-form"
+        >
+          <Form.Item
+            name="name"
+            label="Tên tag"
+            rules={[
+              { required: true, message: 'Vui lòng nhập tên tag!' },
+              { min: 2, message: 'Tên tag phải có ít nhất 2 ký tự!' },
+              { max: 50, message: 'Tên tag không được vượt quá 50 ký tự!' }
+            ]}
+            className="form-item"
+          >
+            <Input placeholder="Nhập tên tag" size="large" className="form-input" />
+          </Form.Item>
+          <Form.Item
+            name="description"
+            label="Mô tả"
+            rules={[
+              { max: 200, message: 'Mô tả không được vượt quá 200 ký tự!' }
+            ]}
+            className="form-item"
+          >
+            <TextArea
+              rows={3}
+              placeholder="Nhập mô tả tag (không bắt buộc)"
+              maxLength={200}
+              showCount
+              size="large"
+              className="form-textarea"
+            />
+          </Form.Item>
+          <Form.Item className="modal-actions">
+            <Space>
+              <Button type="primary" htmlType="submit" loading={addingTag} size="large">
+                Thêm tag
+              </Button>
+              <Button onClick={() => {
+                setIsTagModalVisible(false);
+                tagForm.resetFields();
+              }} size="large">
+                Hủy
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
