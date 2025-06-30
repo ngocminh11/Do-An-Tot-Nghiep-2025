@@ -1,134 +1,87 @@
 const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
-// === Common Validators ===
-const stringValidator = {
-  validator: v => /^[\p{L}0-9\s,.'-]+$/u.test(v),
-  message: props => `${props.path} chứa ký tự không hợp lệ.`
-};
-
-const wordCountValidator = (min, max) => ({
-  validator: function (v) {
-    const count = v.trim().split(/\s+/).length;
-    return count >= min && count <= max;
-  },
-  message: props =>
-    `${props.path} phải có từ ${min} đến ${max} từ (hiện tại: ${props.value.trim().split(/\s+/).length})`
-});
-
+/* ------------------ Email validator ------------------ */
 const emailValidator = {
   validator: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
-  message: props => `${props.value} không phải là địa chỉ email hợp lệ.`
+  message:   props => `${props.value} không phải email hợp lệ.`
 };
 
-const phoneValidator = {
-  validator: v => /^0\d{9,10}$/.test(v),
-  message: props => `${props.value} không phải là số điện thoại hợp lệ.`
-};
+/* ------------------ Hằng số role --------------------- */
+const ROLE_ENUM = [
+  'Khách Hàng',         // customer
+  'Nhân Viên',          // staff
+  'Quản Lý Kho',        // warehouseManager
+  'Quản Lý Nhân Sự',    // hrManager
+  'Quản Lý Chính'       // generalManager
+];
 
-// === Schema ===
-const userSchema = new mongoose.Schema({
-  fullName: {
-    type: String,
-    required: true,
-    trim: true,
-    minlength: 3,
-    maxlength: 100,
-    validate: [
-      stringValidator,
-      wordCountValidator(2, 10)
-    ]
-  },
-  gender: {
-    type: String,
-    enum: ['Nam', 'Nữ', 'Khác'],
-    default: 'Khác'
-  },
-  skinType: {
-    type: String,
-    required: true,
-    trim: true,
-    minlength: 3,
-    maxlength: 50,
-    validate: [stringValidator]
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true,
-    validate: emailValidator
-  },
-  emailVerified: {
-    type: Boolean,
-    default: false
-  },
-  passwordHash: {
-    type: String,
-    required: true,
-    minlength: 60 // bcrypt hash
-  },
-  phone: {
-    type: String,
-    required: true,
-    validate: phoneValidator
-  },
-  address: {
-    type: [String],
-    required: true,
-    trim: true,
-    minlength: 5,
-    maxlength: 300,
-    validate: stringValidator
-  },
-  addresses: [{
-    id: { type: String, required: true },
-    fullName: { type: String, required: true },
-    phoneNumber: { type: String, required: true },
-    city: { type: String, required: true },
-    district: { type: String, required: true },
-    ward: { type: String, required: true },
-    address: { type: String, required: true },
-    isDefault: { type: Boolean, default: false }
-  }],
-  role: {
-    type: String,
-    enum: ['customer', 'admin'],
-    required: true,
-    default: 'customer'
-  },
-  loyaltyPoints: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  vouchers: [{
-    promotionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Promotion' },
-    isUsed: { type: Boolean, default: false },
-    redeemedAt: { type: Date }
-  }],
-  accountStatus: {
-    type: String,
-    enum: ['active', 'inactive', 'banned'],
-    default: 'active'
-  },
-  registrationIP: {
-    type: String,
-    default: null
-  },
-  userAgent: {
-    type: String,
-    default: null
-  },
-  orderIds: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Order'
-  }],
-  refreshToken: { type: String }
-},
+const PIN_ROLES = [
+  'Quản Lý Kho',
+  'Quản Lý Nhân Sự',
+  'Quản Lý Chính'
+];
+const PIN_REGEX = /^\d{6}$/; // đúng 6 chữ số
 
+/* ------------------ Schema --------------------------- */
+const userSchema = new Schema(
   {
-    timestamps: true
-  });
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      validate: emailValidator
+    },
+    emailVerified: { type: Boolean, default: false },
+
+    passwordHash: {
+      type: String,
+      required: true,
+      minlength: 60 // bcrypt hash length
+    },
+
+    /* 🔐 PIN 6‑số – chỉ cho 3 role đặc biệt */
+    pin: {
+      type: String,
+      minlength: 6,
+      maxlength: 6,
+      default: null
+    },
+
+    role: {
+      type: String,
+      enum: ROLE_ENUM,
+      default: 'Khách Hàng',
+      required: true
+    },
+    accountStatus: {
+      type: String,
+      enum: ['active', 'inactive', 'banned'],
+      default: 'active'
+    },
+
+    registrationIP: String,
+    userAgent:     String,
+    refreshToken:  String
+  },
+  { timestamps: true }
+);
+
+/* ------------------ Ràng buộc PIN theo role ------------------ */
+userSchema.pre('validate', function (next) {
+  const needPin   = PIN_ROLES.includes(this.role);
+  const hasPin    = typeof this.pin === 'string' && this.pin.length > 0;
+
+  if (needPin && !hasPin)        // role cần nhưng chưa có
+    this.invalidate('pin', 'Vai trò này phải thiết lập PIN 6 số.');
+  if (needPin && hasPin && !PIN_REGEX.test(this.pin)) // sai định dạng
+    this.invalidate('pin', 'PIN phải gồm đúng 6 chữ số.');
+  if (!needPin && hasPin)        // role không được phép có PIN
+    this.invalidate('pin', 'Chỉ các vai trò quản lý mới được thiết lập PIN.');
+
+  next();
+});
 
 module.exports = mongoose.model('User', userSchema);
