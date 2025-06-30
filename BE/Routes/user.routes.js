@@ -10,8 +10,8 @@ const { authenticateUser } = require('../Middlewares/auth.middleware');
 
 // Routes for User Account (user & admin can access their own or by ID)
 router.get('/accounts/:id', authenticateUser, userController.getUserById);
-router.put('/accounts/:id', authenticateUser, userController.updateUser);
-router.delete('/accounts/:id', authenticateUser, userController.deleteUser);
+router.put('/accounts/:id', authenticateUser, userController.updateUserNoPin);
+router.patch('/accounts/:id/status', authenticateUser, userController.updateOwnStatus);
 
 // Routes for Cart (user only)
 router.post('/carts/add', authenticateUser, cartController.addToCart);

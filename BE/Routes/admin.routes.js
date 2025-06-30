@@ -47,11 +47,15 @@ router.put('/categories/:id', categoryController.updateCategory);
 router.delete('/categories/:id', categoryController.deleteCategory);
 
 // Routes for Account
-router.get('/accounts', userController.getAllUsers);
-router.get('/accounts/:id', userController.getUserById);
-router.post('/accounts', userController.createUser);
-router.put('/accounts/:id', userController.updateUser);
-router.delete('/accounts/:id', userController.deleteUser);
+router.get('/accounts', authenticateUser, authorizeAdmin, userController.getAllUsers);
+router.get('/accounts/:id', authenticateUser, authorizeAdmin, userController.getUserById);
+router.post('/accounts', authenticateUser, authorizeAdmin, userController.createUserNoPin);
+router.post('/accounts/with-pin', authenticateUser, authorizeAdmin, userController.createUserWithPin);
+router.put('/accounts/:id', authenticateUser, authorizeAdmin, userController.updateUserNoPin);
+router.put('/accounts/with-pin/:id', authenticateUser, authorizeAdmin, userController.updateUserWithPin);
+router.patch('/accounts/:id/pin', authenticateUser, authorizeAdmin, userController.updatePin);
+router.post('/accounts/:id/verify-pin', authenticateUser, authorizeAdmin, userController.verifyPin);
+router.delete('/accounts/:id', authenticateUser, authorizeAdmin, userController.deleteUser);
 
 // Routes for Comment
 router.get('/', commentController.getAllComments);
