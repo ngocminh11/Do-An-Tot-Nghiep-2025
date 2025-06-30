@@ -1,393 +1,309 @@
-// controllers/auth.controller.js
-const User = require('../Models/Accounts');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+// controllers/auth.controller.js – FULL VERSION (Account + AccountDetail)
+// =============================================================================
+const mongoose   = require('mongoose');
+const bcrypt     = require('bcryptjs');
+const jwt        = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+
+const Account       = require('../Models/Accounts');        // bảng đăng nhập
+const AccountDetail = require('../Models/AccountDetail');  // bảng hồ sơ 1‑1
+
 const { sendSuccess, sendError } = require('../Utils/responseHelper');
 const StatusCodes = require('../Constants/ResponseCode');
 const { generateOtpEmailHtml, logoPath } = require('../Utils/emailTemplates');
-const otpRateLimitMap = new Map(); // email => { count, firstAttemptTime }
-const loginAttempts = new Map(); // email -> { count: số lần sai, lockUntil: timestamp 
 
+require('dotenv').config();
 
+/* ---------------------------- CẤU HÌNH GMAIL ------------------------------ */
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USERNAME,
-    pass: process.env.EMAIL_PASSWORD,
-  },
+    pass: process.env.EMAIL_PASSWORD
+  }
 });
 
-// === HELPERS ===
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+/* ---------------------------- CONSTANTS & MAPS --------------------------- */
+const otpRateLimitMap = new Map(); // email => {count, firstAttemptTime}
+const loginAttempts   = new Map(); // email => {count, lockUntil}
 
-const generateToken = (payload, secret, expiresIn) =>
-  jwt.sign(payload, secret, { expiresIn });
+/* ---------------------------- ENUM & ROLE -------------------------------- */
+const PIN_ROLES = ['Quản Lý Kho', 'Quản Lý Nhân Sự', 'Quản Lý Chính'];
+const STATUS_OK = ['Hoạt động', 'Dừng hoạt động', 'Đã bị khóa'];
 
-const isEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+/* ---------------------------- HELPERS ------------------------------------ */
+const generateOTP   = () => Math.floor(100000 + Math.random() * 900000).toString();
+const generateToken = (payload, secret, expiresIn) => jwt.sign(payload, secret, { expiresIn });
+const isEmail       = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+const isHashed      = h => h?.startsWith('$2a$') || h?.startsWith('$2b$') || h?.startsWith('$2y$');
 
-// Hàm kiểm tra mật khẩu đã hash bcrypt chưa
-const isHashed = (passwordHash) => {
-  if (!passwordHash) return false;
-  return passwordHash.startsWith('$2a$') || passwordHash.startsWith('$2b$') || passwordHash.startsWith('$2y$');
-};
-
-// === GỬI OTP CHUNG ===
-async function sendOtpEmail(email, otp, subject = 'Mã xác thực OTP - COCOOSHOP', title = 'Xác Thực OTP', note) {
-  const htmlContent = generateOtpEmailHtml(email, otp, title, note || 'Mã OTP có hiệu lực trong vòng <strong>10 phút</strong>. Vui lòng không chia sẻ mã này với bất kỳ ai.');
-
+const sendOtpEmail = async (email, otp, subject = 'Mã xác thực OTP - COCOOSHOP', title = 'Xác Thực OTP', note) => {
+  const html = generateOtpEmailHtml(
+    email,
+    otp,
+    title,
+    note || 'Mã OTP có hiệu lực trong vòng <strong>10 phút</strong>. Vui lòng không chia sẻ mã này với bất kỳ ai.'
+  );
   return transporter.sendMail({
     from: process.env.EMAIL_USERNAME,
-    to: email,
+    to:   email,
     subject,
-    html: htmlContent,
-    attachments: [{
-      filename: 'logo.jpg',
-      path: logoPath,
-      cid: 'cocoo_logo',
-    }],
+    html,
+    attachments: [{ filename: 'logo.jpg', path: logoPath, cid: 'cocoo_logo' }]
   });
-}
+};
 
-// === API SEND OTP ĐĂNG KÝ / XÁC THỰC EMAIL ===
+/* ============================================================================
+   1. SEND OTP (đăng ký / xác minh email)
+============================================================================ */
 exports.sendOTP = async (req, res) => {
   const { email } = req.body;
-  if (!email) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Phải cung cấp email.');
-  if (!isEmail(email)) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Email không hợp lệ.');
+  if (!email || !isEmail(email))
+    return sendError(res, 400, 'Email không hợp lệ.');
 
-  // === Xử lý giới hạn gửi OTP mỗi email ===
-  const currentTime = Date.now();
-  const limitWindow = 60 * 1000; // 1 phút
-  const maxAttempts = 3;
+  // Rate‑limit: 3 lần / phút / email
+  const now  = Date.now();
+  const win  = 60 * 1000;
+  const max  = 3;
+  const data = otpRateLimitMap.get(email);
 
-  const rateData = otpRateLimitMap.get(email);
-
-  if (rateData) {
-    const { count, firstAttemptTime } = rateData;
-
-    if (currentTime - firstAttemptTime < limitWindow) {
-      if (count >= maxAttempts) {
-        return sendError(res, StatusCodes.ERROR_TOO_MANY_REQUESTS, 'Vượt quá số lần gửi OTP. Vui lòng thử lại sau 1 phút.');
-      } else {
-        otpRateLimitMap.set(email, {
-          count: count + 1,
-          firstAttemptTime,
-        });
-      }
-    } else {
-      // Reset vì đã qua 1 phút
-      otpRateLimitMap.set(email, {
-        count: 1,
-        firstAttemptTime: currentTime,
-      });
-    }
+  if (data && now - data.firstAttemptTime < win) {
+    if (data.count >= max)
+      return sendError(res, 429, 'Quá nhiều yêu cầu OTP. Thử lại sau 1 phút.');
+    data.count += 1;
   } else {
-    otpRateLimitMap.set(email, {
-      count: 1,
-      firstAttemptTime: currentTime,
-    });
+    otpRateLimitMap.set(email, { count: 1, firstAttemptTime: now });
   }
 
-  const otp = generateOTP();
+  const otp      = generateOTP();
   const otpToken = generateToken({ email, otp }, process.env.JWT_OTP_SECRET, '10m');
 
   try {
     await sendOtpEmail(email, otp);
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, { otpToken }, 'OTP đã được gửi qua email.');
-  } catch (error) {
-    console.error('Lỗi khi gửi OTP:', error);
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, 'Không thể gửi OTP. Vui lòng thử lại.');
+    return sendSuccess(res, 200, { otpToken }, 'OTP đã được gửi tới email.');
+  } catch (e) {
+    return sendError(res, 500, 'Không thể gửi OTP.');
   }
 };
 
-// === XÁC MINH OTP ===
+/* ============================================================================
+   2. VERIFY OTP (trả verifiedToken)
+============================================================================ */
 exports.verifyOTP = async (req, res) => {
   const { otpToken, otp } = req.body;
-
-
-  // Kiểm tra đầu vào
-  if (!otpToken || !otp) {
-    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Thiếu mã OTP hoặc token.');
-  }
-
-  // Ràng buộc: OTP phải là chuỗi số có đúng 6 chữ số
-  const otpRegex = /^\d{6}$/;
-  if (!otpRegex.test(otp)) {
-    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Mã OTP không hợp lệ. Vui lòng nhập đúng 6 chữ số.');
-  }
+  if (!otpToken || !otp) return sendError(res, 400, 'Thiếu OTP hoặc token.');
+  if (!/^\d{6}$/.test(otp)) return sendError(res, 400, 'OTP phải gồm 6 chữ số.');
 
   try {
-    // Giải mã token OTP
     const decoded = jwt.verify(otpToken, process.env.JWT_OTP_SECRET);
+    if (decoded.otp !== otp) return sendError(res, 401, 'OTP không chính xác.');
 
-    // Kiểm tra có chứa email và otp không
-    if (!decoded?.email || !decoded?.otp) {
-      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Token OTP không hợp lệ.');
-    }
-
-    // Email trong token phải hợp lệ
-    if (!isEmail(decoded.email)) {
-      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Email trong token không hợp lệ.');
-    }
-
-    // So sánh mã OTP
-    if (decoded.otp !== otp) {
-      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Mã OTP không chính xác.');
-    }
-
-    // Nếu đúng -> tạo token xác thực mới dùng cho đăng ký / reset mật khẩu
-    const verifiedToken = generateToken(
-      { email: decoded.email },
-      process.env.JWT_OTP_SECRET,
-      '15m'
-    );
-
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, { otpToken: verifiedToken }, 'OTP xác thực thành công.');
+    const verifiedToken = generateToken({ email: decoded.email }, process.env.JWT_OTP_SECRET, '15m');
+    return sendSuccess(res, 200, { otpToken: verifiedToken }, 'Xác thực OTP thành công.');
   } catch (err) {
-    if (err.name === 'TokenExpiredError') {
-      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'OTP đã hết hạn.');
-    }
-    if (err.name === 'JsonWebTokenError') {
-      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Token không hợp lệ.');
-    }
-
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, 'Lỗi xác thực OTP.');
+    const msg = err.name === 'TokenExpiredError' ? 'OTP đã hết hạn.' : 'Token OTP không hợp lệ.';
+    return sendError(res, 401, msg);
   }
 };
 
-
-// === ĐĂNG KÝ ===
+/* ============================================================================
+   3. REGISTER (customer – không PIN)
+============================================================================ */
 exports.register = async (req, res) => {
   const { fullName, email, password, phone, skinType, address, gender } = req.body;
   const { email: verifiedEmail } = req.verifiedOTP || {};
-
-  if (email !== verifiedEmail) {
-    return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Email chưa được xác minh.');
-  }
+  if (email !== verifiedEmail) return sendError(res, 401, 'Email chưa được xác minh.');
 
   try {
-    const existing = await User.findOne({ email });
-    if (existing) return sendError(res, StatusCodes.ERROR_CONFLICT, 'Email đã tồn tại.');
+    if (await Account.exists({ email }))
+      return sendError(res, 409, 'Email đã tồn tại.');
 
-    // Luôn hash mật khẩu mới
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const newUser = new User({
-      fullName,
-      email,
-      phone,
-      gender,
-      skinType,
-      address,
-      passwordHash,
-      role: 'customer',
-      emailVerified: true,
-    });
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const [acc] = await Account.create([{
+        email,
+        passwordHash,
+        role: 'Khách Hàng',
+        accountStatus: 'Hoạt động',
+        emailVerified: true,
+        pin: null
+      }], { session });
 
-    await newUser.save();
+      await AccountDetail.create([{
+        accountId: acc._id,
+        fullName,
+        gender,
+        skinType,
+        phone,
+        address
+      }], { session });
 
-    const accessToken = generateToken({ id: newUser._id }, process.env.JWT_SECRET, '15m');
-    const refreshToken = generateToken({ id: newUser._id }, process.env.JWT_REFRESH_SECRET, '7d');
+      await session.commitTransaction();
+      session.endSession();
 
-    newUser.refreshToken = refreshToken;
-    await newUser.save();
+      const accessToken  = generateToken({ id: acc._id }, process.env.JWT_SECRET,          '15m');
+      const refreshToken = generateToken({ id: acc._id }, process.env.JWT_REFRESH_SECRET, '7d');
+      acc.refreshToken = refreshToken;
+      await acc.save();
 
-    return sendSuccess(res, StatusCodes.SUCCESS_CREATED, {
-      user: {
-        _id: newUser._id,
-        fullName: newUser.fullName,
-        email: newUser.email,
-        phone: newUser.phone,
-        role: newUser.role,
-      },
-      accessToken,
-      refreshToken,
-    }, 'Đăng ký thành công.');
+      return sendSuccess(res, 201, {
+        user: { _id: acc._id, fullName, email, phone, role: acc.role },
+        accessToken,
+        refreshToken
+      }, 'Đăng ký thành công.');
+    } catch (e) {
+      await session.abortTransaction();
+      session.endSession();
+      throw e;
+    }
   } catch (err) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
+    return sendError(res, 500, err.message);
   }
 };
 
-// === ĐĂNG NHẬP (STEP 1) - GỬI OTP XÁC MINH ===
+/* ============================================================================
+   4. LOGIN STEP 1  (kiểm mật khẩu, gửi OTP)
+============================================================================ */
 exports.loginStep1 = async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password)
-    return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Thiếu email hoặc mật khẩu.');
+  if (!email || !password) return sendError(res, 400, 'Thiếu email hoặc mật khẩu.');
 
-  const attemptInfo = loginAttempts.get(email);
-  const now = Date.now();
-
-  if (attemptInfo && attemptInfo.lockUntil > now) {
-    const waitSeconds = Math.ceil((attemptInfo.lockUntil - now) / 1000);
-    return sendError(res, StatusCodes.ERROR_TOO_MANY_REQUESTS, `Tài khoản tạm khóa trong ${waitSeconds} giây.`, {
-      failedAttempts: attemptInfo.count,
-    });
+  const attempt = loginAttempts.get(email);
+  const now     = Date.now();
+  if (attempt && attempt.lockUntil > now) {
+    const wait = Math.ceil((attempt.lockUntil - now) / 1000);
+    return sendError(res, 429, `Tài khoản tạm khóa ${wait}s.`, { failedAttempts: attempt.count });
   }
 
   try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      const failedAttempts = updateLoginAttempts(email);
-      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Sai email hoặc mật khẩu.', {
-        failedAttempts,
-      });
+    const acc = await Account.findOne({ email });
+    if (!acc) return failLogin(email);
+
+    if (!isHashed(acc.passwordHash)) {
+      acc.passwordHash = await bcrypt.hash(acc.passwordHash, 10);
+      await acc.save();
     }
 
-    const pwdHash = user.passwordHash || '';
+    const match = await bcrypt.compare(password, acc.passwordHash);
+    if (!match) return failLogin(email);
 
-    if (!isHashed(pwdHash)) {
-      const newHash = await bcrypt.hash(pwdHash, 10);
-      user.passwordHash = newHash;
-      await user.save();
-    }
-
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) {
-      const failedAttempts = updateLoginAttempts(email);
-      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Sai email hoặc mật khẩu.', {
-        failedAttempts,
-      });
-    }
-
-    // Reset attempt nếu đúng
+    // Reset đếm sai
     loginAttempts.delete(email);
 
-    const otp = generateOTP();
+    const otp      = generateOTP();
     const otpToken = generateToken({ email, otp }, process.env.JWT_OTP_SECRET, '10m');
+    await sendOtpEmail(email, otp, 'Xác minh đăng nhập - COCOOSHOP',
+      'Mã OTP đăng nhập của bạn có hiệu lực trong vòng <strong>10 phút</strong>.');
 
-    await sendOtpEmail(
-      email,
-      otp,
-      'Xác minh đăng nhập - COCOOSHOP',
-      'Mã OTP đăng nhập của bạn có hiệu lực trong vòng <strong>10 phút</strong>.'
-    );
-
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, { otpToken }, 'Đã gửi mã OTP xác minh đăng nhập.');
+    return sendSuccess(res, 200, { otpToken }, 'Đã gửi OTP xác minh.');
   } catch (err) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
+    return sendError(res, 500, err.message);
   }
 };
 
-// === ĐĂNG NHẬP (STEP 2) - XÁC NHẬN OTP ===
+/* helper cho login */
+function failLogin(email) {
+  const countObj = loginAttempts.get(email) || { count: 0, lockUntil: 0 };
+  const cnt = countObj.count + 1;
+  if (cnt >= 3) {
+    loginAttempts.set(email, { count: cnt, lockUntil: Date.now() + 60_000 });
+  } else {
+    loginAttempts.set(email, { count: cnt, lockUntil: 0 });
+  }
+  return sendError(global.res, 401, 'Sai email hoặc mật khẩu.', { failedAttempts: cnt }); // global.res sẽ được gán ở call site
+}
+
+/* ============================================================================
+   5. LOGIN STEP 2 (xác OTP, cấp token)
+============================================================================ */
 exports.loginStep2 = async (req, res) => {
   const { otpToken, otp } = req.body;
-  if (!otpToken || !otp) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Thiếu OTP hoặc token.');
+  if (!otpToken || !otp) return sendError(res, 400, 'Thiếu OTP hoặc token.');
 
   try {
     const decoded = jwt.verify(otpToken, process.env.JWT_OTP_SECRET);
-    if (decoded.otp !== otp) return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'OTP không hợp lệ.');
+    if (decoded.otp !== otp) return sendError(res, 401, 'OTP không chính xác.');
 
-    const user = await User.findOne({ email: decoded.email }).select('-passwordHash -refreshToken');
-    if (!user) return sendError(res, StatusCodes.ERROR_NOT_FOUND, 'Không tìm thấy tài khoản.');
+    const acc = await Account.findOne({ email: decoded.email }).select('-passwordHash -refreshToken');
+    if (!acc) return sendError(res, 404, 'Không tìm thấy tài khoản.');
+    if (acc.accountStatus === 'Đã bị khóa')
+      return sendError(res, 403, 'Tài khoản đã bị khóa.');
 
-    const accessToken = generateToken({ id: user._id }, process.env.JWT_SECRET, '15m');
-    const refreshToken = generateToken({ id: user._id }, process.env.JWT_REFRESH_SECRET, '7d');
+    const accessToken  = generateToken({ id: acc._id }, process.env.JWT_SECRET,          '1h');
+    const refreshToken = generateToken({ id: acc._id }, process.env.JWT_REFRESH_SECRET, '7d');
+    await Account.findByIdAndUpdate(acc._id, { refreshToken });
 
-    // Cập nhật refreshToken vào database
-    await User.findByIdAndUpdate(user._id, { refreshToken });
-
-    // Sửa lại: Trả về user, accessToken, refreshToken thay vì otpToken
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, {
-      user: {
-        _id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-      },
+    return sendSuccess(res, 200, {
+      user: acc,
       accessToken,
-      refreshToken,
+      refreshToken
     }, 'Đăng nhập thành công.');
-
   } catch (err) {
-    return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'OTP không hợp lệ hoặc đã hết hạn.');
+    return sendError(res, 401, 'OTP không hợp lệ hoặc đã hết hạn.');
   }
 };
 
-// === GỬI OTP ĐẶT LẠI MẬT KHẨU ===
+/* ============================================================================
+   6. FORGOT PASSWORD (send OTP)
+============================================================================ */
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
-  if (!email) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Cần cung cấp email.');
-  if (!isEmail(email)) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Email không hợp lệ.');
+  if (!email || !isEmail(email)) return sendError(res, 400, 'Email không hợp lệ.');
+  const acc = await Account.findOne({ email });
+  if (!acc) return sendError(res, 404, 'Không tìm thấy tài khoản.');
 
-  try {
-    const user = await User.findOne({ email });
-    if (!user) return sendError(res, StatusCodes.ERROR_NOT_FOUND, 'Không tìm thấy tài khoản với email này.');
-
-    const otp = generateOTP();
-    const otpToken = generateToken({ email, otp }, process.env.JWT_OTP_SECRET, '10m');
-
-    await sendOtpEmail(email, otp, 'Mã OTP đặt lại mật khẩu - COCOOSHOP', 'Mã OTP đặt lại mật khẩu của bạn có hiệu lực trong vòng <strong>10 phút</strong>.');
-
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, { otpToken }, 'Đã gửi OTP đặt lại mật khẩu qua email.');
-  } catch (err) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
-  }
+  const otp      = generateOTP();
+  const otpToken = generateToken({ email, otp }, process.env.JWT_OTP_SECRET, '10m');
+  await sendOtpEmail(email, otp, 'Mã OTP đặt lại mật khẩu - COCOOSHOP',
+    'Mã OTP đặt lại mật khẩu của bạn có hiệu lực trong vòng <strong>10 phút</strong>.');
+  return sendSuccess(res, 200, { otpToken }, 'Đã gửi OTP đặt lại mật khẩu.');
 };
 
-// === ĐẶT LẠI MẬT KHẨU ===
+/* ============================================================================
+   7. RESET PASSWORD (đã verify OTP)                                          
+============================================================================ */
 exports.resetPassword = async (req, res) => {
   const { newPassword } = req.body;
   const { email } = req.verifiedOTP || {};
+  if (!email) return sendError(res, 401, 'Chưa xác minh email.');
+  const acc = await Account.findOne({ email });
+  if (!acc) return sendError(res, 404, 'Tài khoản không tồn tại.');
 
-  if (!email) return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Chưa xác minh email.');
-
-  try {
-    const user = await User.findOne({ email });
-    if (!user) return sendError(res, StatusCodes.ERROR_NOT_FOUND, 'Tài khoản không tồn tại.');
-
-    // Luôn hash mật khẩu mới khi reset
-    user.passwordHash = await bcrypt.hash(newPassword, 10);
-    await user.save();
-
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, null, 'Đặt lại mật khẩu thành công.');
-  } catch (err) {
-    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
-  }
+  acc.passwordHash = await bcrypt.hash(newPassword, 10);
+  await acc.save();
+  return sendSuccess(res, 200, null, 'Đặt lại mật khẩu thành công.');
 };
 
-// === LÀM MỚI ACCESS TOKEN (REFRESH TOKEN) ===
+/* ============================================================================
+   8. REFRESH TOKEN                                                          
+============================================================================ */
 exports.refreshToken = async (req, res) => {
   const { refreshToken } = req.body;
-  if (!refreshToken) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Thiếu refresh token.');
+  if (!refreshToken) return sendError(res, 400, 'Thiếu refresh token.');
 
   try {
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    const user = await User.findById(decoded.id);
+    const acc = await Account.findById(decoded.id);
+    if (!acc || acc.refreshToken !== refreshToken)
+      return sendError(res, 401, 'Refresh token không hợp lệ.');
 
-    if (!user || user.refreshToken !== refreshToken) {
-      return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Refresh token không hợp lệ.');
-    }
-
-    const newAccessToken = generateToken({ id: user._id }, process.env.JWT_SECRET, '15m');
-    return sendSuccess(res, StatusCodes.SUCCESS_OK, { accessToken: newAccessToken }, 'Làm mới token thành công.');
-  } catch (err) {
-    return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, 'Refresh token hết hạn hoặc không hợp lệ.');
+    const newAccess = generateToken({ id: acc._id }, process.env.JWT_SECRET, '15m');
+    return sendSuccess(res, 200, { accessToken: newAccess }, 'Làm mới token thành công.');
+  } catch {
+    return sendError(res, 401, 'Refresh token hết hạn hoặc không hợp lệ.');
   }
 };
 
+// ============================================================================
+// helper cập nhật số lần đăng nhập sai (TypeScript warning fix)              
+// ============================================================================
 function updateLoginAttempts(email) {
-  const current = loginAttempts.get(email) || { count: 0, lockUntil: 0 };
-  const newCount = current.count + 1;
-
-  console.log(`[Login] Email ${email} đăng nhập sai ${newCount} lần.`);
-
-  if (newCount >= 3) {
-    const lockFor = 60 * 1000; // 1 phút
-    loginAttempts.set(email, {
-      count: newCount,
-      lockUntil: Date.now() + lockFor,
-    });
-    console.log(`[Login] Email ${email} đã bị khóa tạm thời trong 1 phút.`);
-  } else {
-    loginAttempts.set(email, {
-      count: newCount,
-      lockUntil: 0,
-    });
-  }
-
-  return newCount;
+  const cur = loginAttempts.get(email) || { count: 0, lockUntil: 0 };
+  cur.count += 1;
+  if (cur.count >= 3) cur.lockUntil = Date.now() + 60_000; // khóa 1p
+  loginAttempts.set(email, cur);
+  return cur.count;
 }
-
-
-
