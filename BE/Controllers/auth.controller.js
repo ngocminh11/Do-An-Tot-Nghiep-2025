@@ -28,7 +28,7 @@ const otpRateLimitMap = new Map(); // email => {count, firstAttemptTime}
 const loginAttempts   = new Map(); // email => {count, lockUntil}
 
 /* ---------------------------- ENUM & ROLE -------------------------------- */
-const PIN_ROLES = ['Quản Lý Kho', 'Quản Lý Nhân Sự', 'Quản Lý Chính'];
+const PIN_ROLES = ['Quản Lý Kho', 'Quản Lý Nhân Sự','Quản Lý Đơn Hàng', 'Quản Lý Chính'];
 const STATUS_OK = ['Hoạt động', 'Dừng hoạt động', 'Đã bị khóa'];
 
 /* ---------------------------- HELPERS ------------------------------------ */
