@@ -12,13 +12,15 @@ const ROLE_ENUM = [
   'Khách Hàng',         // customer
   'Nhân Viên',          // staff
   'Quản Lý Kho',        // warehouseManager
-  'Quản Lý Nhân Sự',    // hrManager
+  'Quản Lý Nhân Sự',
+  'Quản Lý Đơn Hàng',    // hrManager
   'Quản Lý Chính'       // generalManager
 ];
 
 const PIN_ROLES = [
   'Quản Lý Kho',
   'Quản Lý Nhân Sự',
+  'Quản Lý Đơn Hàng',
   'Quản Lý Chính'
 ];
 const PIN_REGEX = /^\d{6}$/; // đúng 6 chữ số
@@ -58,8 +60,8 @@ const userSchema = new Schema(
     },
     accountStatus: {
       type: String,
-      enum: ['active', 'inactive', 'banned'],
-      default: 'active'
+      enum: ['Hoạt động', 'Dừng hoạt động', 'Đã bị khóa'],
+      default: 'Hoạt động'
     },
 
     registrationIP: String,

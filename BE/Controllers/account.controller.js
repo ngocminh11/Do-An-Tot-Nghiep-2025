@@ -6,7 +6,7 @@ const StatusCodes = require('../Constants/ResponseCode');
 const Messages     = require('../Constants/ResponseMessage');
 
 /* ---------------- Const & Helpers ----------------------------------------- */
-const PIN_ROLES   = ['Quản Lý Kho', 'Quản Lý Nhân Sự', 'Quản Lý Chính'];
+const PIN_ROLES   = ['Quản Lý Kho', 'Quản Lý Nhân Sự','Quản Lý Đơn Hàng','Quản Lý Chính'];
 const DEFAULT_PIN = '000000';
 const isValidId   = id => mongoose.Types.ObjectId.isValid(id);
 
