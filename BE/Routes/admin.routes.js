@@ -23,6 +23,19 @@ router.put('/products/:id', validateImageUpload, productController.updateProduct
 router.delete('/products/:id', productController.deleteProduct);
 router.get('/products/export/csv', productController.exportProductsToExcel);
 
+// --- Nhập kho sản phẩm ---
+router.patch('/products/:id/inventory', productController.updateInventory);
+
+// --- Đổi trạng thái sản phẩm ---
+router.patch('/products/:id/status', productController.changeStatus);
+
+// --- Xem lịch sử thao tác (log) của sản phẩm ---
+router.get('/products/:id/logs', productController.getProductLogs);
+
+// --- Xem toàn bộ lịch sử thao tác sản phẩm ---
+router.get('/products/logs/all', productController.getAllProductLogs);
+
+
 router.get('/media/:id', mediaController.streamImageById); // public
 
 // Routes for Category
