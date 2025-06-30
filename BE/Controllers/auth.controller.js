@@ -5,7 +5,7 @@ const bcrypt     = require('bcryptjs');
 const jwt        = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 
-const Account       = require('../Models/Account');        // bảng đăng nhập
+const Account       = require('../Models/Accounts');        // bảng đăng nhập
 const AccountDetail = require('../Models/AccountDetail');  // bảng hồ sơ 1‑1
 
 const { sendSuccess, sendError } = require('../Utils/responseHelper');
