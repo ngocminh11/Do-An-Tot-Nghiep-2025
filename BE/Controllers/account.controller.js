@@ -289,21 +289,27 @@ exports.updatePin = async (req, res) => {
 /* ========================================================================== */
 exports.deleteUser = async (req, res) => {
   const { id } = req.params;
-  if (!isValidId(id)) return sendError(res, 400, Messages.INVALID_ID);
+  if (!isValidId(id))
+    return sendError(res, 400, Messages.INVALID_ID);
 
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
+    // Xoá Account trước – nếu không tồn tại thì dừng
     const accDel = await Account.findByIdAndDelete(id, { session });
-    const detDel = await AccountDetail.findOneAndDelete({ accountId: id }, { session });
     if (!accDel) throw new Error(Messages.USER_NOT_FOUND);
+
+    // Xoá AccountDetail (không cần gán biến)
+    await AccountDetail.deleteOne({ accountId: id }, { session });
 
     await session.commitTransaction();
     return sendSuccess(res, 200, null, Messages.USER_DELETED);
   } catch (err) {
     await session.abortTransaction();
     return sendError(res, 500, err.message);
-  } finally { session.endSession(); }
+  } finally {
+    session.endSession();
+  }
 };
 
 /* ========================================================================== */
