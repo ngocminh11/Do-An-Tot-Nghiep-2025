@@ -240,7 +240,7 @@ exports.updateProduct = async (req, res) => {
 exports.updateInventory = async (req, res) => {
   const { id } = req.params;
   const { quantity, originalPrice } = req.body;
-
+  console.log("id",id)
   if (!isValidId(id)) return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
   if (quantity === undefined && originalPrice === undefined)
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Phải truyền "quantity" hoặc "originalPrice".');

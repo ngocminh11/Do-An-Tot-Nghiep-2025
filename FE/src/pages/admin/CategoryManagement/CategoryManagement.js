@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Popconfirm, message, Spin, Tag, Input } from 'antd';
+import { Table, Button, Space, Popconfirm, message, Spin, Tag, Input, Row, Col, Card as AntCard } from 'antd';
 import { EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import categoryService from '../../../services/categoryService';
@@ -202,13 +202,47 @@ const CategoryManagement = () => {
             {loading ? (
                 <Spin size="large" />
             ) : (
-                <Table
-                    columns={columns}
-                    dataSource={categories}
-                    rowKey="_id"
-                    pagination={pagination}
-                    onChange={handleTableChange}
-                />
+                <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
+                    {categories.length === 0 ? (
+                        <Col span={24} style={{ textAlign: 'center', color: '#888' }}>Không có danh mục nào.</Col>
+                    ) : (
+                        categories.map(category => (
+                            <Col xs={24} sm={12} md={8} lg={6} key={category._id}>
+                                <AntCard
+                                    className="category-menu-card"
+                                    actions={[
+                                        <Button
+                                            type="primary"
+                                            icon={<EditOutlined />}
+                                            onClick={() => navigate(`/admin/categories/edit/${category._id}`)}
+                                            size="small"
+                                        >Sửa</Button>,
+                                        <Popconfirm
+                                            title={`Bạn có chắc chắn muốn xóa danh mục ${category.name || 'này'}?`}
+                                            onConfirm={() => handleDelete(category._id)}
+                                            okText="Xóa"
+                                            okType="danger"
+                                            cancelText="Hủy"
+                                        >
+                                            <Button danger icon={<DeleteOutlined />} size="small">Xóa</Button>
+                                        </Popconfirm>
+                                    ]}
+                                >
+                                    <div style={{ fontWeight: 'bold', fontSize: 18 }}>{category.name}</div>
+                                    <div style={{ color: '#888', margin: '8px 0' }}>{category.description || 'Không mô tả'}</div>
+                                    <div style={{ marginBottom: 8 }}>
+                                        <Tag color={getStatusColor(category.status)}>
+                                            {category.status === 'active' ? 'Hoạt động' :
+                                                category.status === 'inactive' ? 'Không hoạt động' : 'Đã lưu trữ'}
+                                        </Tag>
+                                    </div>
+                                    <div style={{ fontSize: 12, color: '#aaa' }}>Ngày tạo: {new Date(category.createdAt).toLocaleDateString('vi-VN')}</div>
+                                    <div style={{ fontSize: 12, color: '#aaa' }}>Ngày cập nhật: {new Date(category.updatedAt).toLocaleDateString('vi-VN')}</div>
+                                </AntCard>
+                            </Col>
+                        ))
+                    )}
+                </Row>
             )}
         </div>
     );

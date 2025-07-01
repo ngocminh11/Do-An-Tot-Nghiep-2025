@@ -129,6 +129,75 @@ const productService = {
   getRecommendedProductsForChatbot: async (query) => {
     const response = await axios.get(`${API_URL}/products/recommend?query=${encodeURIComponent(query)}`);
     return response.data.data || [];
+  },
+
+  // Lấy sản phẩm theo danh mục (ADMIN API)
+  getProductsByCategoryAdmin: async (categoryId, params = {}) => {
+    try {
+      const { page = 1, limit = 10, status } = params;
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        ...(status && { status })
+      });
+      const response = await axios.get(`${API_URL}/admin/products/category/${categoryId}?${queryParams}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Nhập kho sản phẩm (PATCH /admin/products/:id/inventory)
+  updateInventory: async (id, { quantity, originalPrice }) => {
+    try {
+      const payload = {};
+      if (quantity !== undefined && quantity !== null) payload.quantity = quantity;
+      if (originalPrice !== undefined && originalPrice !== null) payload.originalPrice = originalPrice;
+      const response = await axios.patch(`${API_URL}/admin/products/${id}/inventory`, payload);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Đổi trạng thái sản phẩm (PATCH /admin/products/:id/status)
+  changeStatus: async (id, status) => {
+    try {
+      const response = await axios.patch(`${API_URL}/admin/products/${id}/status`, { status });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Lấy log thao tác của 1 sản phẩm (GET /admin/products/:id/logs)
+  getProductLogs: async (id, params = {}) => {
+    try {
+      const { page = 1, limit = 20 } = params;
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+      });
+      const response = await axios.get(`${API_URL}/admin/products/${id}/logs?${queryParams}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Lấy toàn bộ log thao tác sản phẩm (GET /admin/products/logs/all)
+  getAllProductLogs: async (params = {}) => {
+    try {
+      const { page = 1, limit = 20 } = params;
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+      });
+      const response = await axios.get(`${API_URL}/admin/products/logs/all?${queryParams}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
   }
 };
 

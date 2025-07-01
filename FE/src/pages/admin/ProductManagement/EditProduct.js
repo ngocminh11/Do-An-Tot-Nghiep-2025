@@ -195,15 +195,15 @@ const EditProduct = () => {
             setLoadingTags(true);
             try {
                 const response = await tagService.getAllTags();
-                if (response && Array.isArray(response.data)) {
-                    setTags(response.data.map(tag => ({
-                        ...tag,
-                        _id: String(tag._id),
-                        name: tag.name || 'Unnamed Tag'
-                    })));
-                } else {
-                    setTags([]);
-                    message.error('Không thể tải tags');
+                let tagArr = [];
+                if (Array.isArray(response?.data)) {
+                    tagArr = response.data;
+                } else if (Array.isArray(response?.data?.data)) {
+                    tagArr = response.data.data;
+                }
+                setTags(tagArr);
+                if (tagArr.length === 0) {
+                    message.info('Chưa có tag nào, hãy thêm tag mới!');
                 }
             } catch (error) {
                 setTags([]);
@@ -220,6 +220,11 @@ const EditProduct = () => {
 
     const handleFinish = async (values) => {
         try {
+            // DEBUG: log tagIds
+            console.log('TagIds gửi lên:', values.basicInformation?.tagIds);
+            // Đảm bảo tagIds luôn là mảng
+            const tagIds = Array.isArray(values.basicInformation?.tagIds) ? values.basicInformation.tagIds : [];
+            if (tagIds.length === 0) throw new Error('Vui lòng chọn ít nhất một tag');
             const formData = new FormData();
 
             // Append basic information
@@ -229,7 +234,7 @@ const EditProduct = () => {
                     sku: values.basicInformation.sku,
                     brand: 'CoCo',
                     categoryIds: values.basicInformation.categoryIds,
-                    tagIds: values.basicInformation.tagIds,
+                    tagIds: tagIds,
                     status: 'active'
                 }));
             }
