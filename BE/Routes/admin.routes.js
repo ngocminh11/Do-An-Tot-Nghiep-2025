@@ -1,110 +1,278 @@
+/* --------------------------------------------------------------------------
+ *  routes/index.js  –  Phân quyền chi tiết
+ * --------------------------------------------------------------------------
+ *  ROLE_QUYEN:
+ *   - Khách Hàng        : chỉ thao tác cá nhân
+ *   - Nhân Viên         : xem dữ liệu
+ *   - Quản Lý Kho       : CRUD Product | Category | Tag | Promotion | Post
+ *   - Quản Lý Nhân Sự   : CRUD Account
+ *   - Quản Lý Đơn Hàng  : CRUD Order
+ *   - Quản Lý Chính     : toàn quyền
+ * ------------------------------------------------------------------------ */
+
 const express = require('express');
-const router = express.Router();
-const categoryController = require('../Controllers/category.controller');
-const productController = require('../Controllers/product.controller');
-const userController = require('../Controllers/account.controller');
-const commentController = require('../Controllers/comment.controller');
-const tagController = require('../Controllers/tag.controller');
-const cartController = require('../Controllers/cart.controller');
-const mediaController = require('../Controllers/media.controller');
-const promotionController = require('../Controllers/promotion.controller');
-const postController = require('../Controllers/post.controller');
-const orderController = require('../Controllers/order.controller');
-const dashboardController = require('../Controllers/dashboard.controller');
-const { authenticateUser, authorizeAdmin } = require('../Middlewares/auth.middleware');
-const validateImageUpload = require('../Middlewares/upload.middleware');
+const router  = express.Router();
 
-// Routes for Product
-router.get('/products', productController.getAllProducts);
-router.get('/products/category/:categoryId', productController.getProductsByCategory);
-router.get('/products/:id', productController.getProductById);
-router.post('/products', validateImageUpload, productController.createProduct);
-router.put('/products/:id', validateImageUpload, productController.updateProduct);
-router.delete('/products/:id', productController.deleteProduct);
-router.get('/products/export/csv', productController.exportProductsToExcel);
+/* ==== Controllers ==== */
+const categoryCtrl  = require('../Controllers/category.controller');
+const productCtrl   = require('../Controllers/product.controller');
+const accountCtrl   = require('../Controllers/account.controller');
+const commentCtrl   = require('../Controllers/comment.controller');
+const tagCtrl       = require('../Controllers/tag.controller');
+const cartCtrl      = require('../Controllers/cart.controller');
+const mediaCtrl     = require('../Controllers/media.controller');
+const promotionCtrl = require('../Controllers/promotion.controller');
+const postCtrl      = require('../Controllers/post.controller');
+const orderCtrl     = require('../Controllers/order.controller');
+const dashboardCtrl = require('../Controllers/dashboard.controller');
 
-// --- Nhập kho sản phẩm ---
-router.patch('/products/:id/inventory', productController.updateInventory);
+/* ==== Middlewares ==== */
+const validateImageUpload            = require('../Middlewares/upload.middleware');
+const { authenticateUser, authorizeRoles } = require('../Middlewares/auth.middleware');
 
-// --- Đổi trạng thái sản phẩm ---
-router.patch('/products/:id/status', productController.changeStatus);
+/* ---- Helper ---- */
+const ALL_STAFF = [
+  'Nhân Viên',
+  'Quản Lý Kho',
+  'Quản Lý Nhân Sự',
+  'Quản Lý Đơn Hàng',
+  'Quản Lý Chính'
+];
 
-// --- Xem lịch sử thao tác (log) của sản phẩm ---
-router.get('/products/:id/logs', productController.getProductLogs);
+/* =========================================================================
+ * 1) PRODUCT
+ * ========================================================================= */
+router.get('/products',
+  authenticateUser, authorizeRoles(ALL_STAFF),
+  productCtrl.getAllProducts);
 
-// --- Xem toàn bộ lịch sử thao tác sản phẩm ---
-router.get('/products/logs/all', productController.getAllProductLogs);
+router.get('/products/export/csv',
+  authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']),
+  productCtrl.exportProductsToExcel);
+
+router.get('/products/category/:categoryId',
+  authenticateUser, authorizeRoles(ALL_STAFF),
+  productCtrl.getProductsByCategory);
+
+router.get('/products/:id',
+  authenticateUser, authorizeRoles(ALL_STAFF),
+  productCtrl.getProductById);
+
+router.post('/products',
+  authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']),
+  validateImageUpload,
+  productCtrl.createProduct);
+
+router.put('/products/:id',
+  authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']),
+  validateImageUpload,
+  productCtrl.updateProduct);
+
+router.delete('/products/:id',
+  authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']),
+  productCtrl.deleteProduct);
+
+/* --- kho & trạng thái (yêu cầu PIN) --- */
+router.patch('/products/:id/inventory',
+  authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']),
+  productCtrl.updateInventory);
+
+router.patch('/products/:id/status',
+  authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']),
+  productCtrl.changeStatus);
+
+/* --- Logs --- */
+router.get('/products/:id/logs',
+  authenticateUser, authorizeRoles(ALL_STAFF),
+  productCtrl.getProductLogs);
+
+router.get('/products/logs/all',
+  authenticateUser, authorizeRoles(ALL_STAFF),
+  productCtrl.getAllProductLogs);
 
 
-router.get('/media/:id', mediaController.streamImageById); // public
+/* =========================================================================
+ * 2) CATEGORY  (CRUD – Kho & Chính)
+ * ========================================================================= */
+router
+  .route('/categories')
+  .get (authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), categoryCtrl.getAllCategories)
+  .post(authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), categoryCtrl.createCategory);
 
-// Routes for Category
-router.get('/categories', categoryController.getAllCategories);
-router.get('/categories/:id', categoryController.getCategoryById);
-router.get('/categories/:id/products', categoryController.getCategoryWithProducts);
-router.post('/categories', categoryController.createCategory);
-router.put('/categories/:id', categoryController.updateCategory);
-router.delete('/categories/:id', categoryController.deleteCategory);
+router.get('/categories/:id/products',
+  authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']),
+  categoryCtrl.getCategoryWithProducts);
 
-// Routes for Account
-router.get('/accounts', authenticateUser, authorizeAdmin, userController.getAllUsers);
-router.get('/accounts/:id', authenticateUser, authorizeAdmin, userController.getUserById);
-router.post('/accounts', authenticateUser, authorizeAdmin, userController.createUserNoPin);
-router.post('/accounts/with-pin', authenticateUser, authorizeAdmin, userController.createUserWithPin);
-router.put('/accounts/:id', authenticateUser, authorizeAdmin, userController.updateUserNoPin);
-router.put('/accounts/with-pin/:id', authenticateUser, authorizeAdmin, userController.updateUserWithPin);
-router.patch('/accounts/:id/pin', authenticateUser, authorizeAdmin, userController.updatePin);
-router.post('/accounts/:id/verify-pin', authenticateUser, authorizeAdmin, userController.verifyPin);
-router.delete('/accounts/:id', authenticateUser, authorizeAdmin, userController.deleteUser);
+router
+  .route('/categories/:id')
+  .get   (authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), categoryCtrl.getCategoryById)
+  .put   (authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), categoryCtrl.updateCategory)
+  .delete(authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), categoryCtrl.deleteCategory);
 
-// Routes for Comment
-router.get('/', commentController.getAllComments);
-router.get('/comments', commentController.getAllComments);
-router.get('/comments/product/:productId', commentController.getCommentsByProduct);
-router.get('/comments/:id', commentController.getCommentById);
-router.delete('/comments/:id', commentController.deleteComment);
-router.put('/comments/:id/reply', commentController.replyToComment);
 
-// Routes for Tag
-router.get('/tags', tagController.getAllTags);
-router.get('/tags/:id', tagController.getTagById);
-router.post('/tags', tagController.createTag);
-router.put('/tags/:id', tagController.updateTag);
-router.delete('/tags/:id', tagController.deleteTag);
+/* =========================================================================
+ * 3) TAG  (đã đủ 5 route)
+ * ========================================================================= */
+router
+  .route('/tags')
+  .get (authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), tagCtrl.getAllTags)
+  .post(authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), tagCtrl.createTag);
 
-// Routes for Cart
-router.get('/carts', cartController.getAllCarts);
-router.get('/carts/:userId', cartController.getCartByUserId);
-router.delete('/carts/:userId', cartController.clearCartByUserId);
+router
+  .route('/tags/:id')
+  .get   (authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), tagCtrl.getTagById)
+  .put   (authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), tagCtrl.updateTag)
+  .delete(authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), tagCtrl.deleteTag);
 
-// Routes for Promotion
-router.post('/promotions', promotionController.createPromotion);
-router.get('/promotions', promotionController.getAllPromotions);
-router.get('/promotions/:id', promotionController.getPromotionById);
-router.put('/promotions/:id', promotionController.updatePromotion);
-router.delete('/promotions/:id', promotionController.deletePromotion);
 
-// Routes for Order (admin)
-router.get('/orders', orderController.getAllOrders);
-router.get('/orders/:id', orderController.getOrderById);
-router.patch('/orders/:id/status', orderController.updateOrderStatus);
-router.post('/orders/:id/respond-cancel', orderController.respondCancelRequest);
-router.put('/orders/:id', orderController.updateOrder);
-router.delete('/orders/:id', orderController.deleteOrder);
+/* =========================================================================
+ * 4) ACCOUNT / USER  (Nhân Sự & Chính)
+ * ========================================================================= */
+router.get('/accounts',
+  authenticateUser, authorizeRoles(['Quản Lý Nhân Sự','Quản Lý Chính']),
+  accountCtrl.getAllUsers);
 
-// Routes for Post
-router.get('/posts', postController.getAllPosts);
-router.get('/posts/:id', postController.getPostById);
-router.post('/posts', postController.createPost);
-router.put('/posts/:id', postController.updatePost);
-router.delete('/posts/:id', postController.deletePost);
+router.post('/accounts',
+  authenticateUser, authorizeRoles(['Quản Lý Nhân Sự','Quản Lý Chính']),
+  accountCtrl.createUserNoPin);
 
-// Routes for Dashboard (admin)
-router.get('/revenue-by-month', dashboardController.revenueByMonth);
-router.get('/top-products', dashboardController.topProducts);
-router.get('/low-stock',  dashboardController.lowStockProducts);
-router.get('/order-status-ratio',dashboardController.orderStatusRatio);
-router.get('/user-growth',      dashboardController.userGrowth);
+router.post('/accounts/with-pin',
+  authenticateUser, authorizeRoles(['Quản Lý Nhân Sự','Quản Lý Chính']),
+  accountCtrl.createUserWithPin);
 
+router
+  .route('/accounts/:id')
+  .get   (authenticateUser, authorizeRoles(['Quản Lý Nhân Sự','Quản Lý Chính']), accountCtrl.getUserById)
+  .put   (authenticateUser, authorizeRoles(['Quản Lý Nhân Sự','Quản Lý Chính']), accountCtrl.updateUserNoPin)
+  .delete(authenticateUser, authorizeRoles(['Quản Lý Nhân Sự','Quản Lý Chính']), accountCtrl.deleteUser);
+
+router.put('/accounts/with-pin/:id',
+  authenticateUser, authorizeRoles(['Quản Lý Nhân Sự','Quản Lý Chính']),
+  accountCtrl.updateUserWithPin);
+
+router.patch('/accounts/:id/pin',
+  authenticateUser, authorizeRoles(['Quản Lý Nhân Sự','Quản Lý Chính']),
+  accountCtrl.updatePin);
+
+router.post('/accounts/:id/verify-pin',
+  authenticateUser, authorizeRoles(['Quản Lý Nhân Sự','Quản Lý Chính']),
+  accountCtrl.verifyPin);
+
+
+/* =========================================================================
+ * 5) ORDER  (Đơn Hàng & Chính)
+ * ========================================================================= */
+// Read
+router.get('/orders',
+  authenticateUser, authorizeRoles(ALL_STAFF),
+  orderCtrl.getAllOrders);
+
+router.get('/orders/:id',
+  authenticateUser, authorizeRoles(ALL_STAFF),
+  orderCtrl.getOrderById);
+
+// Write (yêu cầu PIN trong controller)
+router.patch('/orders/:id/status',
+  authenticateUser, authorizeRoles(['Quản Lý Đơn Hàng','Quản Lý Chính']),
+  orderCtrl.updateOrderStatus);
+
+router.post('/orders/:id/respond-cancel',
+  authenticateUser, authorizeRoles(['Quản Lý Đơn Hàng','Quản Lý Chính']),
+  orderCtrl.respondCancelRequest);
+
+router.put('/orders/:id',
+  authenticateUser, authorizeRoles(['Quản Lý Đơn Hàng','Quản Lý Chính']),
+  orderCtrl.updateOrder);
+
+router.delete('/orders/:id',
+  authenticateUser, authorizeRoles(['Quản Lý Đơn Hàng','Quản Lý Chính']),
+  orderCtrl.deleteOrder);
+
+
+/* =========================================================================
+ * 6) PROMOTION  – Quản Lý Kho & Quản Lý Chính
+ * ========================================================================= */
+router
+  .route('/promotions')
+  .get (authenticateUser, authorizeRoles(ALL_STAFF), promotionCtrl.getAllPromotions)
+  .post(authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), promotionCtrl.createPromotion);
+
+router
+  .route('/promotions/:id')
+  .get   (authenticateUser, authorizeRoles(ALL_STAFF), promotionCtrl.getPromotionById)
+  .put   (authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), promotionCtrl.updatePromotion)
+  .delete(authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), promotionCtrl.deletePromotion);
+
+
+/* =========================================================================
+ * 7) POST / BLOG  – Quản Lý Kho & Quản Lý Chính
+ * ========================================================================= */
+router
+  .route('/posts')
+  .get (authenticateUser, authorizeRoles(ALL_STAFF), postCtrl.getAllPosts)
+  .post(authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), postCtrl.createPost);
+
+router
+  .route('/posts/:id')
+  .get   (authenticateUser, authorizeRoles(ALL_STAFF), postCtrl.getPostById)
+  .put   (authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), postCtrl.updatePost)
+  .delete(authenticateUser, authorizeRoles(['Quản Lý Kho','Quản Lý Chính']), postCtrl.deletePost);
+
+
+/* =========================================================================
+ * 8) COMMENT – tất cả staff đều xem được / chỉ admin được reply/delete
+ * ========================================================================= */
+router.get('/comments',
+  authenticateUser, authorizeRoles(ALL_STAFF),
+  commentCtrl.getAllComments);
+
+router.get('/comments/product/:productId',
+  authenticateUser, authorizeRoles(ALL_STAFF),
+  commentCtrl.getCommentsByProduct);
+
+router.get('/comments/:id',
+  authenticateUser, authorizeRoles(ALL_STAFF),
+  commentCtrl.getCommentById);
+
+router.delete('/comments/:id',
+  authenticateUser, authorizeRoles(['Quản Lý Chính']),
+  commentCtrl.deleteComment);
+
+router.put('/comments/:id/reply',
+  authenticateUser, authorizeRoles(['Quản Lý Chính']),
+  commentCtrl.replyToComment);
+
+
+/* =========================================================================
+ * 9) DASHBOARD – Quản Lý Chính (toàn quyền)
+ * ========================================================================= */
+router.get('/revenue-by-month',
+  authenticateUser, authorizeRoles(['Quản Lý Chính']),
+  dashboardCtrl.revenueByMonth);
+
+router.get('/top-products',
+  authenticateUser, authorizeRoles(['Quản Lý Chính']),
+  dashboardCtrl.topProducts);
+
+router.get('/low-stock',
+  authenticateUser, authorizeRoles(['Quản Lý Chính']),
+  dashboardCtrl.lowStockProducts);
+
+router.get('/order-status-ratio',
+  authenticateUser, authorizeRoles(['Quản Lý Chính']),
+  dashboardCtrl.orderStatusRatio);
+
+router.get('/user-growth',
+  authenticateUser, authorizeRoles(['Quản Lý Chính']),
+  dashboardCtrl.userGrowth);
+
+/* =========================================================================
+ * 10) MEDIA public & CART user‑level (không đổi)
+ * ========================================================================= */
+router.get('/media/:id', mediaCtrl.streamImageById);
+
+router.get('/carts', cartCtrl.getAllCarts);
+router.get('/carts/:userId', cartCtrl.getCartByUserId);
+router.delete('/carts/:userId', cartCtrl.clearCartByUserId);
 
 module.exports = router;

@@ -1,48 +1,173 @@
+// ============================================================================
+//   Chỉ dành cho người dùng cuối (role = 'Khách Hàng')
+// ============================================================================
+
 const express = require('express');
-const router = express.Router();
-const userController = require('../Controllers/account.controller');
-const cartController = require('../Controllers/cart.controller');
-const orderController = require('../Controllers/order.controller');
-const categoryController = require('../Controllers/category.controller');
-const commentController = require('../Controllers/comment.controller');
-const productController = require('../Controllers/product.controller');
-const { authenticateUser } = require('../Middlewares/auth.middleware');
+const router  = express.Router();
 
-// Routes for User Account (user & admin can access their own or by ID)
-router.get('/accounts/:id', authenticateUser, userController.getUserById);
-router.put('/accounts/:id', authenticateUser, userController.updateUserNoPin);
-router.patch('/accounts/:id/status', authenticateUser, userController.updateOwnStatus);
+const accountCtrl  = require('../Controllers/account.controller');
+const cartCtrl     = require('../Controllers/cart.controller');
+const orderCtrl    = require('../Controllers/order.controller');
+const categoryCtrl = require('../Controllers/category.controller');
+const productCtrl  = require('../Controllers/product.controller');
+const commentCtrl  = require('../Controllers/comment.controller');
 
-// Routes for Cart (user only)
-router.post('/carts/add', authenticateUser, cartController.addToCart);
-router.put('/carts/update', authenticateUser, cartController.updateQuantity);
-router.delete('/carts/remove', authenticateUser, cartController.removeFromCart);
-router.get('/carts/my-cart', authenticateUser, cartController.getMyCart);
-router.delete('/carts/clear', authenticateUser, cartController.clearMyCart);
+const {
+  authenticateUser,
+  authorizeRoles           // middleware đã khai báo trước
+} = require('../Middlewares/auth.middleware');
 
-// Routes for Order (user & admin)
-router.post('/orders',authenticateUser, orderController.createOrder);
-router.get('/orders/my-orders',authenticateUser, authenticateUser, orderController.getUserOrders);
-router.get('/orders/:id', authenticateUser, orderController.getOrderById);
-router.post('/orders/:id/cancel-request', authenticateUser, orderController.cancelRequestByUser);
+const CUSTOMER = ['Khách Hàng'];
 
-// Routes for Categories (public access)
-router.get('/categories', authenticateUser,categoryController.getAllCategories);
-router.get('/categories/:id',authenticateUser, categoryController.getCategoryById);
-router.get('/categories/:id/products',authenticateUser, categoryController.getCategoryWithProducts);
+/* -------------------------------------------------------------------------- */
+/* 1.  ACCOUNT – chỉ cho owner (hoặc admin – đã xử lý trong controller)       */
+/* -------------------------------------------------------------------------- */
+router.get(
+  '/accounts/:id',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  accountCtrl.getUserById
+);
 
-// Routes for Products (public access)
-router.get('/products',authenticateUser, productController.getAllProducts);
-router.get('/products/category/:categoryId',authenticateUser, productController.getProductsByCategory);
-router.get('/products/:id',authenticateUser, productController.getProductById);
+router.put(
+  '/accounts/:id',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  accountCtrl.updateUserNoPin
+);
 
-// Routes for Comment (user)
-router.get('/comments',authenticateUser, commentController.getAllComments);
-router.post('/comments', authenticateUser, commentController.createComment);
-router.get('/comments/product/:productId', commentController.getCommentsByProduct);
-router.get('/comments/:id',authenticateUser, commentController.getCommentById);
-router.put('/comments/:id', authenticateUser, commentController.updateComment);
-router.delete('/comments/:id', authenticateUser, commentController.deleteComment);
-router.put('/comments/:id/reply', authenticateUser, commentController.replyToComment);
+router.patch(
+  '/accounts/:id/status',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  accountCtrl.updateOwnStatus
+);
+
+/* -------------------------------------------------------------------------- */
+/* 2.  CART                                                                  */
+/* -------------------------------------------------------------------------- */
+router.post(
+  '/carts/add',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  cartCtrl.addToCart
+);
+
+router.put(
+  '/carts/update',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  cartCtrl.updateQuantity
+);
+
+router.delete(
+  '/carts/remove',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  cartCtrl.removeFromCart
+);
+
+router.get(
+  '/carts/my-cart',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  cartCtrl.getMyCart
+);
+
+router.delete(
+  '/carts/clear',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  cartCtrl.clearMyCart
+);
+
+/* -------------------------------------------------------------------------- */
+/* 3.  ORDER                                                                 */
+/* -------------------------------------------------------------------------- */
+router.post(
+  '/orders',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  orderCtrl.createOrder
+);
+
+router.get(
+  '/orders/my-orders',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  orderCtrl.getUserOrders
+);
+
+router.get(
+  '/orders/:id',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  orderCtrl.getOrderById
+);
+
+router.post(
+  '/orders/:id/cancel-request',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  orderCtrl.cancelRequestByUser
+);
+
+/* -------------------------------------------------------------------------- */
+/* 4.  CATEGORY & PRODUCT – public (không cần login)                         */
+/* -------------------------------------------------------------------------- */
+router.get('/categories',                 categoryCtrl.getAllCategories);
+router.get('/categories/:id',             categoryCtrl.getCategoryById);
+router.get('/categories/:id/products',    categoryCtrl.getCategoryWithProducts);
+
+router.get('/products',                   productCtrl.getAllProducts);
+router.get('/products/category/:categoryId', productCtrl.getProductsByCategory);
+router.get('/products/:id',               productCtrl.getProductById);
+
+/* -------------------------------------------------------------------------- */
+/* 5.  COMMENT – user phải đăng nhập                                          */
+/* -------------------------------------------------------------------------- */
+router.get(
+  '/comments',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  commentCtrl.getAllComments
+);
+
+router.post(
+  '/comments',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  commentCtrl.createComment
+);
+
+router.get('/comments/product/:productId', commentCtrl.getCommentsByProduct);
+
+router.get(
+  '/comments/:id',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  commentCtrl.getCommentById
+);
+
+router.put(
+  '/comments/:id',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  commentCtrl.updateComment
+);
+
+router.delete(
+  '/comments/:id',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  commentCtrl.deleteComment
+);
+
+router.put(
+  '/comments/:id/reply',
+  authenticateUser,
+  authorizeRoles(...CUSTOMER),
+  commentCtrl.replyToComment
+);
 
 module.exports = router;
