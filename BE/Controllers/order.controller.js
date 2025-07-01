@@ -1,13 +1,8 @@
-/* ------------------------------------------------------------- *
- *  controllers/order.controller.js                              *
- *  (C) 2024 – COCOO SHOP – Back-end team                        *
- * ------------------------------------------------------------- */
-
 const mongoose  = require('mongoose');
 const Order     = require('../Models/Orders');
 const OrderDetail = require('../Models/OrderDetails');
 const Product   = require('../Models/Products');
-
+const checkPin = require('../Utils/checkPin'); 
 const {
   sendSuccess,
   sendError
@@ -229,6 +224,7 @@ exports.getAllOrders = async (req, res) => {
  * ============================================================ */
 exports.updateOrderStatus = async (req, res) => {
   try {
+    await checkPin(req);
     const { id }                        = req.params;
     const { status, shippingInfo,
             pin, reason }               = req.body;
@@ -328,6 +324,7 @@ exports.updateOrderStatus = async (req, res) => {
  * 6. ADMIN – RESPOND CANCEL REQUEST                              *
  * ============================================================ */
 exports.respondCancelRequest = async (req, res) => {
+  await checkPin(req);
   const { id } = req.params;
   const { accept, reason } = req.body;
 
@@ -370,6 +367,7 @@ exports.respondCancelRequest = async (req, res) => {
  * 7. ADMIN – UPDATE MISC FIELD                                  *
  * ============================================================ */
 exports.updateOrder = async (req, res) => {
+  await checkPin(req);
   const { id } = req.params;
   if (!mongoose.isValidObjectId(id))
     return sendError(res, 400, Messages.INVALID_ID);
@@ -410,6 +408,7 @@ exports.updateOrder = async (req, res) => {
  * 8. ADMIN – DELETE ORDER                                       *
  * ============================================================ */
 exports.deleteOrder = async (req, res) => {
+  await checkPin(req);
   const { id } = req.params;
   if (!mongoose.isValidObjectId(id))
     return sendError(res, 400, Messages.INVALID_ID);
