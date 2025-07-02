@@ -42,6 +42,8 @@ import productService from '../../../services/productService';
 import categoryService from '../../../services/categoryService';
 import debounce from 'lodash/debounce';
 import './ProductManagement.scss';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useAuthModal } from '../../../contexts/AuthModalContext';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
@@ -126,10 +128,14 @@ const ProductManagement = () => {
     total: 0,
   });
   const [imageUrls, setImageUrls] = useState({}); // key: product._id, value: objectURL
-  const [inventoryModal, setInventoryModal] = useState({ visible: false, product: null });
   const [statusModal, setStatusModal] = useState({ visible: false, product: null });
   const [logsModal, setLogsModal] = useState({ visible: false, product: null, logs: [], loading: false });
   const [form] = Form.useForm();
+  const { logout, handleSessionExpired } = useAuth();
+  const { setShowLogin } = useAuthModal();
+  const [loginMessage, setLoginMessage] = useState('');
+  const pinInputRef = React.useRef();
+  const [inventoryModal, setInventoryModal] = useState({ visible: false, product: null });
 
   const navigate = useNavigate();
 
@@ -152,8 +158,7 @@ const ProductManagement = () => {
           status: filters.status
         });
       }
-      // DEBUG: log response để kiểm tra cấu trúc dữ liệu
-      console.log('Product API response:', response);
+
       let productsData = [];
       if (Array.isArray(response)) {
         productsData = response;
@@ -164,6 +169,7 @@ const ProductManagement = () => {
       } else if (Array.isArray(response?.data?.products)) {
         productsData = response.data.products;
       }
+
       setAllProducts(productsData);
       setPagination(prev => ({
         ...prev,
@@ -171,10 +177,19 @@ const ProductManagement = () => {
         current: response?.data?.currentPage || 1,
         pageSize: response?.data?.perPage || pagination.pageSize
       }));
+
       if (!productsData || productsData.length === 0) {
         message.info('Không có sản phẩm nào để hiển thị');
       }
     } catch (error) {
+      console.error('Error fetching products:', error);
+
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+
       setAllProducts([]);
       setPagination(prev => ({ ...prev, total: 0 }));
       message.error('Không thể tải danh sách sản phẩm');
@@ -188,7 +203,6 @@ const ProductManagement = () => {
     setLoadingCategories(true);
     try {
       const response = await categoryService.getAllCategories();
-      // Chuẩn hóa lấy đúng mảng danh mục
       if (response && Array.isArray(response.data)) {
         setCategories(response.data.map(cat => ({
           ...cat,
@@ -200,6 +214,14 @@ const ProductManagement = () => {
         message.error('Không thể tải danh mục sản phẩm');
       }
     } catch (error) {
+      console.error('Error fetching categories:', error);
+
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+
       setCategories([]);
       message.error('Không thể tải danh mục sản phẩm');
     } finally {
@@ -366,34 +388,15 @@ const ProductManagement = () => {
       message.success('Xóa sản phẩm thành công');
       fetchProducts();
     } catch (error) {
-      message.error('Không thể xóa sản phẩm');
-    }
-  };
+      console.error('Error deleting product:', error);
 
-  // Nhập kho sản phẩm
-  const handleInventory = (product) => {
-    setInventoryModal({ visible: true, product });
-    form.resetFields();
-  };
-  const handleInventoryOk = async () => {
-    try {
-      const values = await form.validateFields();
-      // Nếu cả hai trường đều rỗng hoặc không hợp lệ
-      if ((values.quantity === undefined || values.quantity === null) && (values.originalPrice === undefined || values.originalPrice === null)) {
-        message.error('Vui lòng nhập số lượng hoặc giá nhập mới!');
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        handleSessionExpired();
         return;
       }
-      // Chỉ truyền các trường có giá trị
-      const payload = {};
-      if (values.quantity !== undefined && values.quantity !== null) payload.quantity = values.quantity;
-      if (values.originalPrice !== undefined && values.originalPrice !== null) payload.originalPrice = values.originalPrice;
-      await productService.updateInventory(inventoryModal.product._id, payload);
-      message.success('Nhập kho thành công');
-      setInventoryModal({ visible: false, product: null });
-      form.resetFields();
-      fetchProducts();
-    } catch (error) {
-      message.error(error?.message || 'Nhập kho thất bại');
+
+      message.error('Không thể xóa sản phẩm');
     }
   };
 
@@ -410,9 +413,18 @@ const ProductManagement = () => {
       setStatusModal({ visible: false, product: null });
       fetchProducts();
     } catch (error) {
+      console.error('Error changing status:', error);
+
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+
       message.error(error?.message || 'Đổi trạng thái thất bại');
     }
   };
+
   const openStatusModal = (product) => setStatusModal({ visible: true, product });
 
   // Xem log thao tác sản phẩm
@@ -422,8 +434,75 @@ const ProductManagement = () => {
       const res = await productService.getProductLogs(product._id);
       setLogsModal({ visible: true, product, logs: res.data?.data || [], loading: false });
     } catch (error) {
+      console.error('Error fetching logs:', error);
+
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+
       setLogsModal({ visible: true, product, logs: [], loading: false });
       message.error('Không thể tải lịch sử thao tác');
+    }
+  };
+
+  const handleInventory = (product) => {
+    setInventoryModal({ visible: true, product });
+    form.resetFields();
+  };
+
+  const handleInventoryOk = async () => {
+    try {
+      const values = await form.validateFields();
+
+      // Validate PIN: phải là 6 số
+      if (!values.pin || !/^\d{6}$/.test(values.pin)) {
+        message.error('Mã PIN phải gồm đúng 6 chữ số!');
+        pinInputRef.current?.focus();
+        return;
+      }
+
+      // Nếu cả hai trường đều rỗng
+      if (!values.quantity && !values.originalPrice) {
+        message.error('Vui lòng nhập số lượng hoặc giá nhập mới!');
+        return;
+      }
+
+      // Chuẩn hóa payload
+      const payload = {
+        quantity: values.quantity || 0,
+        originalPrice: values.originalPrice || undefined,
+        pin: values.pin
+      };
+
+      // Gọi API nhập kho
+      await productService.updateInventory(
+        inventoryModal.product._id,
+        payload
+      );
+
+      message.success('Nhập kho thành công');
+      setInventoryModal({ visible: false, product: null });
+      form.resetFields();
+      fetchProducts();
+    } catch (error) {
+      console.error('Error updating inventory:', error);
+
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+
+      const errorMessage = error?.response?.data?.message || error?.message || 'Nhập kho thất bại';
+
+      if (errorMessage.toLowerCase().includes('pin')) {
+        message.error(errorMessage);
+        pinInputRef.current?.focus();
+      } else {
+        message.error(errorMessage);
+      }
     }
   };
 
@@ -572,25 +651,7 @@ const ProductManagement = () => {
           </div>
         </Card>
       </Card>
-      {/* Modal nhập kho */}
-      <Modal
-        title={`Nhập kho: ${inventoryModal.product?.basicInformation?.productName || ''}`}
-        visible={inventoryModal.visible}
-        onOk={handleInventoryOk}
-        onCancel={() => { setInventoryModal({ visible: false, product: null }); form.resetFields(); }}
-        okText="Nhập kho"
-        cancelText="Hủy"
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item name="quantity" label="Số lượng nhập thêm">
-            <InputNumber min={1} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="originalPrice" label="Giá nhập mới (nếu có)">
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <div style={{ color: '#888', fontSize: 12 }}>Bạn có thể nhập chỉ số lượng, chỉ giá nhập mới hoặc cả hai.</div>
-        </Form>
-      </Modal>
+
       {/* Modal đổi trạng thái */}
       <Modal
         title={`Đổi trạng thái: ${statusModal.product?.basicInformation?.productName || ''}`}
@@ -604,6 +665,7 @@ const ProductManagement = () => {
           <Menu.Item key="Ngừng Bán" disabled={statusModal.product?.basicInformation?.status === 'Ngừng Bán'}>Ngừng Bán</Menu.Item>
         </Menu>
       </Modal>
+
       {/* Modal log thao tác */}
       <Modal
         title={`Lịch sử thao tác: ${logsModal.product?.basicInformation?.productName || ''}`}
@@ -624,6 +686,89 @@ const ProductManagement = () => {
             ))}
           </Timeline>
         )}
+      </Modal>
+
+      {/* Modal nhập kho */}
+      <Modal
+        title={`Nhập kho: ${inventoryModal.product?.basicInformation?.productName || ''}`}
+        visible={inventoryModal.visible}
+        onOk={handleInventoryOk}
+        onCancel={() => {
+          setInventoryModal({ visible: false, product: null });
+          form.resetFields();
+        }}
+        okText="Nhập kho"
+        cancelText="Hủy"
+        width={500}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            name="quantity"
+            label="Số lượng nhập thêm"
+            rules={[{
+              validator: (_, value) => {
+                if (!value && !form.getFieldValue('originalPrice')) {
+                  return Promise.reject('Vui lòng nhập số lượng hoặc giá nhập mới!');
+                }
+                if (value && value <= 0) {
+                  return Promise.reject('Số lượng phải lớn hơn 0');
+                }
+                return Promise.resolve();
+              }
+            }]}
+          >
+            <InputNumber
+              min={0}
+              style={{ width: '100%' }}
+              placeholder="Nhập số lượng (nếu có)"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="originalPrice"
+            label="Giá nhập mới (nếu có)"
+            rules={[{
+              validator: (_, value) => {
+                if (!value && !form.getFieldValue('quantity')) {
+                  return Promise.reject('Vui lòng nhập số lượng hoặc giá nhập mới!');
+                }
+                if (value && value <= 0) {
+                  return Promise.reject('Giá nhập phải lớn hơn 0');
+                }
+                return Promise.resolve();
+              }
+            }]}
+          >
+            <InputNumber
+              min={0}
+              style={{ width: '100%' }}
+              placeholder="Nhập giá nhập mới (nếu có)"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="pin"
+            label="Mã PIN xác nhận"
+            rules={[
+              { required: true, message: 'Vui lòng nhập mã PIN!' },
+              { pattern: /^\d{6}$/, message: 'Mã PIN phải gồm đúng 6 chữ số!' }
+            ]}
+          >
+            <Input.Password
+              placeholder="Nhập mã PIN"
+              maxLength={6}
+              ref={pinInputRef}
+            />
+          </Form.Item>
+
+          <div style={{ color: '#888', fontSize: 12, marginTop: 8 }}>
+            <Text type="secondary">
+              • Bạn có thể nhập chỉ số lượng, chỉ giá nhập mới hoặc cả hai.<br />
+              • Mã PIN là bắt buộc để xác nhận thao tác nhập kho.<br />
+              • Thao tác này sẽ được ghi lại trong lịch sử.
+            </Text>
+          </div>
+        </Form>
       </Modal>
     </div>
   );

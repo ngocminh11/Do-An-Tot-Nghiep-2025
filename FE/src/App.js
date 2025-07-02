@@ -25,6 +25,9 @@ import { MailOutlined } from '@ant-design/icons';
 import OrderManagement from './pages/admin/OrderManagement/OrderManagement';
 import PromotionManagement from './pages/admin/PromotionManagement/PromotionManagement';
 import CommentManagement from './pages/admin/CommentManagement/CommentManagement';
+import { AuthModalProvider, useAuthModal } from './contexts/AuthModalContext';
+import { AuthProviderWithNavigate } from './contexts/AuthContext';
+import { LoginModal } from './components/common/AuthModals';
 
 // Lazy load user components with preloading hints
 const Home = lazy(() => import('./pages/user/Home/Home'));
@@ -50,18 +53,30 @@ const UserManagement = lazy(() => import('./pages/admin/UserManagement/UserManag
 const ContentManagement = lazy(() => import('./pages/admin/ContentManagement/ContentManagement'));
 const Settings = lazy(() => import('./pages/admin/Settings/Settings'));
 
-// Memoized Protected Route component
-const ProtectedRoute = React.memo(({ children, isAdmin }) => {
-  const { isAuthenticated } = useAuth();
+const ADMIN_ROLES = [
+  'Nhân Viên',
+  'Quản Lý Kho',
+  'Quản Lý Nhân Sự',
+  'Quản Lý Đơn Hàng',
+  'Quản Lý Chính'
+];
 
-  // Remove authentication check for admin routes
+const ProtectedRoute = React.memo(({ children, isAdmin }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingFallback />;
+  }
+
   if (isAdmin) {
+    if (!user || !ADMIN_ROLES.includes(user.role)) {
+      return <Navigate to="/" replace />;
+    }
     return children;
   }
 
-  // Keep authentication check for user routes
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+  if (!user) {
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -82,25 +97,11 @@ import './pages/admin/TagManagement/TagManagement.scss';
 import './pages/user/Cart/Cart.scss';
 import './pages/user/Checkout/Checkout.scss';
 
-const App = () => {
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  const token = Cookies.get('token');
-
-  return (
-    <Router>
-      <AppContent />
-    </Router>
-  );
-};
-
-// Memoized AppContent component
-const AppContent = React.memo(() => {
+function AppContent() {
   const location = useLocation();
   const isAdminRoute = useMemo(() => location.pathname.startsWith('/admin'), [location.pathname]);
   const { user } = useAuth();
+  const { showLogin, setShowLogin } = useAuthModal();
 
   // Memoized route configurations
   const userRoutes = useMemo(() => [
@@ -158,6 +159,14 @@ const AppContent = React.memo(() => {
             <Route key={index} path={route.path} element={route.element} />
           ))}
 
+          {/* Route riêng cho từng role */}
+          <Route path="/user" element={<Home />} />
+          <Route path="/staff" element={<AdminLayout><Dashboard /></AdminLayout>} />
+          <Route path="/warehouseManager" element={<AdminLayout><ProductManagement /></AdminLayout>} />
+          <Route path="/orderManager" element={<AdminLayout><OrderManagement /></AdminLayout>} />
+          <Route path="/humanResourcesManager" element={<AdminLayout><UserManagement /></AdminLayout>} />
+          <Route path="/admin" element={<AdminLayout><Dashboard /></AdminLayout>} />
+
           {/* Protected User Routes */}
           <Route
             path="/checkout"
@@ -193,8 +202,13 @@ const AppContent = React.memo(() => {
       {shouldShowFooter && <AppFooter />}
       {/* Show ChatBot for all non-admin routes */}
       {shouldShowChatBot && <ChatBot />}
+      <LoginModal open={showLogin} onClose={() => setShowLogin(false)} />
     </>
   );
-});
+}
+
+function App() {
+  return <AppContent />;
+}
 
 export default App;

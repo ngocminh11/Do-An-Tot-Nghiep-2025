@@ -1,5 +1,6 @@
 import axios from 'axios';
 import config from '../config';
+import Cookies from 'js-cookie';
 
 const API_URL = config.API_BASE_URL;
 
@@ -25,8 +26,10 @@ const categoryService = {
 
     // Lấy tất cả danh mục (có phân trang)
     getAllCategories: async (params = {}) => {
+        const token = Cookies.get('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         try {
-            const response = await axios.get(`${API_URL}/admin/categories`, { params });
+            const response = await axios.get(`${API_URL}/admin/categories`, { params, headers });
             // Chuẩn hóa dữ liệu trả về cho FE
             if (response.data && response.data.data) {
                 return {

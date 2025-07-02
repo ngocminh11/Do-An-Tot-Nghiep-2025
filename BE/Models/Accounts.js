@@ -1,10 +1,11 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
+const bcrypt = require('bcryptjs');
 
 /* ------------------ Email validator ------------------ */
 const emailValidator = {
   validator: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
-  message:   props => `${props.value} không phải email hợp lệ.`
+  message: props => `${props.value} không phải email hợp lệ.`
 };
 
 /* ------------------ Hằng số role --------------------- */
@@ -48,8 +49,9 @@ const userSchema = new Schema(
     pin: {
       type: String,
       minlength: 6,
-      maxlength: 6,
-      default: null
+      maxlength: 60, // bcrypt hash length
+      default: null,
+      select: false // never return PIN in queries
     },
 
     role: {
@@ -65,16 +67,16 @@ const userSchema = new Schema(
     },
 
     registrationIP: String,
-    userAgent:     String,
-    refreshToken:  String
+    userAgent: String,
+    refreshToken: String
   },
   { timestamps: true }
 );
 
 /* ------------------ Ràng buộc PIN theo role ------------------ */
 userSchema.pre('validate', function (next) {
-  const needPin   = PIN_ROLES.includes(this.role);
-  const hasPin    = typeof this.pin === 'string' && this.pin.length > 0;
+  const needPin = PIN_ROLES.includes(this.role);
+  const hasPin = typeof this.pin === 'string' && this.pin.length > 0;
 
   if (needPin && !hasPin)        // role cần nhưng chưa có
     this.invalidate('pin', 'Vai trò này phải thiết lập PIN 6 số.');
@@ -83,6 +85,14 @@ userSchema.pre('validate', function (next) {
   if (!needPin && hasPin)        // role không được phép có PIN
     this.invalidate('pin', 'Chỉ các vai trò quản lý mới được thiết lập PIN.');
 
+  next();
+});
+
+// Hash PIN before save if modified
+userSchema.pre('save', async function (next) {
+  if (this.isModified('pin') && this.pin && /^\d{6}$/.test(this.pin)) {
+    this.pin = await bcrypt.hash(this.pin, 10);
+  }
   next();
 });
 

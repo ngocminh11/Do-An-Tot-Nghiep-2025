@@ -6,6 +6,8 @@ import postService from '../../../services/postService';
 import categoryService from '../../../services/categoryService';
 import tagService from '../../../services/tagService';
 import slugify from 'slugify';
+import { CKEditor } from '@ckeditor/ckeditor5-react';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -18,6 +20,7 @@ const AddPost = () => {
     const [tags, setTags] = useState([]);
     const [loading, setLoading] = useState(false);
     const [loadingData, setLoadingData] = useState(true);
+    const [content, setContent] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -45,7 +48,7 @@ const AddPost = () => {
             // Sinh excerpt nếu thiếu
             let excerpt = values.excerpt?.trim();
             if (!excerpt) {
-                excerpt = values.content?.substring(0, 297) + (values.content?.length > 300 ? '...' : '');
+                excerpt = content?.substring(0, 297) + (content?.length > 300 ? '...' : '');
             }
             // Sinh slug nếu thiếu
             let slug = slugify(values.title || '', { lower: true, strict: true });
@@ -53,7 +56,7 @@ const AddPost = () => {
             const postData = {
                 title: values.title,
                 slug,
-                content: values.content,
+                content: content,
                 excerpt,
                 category: values.category,
                 tags: values.tags,
@@ -86,7 +89,20 @@ const AddPost = () => {
             <h2>Thêm bài viết mới</h2>
             <Form form={form} layout="vertical" onFinish={handleFinish}>
                 <Form.Item name="title" label="Tiêu đề" rules={[{ required: true, message: 'Nhập tiêu đề' }]}> <Input /> </Form.Item>
-                <Form.Item name="content" label="Nội dung" rules={[{ required: true, message: 'Nhập nội dung' }]}> <TextArea rows={5} /> </Form.Item>
+                <Form.Item name="content" label="Nội dung" rules={[{ required: true, message: 'Nhập nội dung' }]}>
+                    <CKEditor
+                        editor={ClassicEditor}
+                        data={content}
+                        onChange={(event, editor) => setContent(editor.getData())}
+                        config={{
+                            ckfinder: { uploadUrl: '/api/upload' },
+                            toolbar: [
+                                'heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', 'blockQuote',
+                                'insertTable', 'imageUpload', 'mediaEmbed', 'undo', 'redo', 'alignment', 'outdent', 'indent', 'codeBlock'
+                            ]
+                        }}
+                    />
+                </Form.Item>
                 <Form.Item name="excerpt" label="Tóm tắt"> <TextArea rows={2} /> </Form.Item>
                 <Form.Item name="category" label="Danh mục" rules={[{ required: true, message: 'Chọn danh mục' }]}> <Select>{categories.map(cat => <Option key={cat._id} value={cat._id}>{cat.name}</Option>)}</Select> </Form.Item>
                 <Form.Item name="tags" label="Tags" rules={[{ required: true, message: 'Chọn tags' }]}> <Select mode="multiple">{tags.map(tag => <Option key={tag._id} value={tag._id}>{tag.name}</Option>)}</Select> </Form.Item>

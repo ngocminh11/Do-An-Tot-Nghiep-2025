@@ -382,38 +382,47 @@ const Profile = () => {
         };
     }, [user?._id]);
 
-    if (!user) return <div className="profile-page"><Card><Text type="danger">Vui lòng đăng nhập để xem thông tin cá nhân.</Text></Card></div>;
+    if (!user) return (
+        <div className="profile-page" style={{ minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Card style={{ maxWidth: 400, width: '100%', textAlign: 'center' }}>
+                <Text type="danger">Vui lòng đăng nhập để xem thông tin cá nhân.</Text>
+            </Card>
+        </div>
+    );
 
     return (
         <div className="profile-page" style={{ maxWidth: 1200, margin: '0 auto', padding: 32 }}>
-            <Row gutter={32} align="top">
+            <Row gutter={[32, 32]} align="top">
                 <Col xs={24} md={7} style={{ textAlign: 'center', marginBottom: 32 }}>
-                    <Avatar size={110} icon={<UserOutlined />} src={user.avatar} style={{ marginBottom: 18 }} />
-                    <Title level={4} style={{ marginBottom: 0 }}>{user.fullName || user.name || 'Chưa cập nhật'}</Title>
-                    <Text type="secondary">{user.role ? user.role.toUpperCase() : 'Khách hàng'}</Text>
-                    <Divider />
-                    <div style={{ marginBottom: 8 }}><MailOutlined /> {user.email}</div>
-                    <div><PhoneOutlined /> {user.phone || 'Chưa cập nhật'}</div>
+                    <Card bordered style={{ borderRadius: 16, boxShadow: '0 2px 8px #f0f1f2' }}>
+                        <Avatar size={110} icon={<UserOutlined />} src={user.avatar} style={{ marginBottom: 18, border: '3px solid #1890ff' }} />
+                        <Title level={4} style={{ marginBottom: 0 }}>{user.fullName || user.name || 'Chưa cập nhật'}</Title>
+                        <Text type="secondary">{user.role ? user.role.toUpperCase() : 'Khách hàng'}</Text>
+                        <Divider />
+                        <div style={{ marginBottom: 8 }}><MailOutlined /> {user.email}</div>
+                        <div><PhoneOutlined /> {user.phone || 'Chưa cập nhật'}</div>
+                    </Card>
                 </Col>
                 <Col xs={24} md={17}>
                     <Tabs defaultActiveKey="1" tabBarGutter={32} style={{ background: 'transparent' }}>
                         <Tabs.TabPane tab="Thông tin cá nhân" key="1">
-                            <Card bordered={false} style={{ marginBottom: 24 }}>
+                            <Card bordered={false} style={{ marginBottom: 24, borderRadius: 16, boxShadow: '0 2px 8px #f0f1f2' }}>
                                 <Form
                                     form={infoForm}
                                     layout="vertical"
                                     onFinish={handleInfoSubmit}
+                                    style={{ maxWidth: 500, margin: '0 auto' }}
                                 >
                                     <Form.Item name="fullName" label="Họ và tên" rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}> <Input prefix={<UserOutlined />} placeholder="Họ và tên" /> </Form.Item>
                                     <Form.Item name="phone" label="Số điện thoại"> <Input prefix={<PhoneOutlined />} placeholder="Số điện thoại" /> </Form.Item>
                                     <Form.Item name="dateOfBirth" label="Ngày sinh"> <Input type="date" placeholder="Ngày sinh" /> </Form.Item>
                                     <Form.Item name="gender" label="Giới tính"> <Input prefix={user.gender === 'Nam' ? <ManOutlined /> : <WomanOutlined />} placeholder="Giới tính" /> </Form.Item>
-                                    <Form.Item> <Button type="primary" htmlType="submit">Cập nhật thông tin</Button> </Form.Item>
+                                    <Form.Item> <Button type="primary" htmlType="submit" block>Cập nhật thông tin</Button> </Form.Item>
                                 </Form>
                             </Card>
                         </Tabs.TabPane>
                         <Tabs.TabPane tab="Địa chỉ" key="2">
-                            <Card bordered={false} style={{ marginBottom: 24 }}>
+                            <Card bordered={false} style={{ marginBottom: 24, borderRadius: 16, boxShadow: '0 2px 8px #f0f1f2' }}>
                                 <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Title level={4} style={{ margin: 0 }}>Địa chỉ giao hàng</Title>
                                     <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
@@ -421,7 +430,7 @@ const Profile = () => {
                                     </Button>
                                 </div>
                                 {addresses.length === 0 ? (
-                                    <Card style={{ textAlign: 'center', marginBottom: 24 }}>
+                                    <Card style={{ textAlign: 'center', marginBottom: 24, borderRadius: 12 }}>
                                         <Text>Bạn chưa có địa chỉ nào.</Text>
                                         <div style={{ marginTop: 16 }}>
                                             <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
@@ -435,7 +444,7 @@ const Profile = () => {
                                             <Card
                                                 key={address.id}
                                                 className={`address-card ${address.isDefault ? 'default' : ''}`}
-                                                style={{ marginBottom: 16 }}
+                                                style={{ marginBottom: 16, borderRadius: 12, border: address.isDefault ? '2px solid #faad14' : undefined }}
                                             >
                                                 <div className="address-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <Space>
@@ -498,11 +507,12 @@ const Profile = () => {
                             </Card>
                         </Tabs.TabPane>
                         <Tabs.TabPane tab="Đổi mật khẩu" key="3">
-                            <Card bordered={false} style={{ marginBottom: 24 }}>
+                            <Card bordered={false} style={{ marginBottom: 24, borderRadius: 16, boxShadow: '0 2px 8px #f0f1f2' }}>
                                 <Form
                                     form={passwordForm}
                                     layout="vertical"
                                     onFinish={handlePasswordSubmit}
+                                    style={{ maxWidth: 400, margin: '0 auto' }}
                                 >
                                     <Form.Item name="currentPassword" label="Mật khẩu hiện tại" rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}> <Input.Password placeholder="Mật khẩu hiện tại" /> </Form.Item>
                                     <Form.Item name="newPassword" label="Mật khẩu mới" rules={[{ required: true, message: 'Vui lòng nhập mật khẩu mới' }]}> <Input.Password placeholder="Mật khẩu mới" /> </Form.Item>
@@ -524,12 +534,12 @@ const Profile = () => {
                                     >
                                         <Input.Password placeholder="Xác nhận mật khẩu mới" />
                                     </Form.Item>
-                                    <Form.Item> <Button type="primary" htmlType="submit">Đổi mật khẩu</Button> </Form.Item>
+                                    <Form.Item> <Button type="primary" htmlType="submit" block>Đổi mật khẩu</Button> </Form.Item>
                                 </Form>
                             </Card>
                         </Tabs.TabPane>
                         <Tabs.TabPane tab="Đơn hàng của tôi" key="4">
-                            <Card bordered={false} style={{ marginBottom: 24 }}>
+                            <Card bordered={false} style={{ marginBottom: 24, borderRadius: 16, boxShadow: '0 2px 8px #f0f1f2' }}>
                                 <div style={{ marginTop: 16 }}>
                                     {loadingOrders ? <Spin /> : (
                                         <OrderTable

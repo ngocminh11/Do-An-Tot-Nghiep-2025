@@ -1,18 +1,19 @@
 const mongoose = require('mongoose');
-const Account       = require('../Models/Accounts');
+const Account = require('../Models/Accounts');
 const AccountDetail = require('../Models/AccountDetail');
 const { sendSuccess, sendError } = require('../Utils/responseHelper');
 const StatusCodes = require('../Constants/ResponseCode');
-const Messages     = require('../Constants/ResponseMessage');
+const Messages = require('../Constants/ResponseMessage');
+const bcrypt = require('bcryptjs');
 
 /* ---------------- Const & Helpers ----------------------------------------- */
-const PIN_ROLES   = ['Quản Lý Kho', 'Quản Lý Nhân Sự','Quản Lý Đơn Hàng','Quản Lý Chính'];
+const PIN_ROLES = ['Quản Lý Kho', 'Quản Lý Nhân Sự', 'Quản Lý Đơn Hàng', 'Quản Lý Chính'];
 const DEFAULT_PIN = '000000';
-const isValidId   = id => mongoose.Types.ObjectId.isValid(id);
+const isValidId = id => mongoose.Types.ObjectId.isValid(id);
 
-const ensurePin = (role, pin) => {
+const ensurePin = async (role, pin) => {
   if (PIN_ROLES.includes(role))      // role bắt buộc PIN
-    return pin || DEFAULT_PIN;
+    return pin ? await bcrypt.hash(pin, 10) : await bcrypt.hash(DEFAULT_PIN, 10);
   if (pin) throw new Error('Role hiện tại không được phép có PIN.');
   return null;                       // role không PIN
 };
@@ -20,15 +21,15 @@ const ensurePin = (role, pin) => {
 const normalizeAddresses = arr =>
   Array.isArray(arr)
     ? arr.map(a => ({
-        id: a.id,
-        fullName: a.fullName,
-        phoneNumber: a.phoneNumber,
-        city: a.city,
-        district: a.district,
-        ward: a.ward,
-        address: a.address,
-        isDefault: !!a.isDefault
-      }))
+      id: a.id,
+      fullName: a.fullName,
+      phoneNumber: a.phoneNumber,
+      city: a.city,
+      district: a.district,
+      ward: a.ward,
+      address: a.address,
+      isDefault: !!a.isDefault
+    }))
     : arr;
 
 /* ========================================================================== */
@@ -51,36 +52,40 @@ exports.getAllUsers = async (req, res) => {
 
     const accMatch = {};
     if (id && isValidId(id)) accMatch._id = new mongoose.Types.ObjectId(id);
-    if (email)  accMatch.email = { $regex: email, $options: 'i' };
-    if (role)   accMatch.role  = role;
+    if (email) accMatch.email = { $regex: email, $options: 'i' };
+    if (role) accMatch.role = role;
     if (accountStatus) accMatch.accountStatus = accountStatus;
 
     const detMatch = {};
     if (fullName) detMatch['detail.fullName'] = { $regex: fullName, $options: 'i' };
-    if (phone)    detMatch['detail.phone']    = { $regex: phone,    $options: 'i' };
+    if (phone) detMatch['detail.phone'] = { $regex: phone, $options: 'i' };
 
     const skip = (page - 1) * limit;
     const sortField = ['createdAt', 'updatedAt'].includes(sortBy) ? sortBy : 'createdAt';
-    const sortDir   = sortOrder === 'asc' ? 1 : -1;
+    const sortDir = sortOrder === 'asc' ? 1 : -1;
 
     const pipeline = [
       { $match: accMatch },
-      { $lookup: {
+      {
+        $lookup: {
           from: 'accountdetails',
           localField: '_id',
           foreignField: 'accountId',
           as: 'detail'
-        }},
+        }
+      },
       { $unwind: '$detail' },
       { $match: detMatch },
       { $sort: { [sortField]: sortDir } },
-      { $facet: {
-          data:  [ { $skip: Number(skip) }, { $limit: Number(limit) } ],
-          total: [ { $count: 'count' } ]
-      }}
+      {
+        $facet: {
+          data: [{ $skip: Number(skip) }, { $limit: Number(limit) }],
+          total: [{ $count: 'count' }]
+        }
+      }
     ];
 
-    const agg   = await Account.aggregate(pipeline);
+    const agg = await Account.aggregate(pipeline);
     const users = agg[0].data;
     const total = agg[0].total[0]?.count || 0;
 
@@ -104,11 +109,19 @@ exports.getUserById = async (req, res) => {
   if (!isValidId(id))
     return sendError(res, 400, Messages.INVALID_ID);
   try {
+    // Chỉ cho phép lấy nếu là chính mình hoặc là HR/Chính
+    const userId = req.user?._id?.toString();
+    const userRole = req.user?.role;
+    if (userId !== id && !['Quản Lý Nhân Sự', 'Quản Lý Chính'].includes(userRole)) {
+      return sendError(res, 403, 'Bạn không có quyền xem thông tin người dùng này.');
+    }
     const acc = await Account.findById(id).lean();
     if (!acc) return sendError(res, 404, Messages.USER_NOT_FOUND);
     const det = await AccountDetail.findOne({ accountId: id }).lean();
-    return sendSuccess(res, 200, { ...acc, detail: det }, Messages.USER_FETCH_SUCCESS);
-  } catch {
+    // Luôn trả về role
+    return sendSuccess(res, 200, { ...acc, role: acc.role, detail: det }, Messages.USER_FETCH_SUCCESS);
+  } catch (err) {
+    console.error('[getUserById] Lỗi:', err);
     return sendError(res, 500, Messages.INTERNAL_SERVER_ERROR);
   }
 };
@@ -162,7 +175,7 @@ exports.createUserWithPin = async (req, res) => {
     if (!PIN_ROLES.includes(req.body.role))
       return sendError(res, 400, 'Role này không yêu cầu PIN – hãy dùng /accounts');
 
-    const pinSave = ensurePin(req.body.role, req.body.pin);
+    const pinSave = await ensurePin(req.body.role, req.body.pin);
 
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -236,10 +249,10 @@ exports.updateUserWithPin = async (req, res) => {
     if (!current) throw new Error(Messages.USER_NOT_FOUND);
 
     const newRole = req.body.role || current.role;
-    const newPin  =
+    const newPin =
       ('pin' in req.body)
-        ? ensurePin(newRole, req.body.pin)
-        : current.pin || (PIN_ROLES.includes(newRole) ? DEFAULT_PIN : null);
+        ? await ensurePin(newRole, req.body.pin)
+        : current.pin || (PIN_ROLES.includes(newRole) ? await bcrypt.hash(DEFAULT_PIN, 10) : null);
 
     if (!PIN_ROLES.includes(newRole)) req.body.pin = null;
     else req.body.pin = newPin;
@@ -266,7 +279,7 @@ exports.updateUserWithPin = async (req, res) => {
 exports.updatePin = async (req, res) => {
   const { id } = req.params;
   const { pin } = req.body;
-  if (!isValidId(id))   return sendError(res, 400, Messages.INVALID_ID);
+  if (!isValidId(id)) return sendError(res, 400, Messages.INVALID_ID);
   if (!/^\d{6}$/.test(pin))
     return sendError(res, 400, 'PIN phải gồm đúng 6 chữ số.');
 
@@ -276,7 +289,7 @@ exports.updatePin = async (req, res) => {
     if (!PIN_ROLES.includes(acc.role))
       return sendError(res, 400, 'Role này không dùng PIN.');
 
-    acc.pin = pin;
+    acc.pin = await bcrypt.hash(pin, 10);
     await acc.save();
     return sendSuccess(res, 200, null, 'Đổi PIN thành công');
   } catch (err) {
@@ -316,8 +329,8 @@ exports.deleteUser = async (req, res) => {
 /* 9) POST /accounts/:id/verify-pin  – Kiểm tra PIN                            */
 /* ========================================================================== */
 exports.verifyPin = async (req, res) => {
-  const { id }   = req.params;
-  const { pin }  = req.body;
+  const { id } = req.params;
+  const { pin } = req.body;
 
   if (!isValidId(id))
     return sendError(res, 400, Messages.INVALID_ID);
@@ -333,7 +346,8 @@ exports.verifyPin = async (req, res) => {
     if (!PIN_ROLES.includes(acc.role))
       return sendError(res, 400, 'Role này không sử dụng PIN.');
 
-    if (acc.pin !== pin)
+    const isMatch = await bcrypt.compare(pin, acc.pin);
+    if (!isMatch)
       return sendError(res, StatusCodes.ERROR_UNAUTHORIZED ?? 401, 'PIN không chính xác.');
 
     return sendSuccess(res, StatusCodes.SUCCESS_OK, null, 'PIN chính xác.');
@@ -371,15 +385,15 @@ exports.updateStatus = async (req, res) => {
 };
 
 /* ========================================================================== */
-/* 11) PATCH /my-account/status            – (USER) tự “Dừng hoạt động”       */
+/* 11) PATCH /my-account/status            – (USER) tự "Dừng hoạt động"       */
 /* ========================================================================== */
 exports.updateOwnStatus = async (req, res) => {
   const { id } = req.params;                        // đã được gán = req.user._id ở route
   const { accountStatus } = req.body;
 
-  // USER chỉ được tự chuyển sang “Dừng hoạt động”
+  // USER chỉ được tự chuyển sang "Dừng hoạt động"
   if (accountStatus !== 'Dừng hoạt động')
-    return sendError(res, 400, 'Bạn chỉ có thể tự chuyển sang “Dừng hoạt động”.');
+    return sendError(res, 400, 'Bạn chỉ có thể tự chuyển sang "Dừng hoạt động".');
 
   try {
     const acc = await Account.findByIdAndUpdate(
@@ -389,7 +403,7 @@ exports.updateOwnStatus = async (req, res) => {
     );
     if (!acc) return sendError(res, 404, Messages.USER_NOT_FOUND);
 
-    return sendSuccess(res, 200, acc, 'Tài khoản của bạn đã được đặt thành “Dừng hoạt động”.');
+    return sendSuccess(res, 200, acc, 'Tài khoản của bạn đã được đặt thành "Dừng hoạt động".');
   } catch (err) {
     return sendError(res, 500, err.message);
   }

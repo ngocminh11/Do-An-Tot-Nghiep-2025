@@ -1,5 +1,6 @@
 import axios from 'axios';
 import config from '../config';
+import Cookies from 'js-cookie';
 
 const API_URL = config.API_BASE_URL;
 
@@ -48,11 +49,9 @@ const promotionService = {
     // Lấy tất cả khuyến mãi (admin)
     getAllPromotions: async (params = {}) => {
         try {
-            const accessToken = localStorage.getItem('token');
-            const response = await axios.get(`${API_URL}/admin/promotions`, {
-                params,
-                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
-            });
+            const token = Cookies.get('token');
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            const response = await axios.get(`${API_URL}/admin/promotions`, { params, headers });
             if (response.data && response.data.data) {
                 return {
                     data: response.data.data.data || response.data.data,

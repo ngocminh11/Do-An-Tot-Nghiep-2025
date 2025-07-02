@@ -3,14 +3,14 @@
 // ============================================================================
 
 const express = require('express');
-const router  = express.Router();
+const router = express.Router();
 
-const accountCtrl  = require('../Controllers/account.controller');
-const cartCtrl     = require('../Controllers/cart.controller');
-const orderCtrl    = require('../Controllers/order.controller');
+const accountCtrl = require('../Controllers/account.controller');
+const cartCtrl = require('../Controllers/cart.controller');
+const orderCtrl = require('../Controllers/order.controller');
 const categoryCtrl = require('../Controllers/category.controller');
-const productCtrl  = require('../Controllers/product.controller');
-const commentCtrl  = require('../Controllers/comment.controller');
+const productCtrl = require('../Controllers/product.controller');
+const commentCtrl = require('../Controllers/comment.controller');
 
 const {
   authenticateUser,
@@ -115,13 +115,13 @@ router.post(
 /* -------------------------------------------------------------------------- */
 /* 4.  CATEGORY & PRODUCT – public (không cần login)                         */
 /* -------------------------------------------------------------------------- */
-router.get('/categories',                 categoryCtrl.getAllCategories);
-router.get('/categories/:id',             categoryCtrl.getCategoryById);
-router.get('/categories/:id/products',    categoryCtrl.getCategoryWithProducts);
+router.get('/categories', categoryCtrl.getAllCategories);
+router.get('/categories/:id', categoryCtrl.getCategoryById);
+router.get('/categories/:id/products', categoryCtrl.getCategoryWithProducts);
 
-router.get('/products',                   productCtrl.getAllProducts);
+router.get('/products', productCtrl.getAllProducts);
 router.get('/products/category/:categoryId', productCtrl.getProductsByCategory);
-router.get('/products/:id',               productCtrl.getProductById);
+router.get('/products/:id', productCtrl.getProductById);
 
 /* -------------------------------------------------------------------------- */
 /* 5.  COMMENT – user phải đăng nhập                                          */

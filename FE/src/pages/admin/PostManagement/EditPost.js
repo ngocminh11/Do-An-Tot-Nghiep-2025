@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Form, Input, Button, Select, Upload, message, Card, Spin } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { CKEditor } from '@ckeditor/ckeditor5-react';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import postService from '../../../services/postService';
 import categoryService from '../../../services/categoryService';
 import tagService from '../../../services/tagService';
@@ -158,10 +158,17 @@ const EditPost = () => {
                         label="Nội dung"
                         rules={[{ required: true, message: 'Vui lòng nhập nội dung!' }]}
                     >
-                        <ReactQuill
-                            value={content}
-                            onChange={setContent}
-                            style={{ height: '300px', marginBottom: '50px' }}
+                        <CKEditor
+                            editor={ClassicEditor}
+                            data={content}
+                            onChange={(event, editor) => setContent(editor.getData())}
+                            config={{
+                                ckfinder: { uploadUrl: '/api/upload' },
+                                toolbar: [
+                                    'heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', 'blockQuote',
+                                    'insertTable', 'imageUpload', 'mediaEmbed', 'undo', 'redo', 'alignment', 'outdent', 'indent', 'codeBlock'
+                                ]
+                            }}
                         />
                     </Form.Item>
 
