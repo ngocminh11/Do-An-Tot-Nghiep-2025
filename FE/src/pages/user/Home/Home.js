@@ -12,7 +12,6 @@ import facialImg from '../../../upload/a_bottle_of_facial_image_.png';
 import cocoWImg from '../../../upload/a_bottle_of_coco_w_image_.png';
 import tubeImg from '../../../upload/a_tube_of_cocoo_su_image_.png';
 import productImg1 from '../../../upload/a_product_image_of_image_.png';
-import productImg2 from '../../../upload/a_product_image_of_image_ (1).png';
 
 const { Title, Text } = Typography;
 

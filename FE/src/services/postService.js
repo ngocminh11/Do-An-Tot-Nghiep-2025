@@ -1,13 +1,16 @@
 import axios from 'axios';
 import config from '../config';
+import Cookies from 'js-cookie';
 
 const API_URL = config.API_BASE_URL;
 
 const postService = {
     // Lấy tất cả bài viết (có phân trang)
     getAllPosts: async (params = {}) => {
+        const token = Cookies.get('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         try {
-            const response = await axios.get(`${API_URL}/admin/posts`, { params });
+            const response = await axios.get(`${API_URL}/admin/posts`, { params, headers });
             if (response.data && response.data.data) {
                 return {
                     data: response.data.data.data,

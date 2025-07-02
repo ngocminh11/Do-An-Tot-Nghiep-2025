@@ -396,11 +396,15 @@ const AddProduct = () => {
       setLoadingTags(true);
       try {
         const response = await tagService.getAllTags();
-        if (response && Array.isArray(response.data)) {
-          setTags(response.data);
-        } else {
-          setTags([]);
-          message.error('Không thể tải danh sách tags');
+        let tagArr = [];
+        if (Array.isArray(response?.data)) {
+          tagArr = response.data;
+        } else if (Array.isArray(response?.data?.data)) {
+          tagArr = response.data.data;
+        }
+        setTags(tagArr);
+        if (tagArr.length === 0) {
+          message.info('Chưa có tag nào, hãy thêm tag mới!');
         }
       } catch (error) {
         setTags([]);
@@ -412,10 +416,61 @@ const AddProduct = () => {
     fetchTags();
   }, []);
 
+  const isObjectId = (id) => typeof id === 'string' && id.length === 24 && /^[a-fA-F0-9]{24}$/.test(id);
+
   const handleFinish = async (values) => {
     try {
       setLoading(true);
-      console.log('Form values:', values);
+      // Đảm bảo các trường array luôn là mảng
+      const ensureArray = (val) => Array.isArray(val) ? val : (val ? [val] : []);
+      let tagIds = values.basicInformation?.tagIds;
+      let categoryIds = values.basicInformation?.categoryIds;
+      tagIds = ensureArray(tagIds).filter(isObjectId);
+      categoryIds = ensureArray(categoryIds).filter(isObjectId);
+      if (!Array.isArray(tagIds) || tagIds.length === 0) {
+        message.error('Vui lòng chọn ít nhất một tag từ danh sách có sẵn!');
+        setLoading(false);
+        return;
+      }
+      if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
+        message.error('Vui lòng chọn ít nhất một danh mục từ danh sách có sẵn!');
+        setLoading(false);
+        return;
+      }
+      console.log('TagIds gửi lên:', tagIds, tagIds.map(x => typeof x), 'typeof:', typeof tagIds);
+      console.log('CategoryIds gửi lên:', categoryIds, 'typeof:', typeof categoryIds);
+
+      // Đảm bảo các trường array khác là mảng
+      const description = {
+        shortDescription: values.description.shortDescription,
+        detailedDescription: values.description.detailedDescription,
+        features: ensureArray(values.description.features),
+        ingredients: ensureArray(values.description.ingredients),
+        usageInstructions: ensureArray(values.description.usageInstructions),
+        expiration: values.description.expiration || ''
+      };
+      const technicalDetails = {
+        specifications: ensureArray(values.technicalDetails.specifications),
+        dimensions: values.technicalDetails.dimensions || {},
+        weight: values.technicalDetails.weight || {},
+        sizeOrWeight: values.technicalDetails.sizeOrWeight || '',
+        suitableSkinTypes: ensureArray(values.technicalDetails.suitableSkinTypes),
+        origin: values.technicalDetails.origin || '',
+        certifications: ensureArray(values.technicalDetails.certifications)
+      };
+      const seo = {
+        metaTitle: values.seo.metaTitle || '',
+        metaDescription: values.seo.metaDescription || '',
+        keywords: ensureArray(values.seo.keywords),
+        urlSlug: values.seo.urlSlug || ''
+      };
+      const policy = {
+        warranty: values.policy.warranty || '',
+        returnPolicy: values.policy.returnPolicy || '',
+        shippingPolicy: values.policy.shippingPolicy || '',
+        additionalOptions: ensureArray(values.policy.additionalOptions),
+        shippingReturnWarranty: ensureArray(values.policy.shippingReturnWarranty)
+      };
 
       // Validate images
       if (!values.media?.mainImage?.[0]?.originFileObj) {
@@ -442,8 +497,8 @@ const AddProduct = () => {
         sku: values.basicInformation.sku,
         status: 'active',
         brand: 'CoCo',
-        categoryIds: values.basicInformation.categoryIds || [],
-        tagIds: values.basicInformation.tagIds || []
+        categoryIds: categoryIds,
+        tagIds: tagIds
       };
 
       const pricingAndInventory = {
@@ -452,40 +507,6 @@ const AddProduct = () => {
         currency: 'VND',
         stockQuantity: Number(values.pricingAndInventory.stockQuantity),
         unit: values.pricingAndInventory.unit
-      };
-
-      const description = {
-        shortDescription: values.description.shortDescription,
-        detailedDescription: values.description.detailedDescription,
-        features: values.description.features || [],
-        ingredients: values.description.ingredients || [],
-        usageInstructions: values.description.usageInstructions || '',
-        expiration: values.description.expiration || ''
-      };
-
-      const technicalDetails = {
-        specifications: values.technicalDetails.specifications || [],
-        dimensions: values.technicalDetails.dimensions || {},
-        weight: values.technicalDetails.weight || {},
-        sizeOrWeight: values.technicalDetails.sizeOrWeight || '',
-        suitableSkinTypes: values.technicalDetails.suitableSkinTypes || [],
-        origin: values.technicalDetails.origin || '',
-        certifications: values.technicalDetails.certifications || []
-      };
-
-      const seo = {
-        metaTitle: values.seo.metaTitle || '',
-        metaDescription: values.seo.metaDescription || '',
-        keywords: values.seo.keywords || [],
-        urlSlug: values.seo.urlSlug || ''
-      };
-
-      const policy = {
-        warranty: values.policy.warranty || '',
-        returnPolicy: values.policy.returnPolicy || '',
-        shippingPolicy: values.policy.shippingPolicy || '',
-        additionalOptions: values.policy.additionalOptions || '',
-        shippingReturnWarranty: values.policy.shippingReturnWarranty || ''
       };
 
       // Create FormData
@@ -520,8 +541,15 @@ const AddProduct = () => {
       message.success('Thêm sản phẩm thành công!');
       navigate('/admin/products');
     } catch (error) {
+      // Hiển thị lỗi rõ ràng khi trùng tên hoặc SKU
+      if (error?.message?.includes('PRODUCT_NAME_EXISTS') || (typeof error === 'string' && error.includes('PRODUCT_NAME_EXISTS'))) {
+        message.error('Tên sản phẩm đã tồn tại. Vui lòng chọn tên khác!');
+      } else if (error?.message?.includes('SKU_EXISTS') || (typeof error === 'string' && error.includes('SKU_EXISTS'))) {
+        message.error('SKU đã tồn tại. Vui lòng chọn SKU khác!');
+      } else {
+        message.error(error.message || 'Có lỗi xảy ra khi thêm sản phẩm');
+      }
       console.error('Error creating product:', error);
-      message.error(error.message || 'Có lỗi xảy ra khi thêm sản phẩm');
     } finally {
       setLoading(false);
     }
@@ -583,13 +611,11 @@ const AddProduct = () => {
         description: values.description,
         status: 'active'
       });
-
-      if (newTag) {
+      if (newTag && newTag._id) {
         setTags(prev => [...prev, newTag]);
         message.success('Thêm tag thành công!');
         setIsTagModalVisible(false);
         tagForm.resetFields();
-
         // Tự động chọn tag mới vừa tạo
         const currentTagIds = form.getFieldValue(['basicInformation', 'tagIds']) || [];
         form.setFieldsValue({
@@ -598,6 +624,8 @@ const AddProduct = () => {
             tagIds: [...currentTagIds, newTag._id]
           }
         });
+      } else {
+        message.error('Không lấy được ID tag mới!');
       }
     } catch (error) {
       message.error(error.message || 'Thêm tag thất bại!');
@@ -713,7 +741,7 @@ const AddProduct = () => {
               <Form.Item
                 name={['basicInformation', 'categoryIds']}
                 label="Danh mục sản phẩm"
-                rules={[{ required: true, message: 'Vui lòng chọn danh mục!' }]}
+                rules={[{ required: true, type: 'array', min: 1, message: 'Vui lòng chọn ít nhất một danh mục!' }]}
                 tooltip="Chọn ít nhất một danh mục cho sản phẩm"
                 className="form-item"
               >
@@ -730,6 +758,14 @@ const AddProduct = () => {
                     filterOption={(input, option) =>
                       option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
                     }
+                    onChange={val => {
+                      form.setFieldsValue({
+                        basicInformation: {
+                          ...form.getFieldValue('basicInformation'),
+                          categoryIds: Array.isArray(val) ? val : val ? [val] : []
+                        }
+                      });
+                    }}
                   >
                     {categories.map((category) => (
                       <Option key={category._id} value={category._id}>
@@ -754,13 +790,14 @@ const AddProduct = () => {
                 label="Tags"
                 tooltip="Chọn hoặc thêm tags cho sản phẩm"
                 className="form-item"
+                rules={[{ required: true, type: 'array', min: 1, message: 'Vui lòng chọn ít nhất một tag' }]}
               >
                 <div className="select-with-icon">
                   <Select
                     mode="multiple"
-                    placeholder="Chọn hoặc nhập tags"
                     allowClear
                     loading={loadingTags}
+                    placeholder="Chọn tag (chỉ chọn từ danh sách)"
                     optionFilterProp="children"
                     showSearch
                     className="form-select"
@@ -768,6 +805,14 @@ const AddProduct = () => {
                     filterOption={(input, option) =>
                       option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
                     }
+                    onChange={val => {
+                      form.setFieldsValue({
+                        basicInformation: {
+                          ...form.getFieldValue('basicInformation'),
+                          tagIds: Array.isArray(val) ? val : val ? [val] : []
+                        }
+                      });
+                    }}
                   >
                     {tags.map((tag) => (
                       <Option key={tag._id} value={tag._id}>

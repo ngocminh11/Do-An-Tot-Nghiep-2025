@@ -4,7 +4,7 @@
 // ===========================================================================
 
 const express = require('express');
-const router  = express.Router();
+const router = express.Router();
 const authCtrl = require('../Controllers/auth.controller');
 const { verifyOTPToken, verifyRefreshToken } = require('../Middlewares/auth.middleware');
 

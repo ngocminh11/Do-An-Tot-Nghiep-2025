@@ -1,37 +1,37 @@
-const mongoose   = require('mongoose');
-const slugify    = require('slugify');
-const ExcelJS    = require('exceljs');
+const mongoose = require('mongoose');
+const slugify = require('slugify');
+const ExcelJS = require('exceljs');
 
-const Product       = require('../Models/Products');
+const Product = require('../Models/Products');
 const ProductDetail = require('../Models/ProductDetail');
-const Category      = require('../Models/Categories');
-const ProductLog    = require('../Models/ProductLog');
+const Category = require('../Models/Categories');
+const ProductLog = require('../Models/ProductLog');
 
-const checkPin      = require('../Utils/checkPin');          // 🔐
+const checkPin = require('../Utils/checkPin');          // 🔐
 const { sendSuccess, sendError } = require('../Utils/responseHelper');
 const StatusCodes = require('../Constants/ResponseCode');
-const Messages    = require('../Constants/ResponseMessage');
+const Messages = require('../Constants/ResponseMessage');
 require('dotenv').config();
 
 /* -------------------- CONST & HELPER ------------------------------------- */
 const ALLOWED_STATUS = ['Hiển Thị', 'Ẩn', 'Ngừng Bán'];
 const STATUS_FLOW = {
-  'Hiển Thị':  ['Ẩn', 'Ngừng Bán'],
-  'Ẩn':        ['Hiển Thị', 'Ngừng Bán'],
+  'Hiển Thị': ['Ẩn', 'Ngừng Bán'],
+  'Ẩn': ['Hiển Thị', 'Ngừng Bán'],
   'Ngừng Bán': []
 };
 
 const isValidId = id => mongoose.Types.ObjectId.isValid(id);
-const regex     = txt => new RegExp(`^${txt}`, 'i');
-const fmtDate   = d   => new Date(d).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+const regex = txt => new RegExp(`^${txt}`, 'i');
+const fmtDate = d => new Date(d).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 const parseJSON = (body, field) => {
   try { return JSON.parse(body[field] || '{}'); }
   catch (e) { throw new Error(`JSON không hợp lệ ở "${field}": ${e.message}`); }
 };
 const buildFilter = ({ name, status, categoryId }) => {
   const f = {};
-  if (name)       f['basicInformation.productName'] = regex(name);
-  if (status)     f['basicInformation.status']      = status;
+  if (name) f['basicInformation.productName'] = regex(name);
+  if (status) f['basicInformation.status'] = status;
   if (categoryId) f['basicInformation.categoryIds'] = categoryId;
   return f;
 };
@@ -56,17 +56,17 @@ exports.getAllProducts = async (req, res) => {
       Product.countDocuments(filter)
     ]);
 
-    const ids     = products.map(p => p._id);
+    const ids = products.map(p => p._id);
     const details = await ProductDetail.find({ _id: { $in: ids } }, 'pricingAndInventory').lean();
-    const map     = Object.fromEntries(details.map(d => [d._id.toString(), d.pricingAndInventory]));
-    const merged  = products.map(p => ({ ...p, pricingAndInventory: map[p._id.toString()] || {} }));
+    const map = Object.fromEntries(details.map(d => [d._id.toString(), d.pricingAndInventory]));
+    const merged = products.map(p => ({ ...p, pricingAndInventory: map[p._id.toString()] || {} }));
 
     return sendSuccess(res, StatusCodes.SUCCESS_OK, {
       data: merged,
       currentPage: +page,
-      totalPages : Math.ceil(total / limit),
-      totalItems : total,
-      perPage    : +limit
+      totalPages: Math.ceil(total / limit),
+      totalItems: total,
+      perPage: +limit
     });
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
@@ -92,31 +92,49 @@ exports.getProductById = async (req, res) => {
 };
 
 /* ======================================================================== */
-/* 3. POST /products  – Tạo sản phẩm (🔐CHECK PIN)                          */
+/* 3. POST /products  – Tạo sản phẩm (🔐CHECK PIN)                          */
 /* ======================================================================== */
 exports.createProduct = async (req, res) => {
   try {
     await checkPin(req);         // 🔐
     delete req.body.pin;         // tránh parseJSON lẫn
-    /* --- phần còn lại giữ nguyên như bản trước --- */
-    const bi   = parseJSON(req.body, 'basicInformation');
-    const piv  = parseJSON(req.body, 'pricingAndInventory');
+    // Parse dữ liệu
+    const bi = parseJSON(req.body, 'basicInformation');
+    const piv = parseJSON(req.body, 'pricingAndInventory');
     const desc = parseJSON(req.body, 'description');
     const tech = parseJSON(req.body, 'technicalDetails');
-    const seo  = parseJSON(req.body, 'seo');
-    const pol  = parseJSON(req.body, 'policy');
+    const seo = parseJSON(req.body, 'seo');
+    const pol = parseJSON(req.body, 'policy');
 
-    /* ........ giữ nguyên toàn bộ logic validation & save .......... */
-    /* ........ cuối hàm không đổi ........ */
+    // Tạo Product trước, chưa có detailId
+    const product = new Product({ basicInformation: bi });
+    await product.save();
+
+    // Tạo ProductDetail với _id trùng Product._id
+    const detail = new ProductDetail({
+      _id: product._id,
+      pricingAndInventory: piv,
+      description: desc,
+      technicalDetails: tech,
+      seo: seo,
+      policy: pol
+    });
+    await detail.save();
+
+    // Cập nhật lại detailId cho Product
+    product.detailId = detail._id;
+    await product.save();
+
+    return sendSuccess(res, StatusCodes.SUCCESS_CREATED, { product, detail }, 'Tạo sản phẩm thành công');
   } catch (err) {
     const code = err.message.includes('PIN') ? StatusCodes.ERROR_UNAUTHORIZED
-                                             : StatusCodes.ERROR_BAD_REQUEST;
+      : StatusCodes.ERROR_BAD_REQUEST;
     return sendError(res, code, err.message);
   }
 };
 
 /* ======================================================================== */
-/* 4. PUT /products/:id – Cập nhật mô tả chung (🔐)                         */
+/* 4. PUT /products/:id – Cập nhật mô tả chung (🔐)                         */
 /* ======================================================================== */
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
@@ -128,29 +146,32 @@ exports.updateProduct = async (req, res) => {
     delete req.body.pin;
 
     /* --------- giữ nguyên phần xử lý còn lại (như bản trước) -------- */
-    const bi   = parseJSON(req.body, 'basicInformation');
-    const piv  = parseJSON(req.body, 'pricingAndInventory');
+    const bi = parseJSON(req.body, 'basicInformation');
+    const piv = parseJSON(req.body, 'pricingAndInventory');
     const desc = parseJSON(req.body, 'description');
     const tech = parseJSON(req.body, 'technicalDetails');
-    const seo  = parseJSON(req.body, 'seo');
-    const pol  = parseJSON(req.body, 'policy');
+    const seo = parseJSON(req.body, 'seo');
+    const pol = parseJSON(req.body, 'policy');
     /* ... save & log như cũ ... */
 
   } catch (err) {
     const code = err.message.includes('PIN') ? StatusCodes.ERROR_UNAUTHORIZED
-                                             : StatusCodes.ERROR_BAD_REQUEST;
+      : StatusCodes.ERROR_BAD_REQUEST;
     return sendError(res, code, err.message);
   }
 };
 
 /* ======================================================================== */
-/* 5. PATCH /products/:id/inventory – Nhập/xuất kho (🔐)                    */
+/* 5. PATCH /products/:id/inventory – Nhập/xuất kho (🔐)                    */
 /* ======================================================================== */
 exports.updateInventory = async (req, res) => {
+  console.log('[INVENTORY] Nhận request:', req.body, 'User:', req.user?.email, 'Role:', req.user?.role);
   try {
     await checkPin(req);             // 🔐
     delete req.body.pin;
+    console.log('[INVENTORY] Qua checkPin OK');
   } catch (e) {
+    console.log('[INVENTORY] Lỗi checkPin:', e.message);
     return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, e.message);
   }
 
@@ -158,11 +179,41 @@ exports.updateInventory = async (req, res) => {
   const { quantity, originalPrice } = req.body;
   if (!isValidId(id))
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
-  /* ... phần còn lại giữ nguyên ... */
+  try {
+    // Tìm ProductDetail
+    let detail = await ProductDetail.findById(id);
+    if (!detail) {
+      // Thử tìm Product, lấy detailId nếu có
+      const product = await Product.findById(id);
+      if (product && product.detailId) {
+        detail = await ProductDetail.findById(product.detailId);
+      }
+    }
+    if (!detail) return sendError(res, StatusCodes.ERROR_NOT_FOUND, 'Không tìm thấy chi tiết sản phẩm');
+
+    // Cập nhật tồn kho
+    if (typeof quantity === 'number' && quantity > 0) {
+      detail.pricingAndInventory.stockQuantity = (detail.pricingAndInventory.stockQuantity || 0) + quantity;
+    }
+    // Cập nhật giá nhập mới nếu có
+    if (typeof originalPrice === 'number' && originalPrice >= 0) {
+      detail.pricingAndInventory.originalPrice = originalPrice;
+    }
+
+    await detail.save();
+
+    // Ghi log thao tác, nếu không có req.user thì operatorId là null
+    const operatorId = req.user && req.user._id ? req.user._id : null;
+    await logAction(id, 'Nhập kho', operatorId, { quantity, originalPrice });
+
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, detail, 'Nhập kho thành công');
+  } catch (err) {
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
+  }
 };
 
 /* ======================================================================== */
-/* 6. PATCH /products/:id/status – Đổi trạng thái (🔐)                       */
+/* 6. PATCH /products/:id/status – Đổi trạng thái (🔐)                       */
 /* ======================================================================== */
 exports.changeStatus = async (req, res) => {
   try {
@@ -176,7 +227,7 @@ exports.changeStatus = async (req, res) => {
 };
 
 /* ======================================================================== */
-/* 7. DELETE /products/:id  – Xoá sản phẩm (🔐)                              */
+/* 7. DELETE /products/:id  – Xoá sản phẩm (🔐)                              */
 /* ======================================================================== */
 exports.deleteProduct = async (req, res) => {
   try {
@@ -352,4 +403,3 @@ exports.getAllProductLogs = async (req, res) => {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
   }
 };
-

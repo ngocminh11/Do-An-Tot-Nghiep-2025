@@ -186,9 +186,9 @@ const AddressForm = ({
                 </Col>
                 <Col span={12}>
                     <Form.Item
-                        name="phoneNumber"
+                        name="phone"
                         label="Số điện thoại"
-                        rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }]}
+                        rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }, { pattern: /^0\d{9,10}$/, message: 'Số điện thoại không hợp lệ!' }]}
                     >
                         <Input prefix={<PhoneOutlined />} placeholder="Nhập số điện thoại" />
                     </Form.Item>
@@ -218,24 +218,35 @@ const AddressForm = ({
             <Row gutter={16}>
                 <Col span={12}>
                     <Form.Item
-                        name="city"
-                        label="Tỉnh/Thành phố"
-                        rules={[{ required: true, message: 'Vui lòng chọn Tỉnh/Thành phố!' }]}
+                        name="address"
+                        label="Địa chỉ chi tiết"
+                        rules={[{ required: true, message: 'Vui lòng nhập địa chỉ chi tiết!' }, { min: 5, max: 300, message: 'Địa chỉ phải từ 5-300 ký tự!' }]}
+                    >
+                        <Input prefix={<HomeOutlined />} placeholder="Số nhà, tên đường..." />
+                    </Form.Item>
+                </Col>
+                <Col span={12}>
+                    <Form.Item
+                        name="ward"
+                        label="Phường/Xã"
+                        rules={[{ required: true, message: 'Vui lòng chọn Phường/Xã!' }]}
                     >
                         <Select
                             showSearch
-                            placeholder="Chọn Tỉnh/Thành phố"
-                            onChange={handleCityChange}
+                            placeholder="Chọn Phường/Xã"
+                            disabled={!wards.length}
                             filterOption={(input, option) =>
                                 option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
                             }
                         >
-                            {Object.keys(vietnamAddressData).map(city => (
-                                <Option key={city} value={city}>{city}</Option>
+                            {wards.map(ward => (
+                                <Option key={ward} value={ward}>{ward}</Option>
                             ))}
                         </Select>
                     </Form.Item>
                 </Col>
+            </Row>
+            <Row gutter={16}>
                 <Col span={12}>
                     <Form.Item
                         name="district"
@@ -257,35 +268,24 @@ const AddressForm = ({
                         </Select>
                     </Form.Item>
                 </Col>
-            </Row>
-            <Row gutter={16}>
                 <Col span={12}>
                     <Form.Item
-                        name="ward"
-                        label="Phường/Xã"
-                        rules={[{ required: true, message: 'Vui lòng chọn Phường/Xã!' }]}
+                        name="city"
+                        label="Tỉnh/Thành phố"
+                        rules={[{ required: true, message: 'Vui lòng chọn Tỉnh/Thành phố!' }]}
                     >
                         <Select
                             showSearch
-                            placeholder="Chọn Phường/Xã"
-                            disabled={!wards.length}
+                            placeholder="Chọn Tỉnh/Thành phố"
+                            onChange={handleCityChange}
                             filterOption={(input, option) =>
                                 option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
                             }
                         >
-                            {wards.map(ward => (
-                                <Option key={ward} value={ward}>{ward}</Option>
+                            {Object.keys(vietnamAddressData).map(city => (
+                                <Option key={city} value={city}>{city}</Option>
                             ))}
                         </Select>
-                    </Form.Item>
-                </Col>
-                <Col span={12}>
-                    <Form.Item
-                        name="address"
-                        label="Địa chỉ chi tiết"
-                        rules={[{ required: true, message: 'Vui lòng nhập địa chỉ chi tiết!' }]}
-                    >
-                        <Input prefix={<HomeOutlined />} placeholder="Số nhà, tên đường..." />
                     </Form.Item>
                 </Col>
             </Row>

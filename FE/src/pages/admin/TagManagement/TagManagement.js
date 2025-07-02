@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Card, Modal, message, Input } from 'antd';
+import { Table, Button, Space, Card, Modal, message, Input, Row, Col, Tag as AntTag } from 'antd';
 import { EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import tagService from '../../../services/tagService';
@@ -69,59 +69,6 @@ const TagManagement = () => {
         });
     };
 
-    const columns = [
-        {
-            title: 'Tên tag',
-            dataIndex: 'name',
-            key: 'name',
-            sorter: true
-        },
-        {
-            title: 'Mô tả',
-            dataIndex: 'description',
-            key: 'description',
-            ellipsis: true
-        },
-        {
-            title: 'Trạng thái',
-            dataIndex: 'status',
-            key: 'status',
-            render: (status) => (
-                <span className={`status-badge ${status}`}>
-                    {status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
-                </span>
-            )
-        },
-        {
-            title: 'Ngày tạo',
-            dataIndex: 'createdAt',
-            key: 'createdAt',
-            render: (date) => new Date(date).toLocaleDateString('vi-VN')
-        },
-        {
-            title: 'Thao tác',
-            key: 'action',
-            render: (_, record) => (
-                <Space size="middle">
-                    <Button
-                        type="primary"
-                        icon={<EditOutlined />}
-                        onClick={() => navigate(`/admin/tags/edit/${record._id}`)}
-                    >
-                        Sửa
-                    </Button>
-                    <Button
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => handleDelete(record)}
-                    >
-                        Xóa
-                    </Button>
-                </Space>
-            ),
-        },
-    ];
-
     return (
         <div className="tag-management">
             <Card className="tag-card">
@@ -142,15 +89,42 @@ const TagManagement = () => {
                         </Button>
                     </Space>
                 </div>
-
-                <Table
-                    columns={columns}
-                    dataSource={tags}
-                    rowKey="_id"
-                    pagination={pagination}
-                    loading={loading}
-                    onChange={handleTableChange}
-                />
+                <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
+                    {tags.length === 0 ? (
+                        <Col span={24} style={{ textAlign: 'center', color: '#888' }}>Không có tag nào.</Col>
+                    ) : (
+                        tags.map(tag => (
+                            <Col xs={24} sm={12} md={8} lg={6} key={tag._id}>
+                                <Card
+                                    className="tag-menu-card"
+                                    actions={[
+                                        <Button
+                                            type="primary"
+                                            icon={<EditOutlined />}
+                                            onClick={() => navigate(`/admin/tags/edit/${tag._id}`)}
+                                            size="small"
+                                        >Sửa</Button>,
+                                        <Button
+                                            danger
+                                            icon={<DeleteOutlined />}
+                                            onClick={() => handleDelete(tag)}
+                                            size="small"
+                                        >Xóa</Button>
+                                    ]}
+                                >
+                                    <div style={{ fontWeight: 'bold', fontSize: 18 }}>{tag.name}</div>
+                                    <div style={{ color: '#888', margin: '8px 0' }}>{tag.description || 'Không mô tả'}</div>
+                                    <div style={{ marginBottom: 8 }}>
+                                        <AntTag color={tag.status === 'active' ? 'green' : 'red'}>
+                                            {tag.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                                        </AntTag>
+                                    </div>
+                                    <div style={{ fontSize: 12, color: '#aaa' }}>Ngày tạo: {new Date(tag.createdAt).toLocaleDateString('vi-VN')}</div>
+                                </Card>
+                            </Col>
+                        ))
+                    )}
+                </Row>
             </Card>
         </div>
     );

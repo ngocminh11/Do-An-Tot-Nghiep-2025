@@ -1,67 +1,94 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { message } from 'antd';
 import { userAPI } from '../services/userService';
+import { useNavigate } from 'react-router-dom';
+import Cookies from 'js-cookie';
 
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-export const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children, navigate: navigateProp, onRequireLogin }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const navigate = navigateProp || useNavigate();
 
+    // Helper: decode JWT để lấy userId và role
+    function getUserInfoFromToken(token) {
+        try {
+            const payload = token.split('.')[1];
+            const decoded = JSON.parse(window.atob(payload));
+            return { id: decoded.id, role: decoded.role };
+        } catch {
+            return { id: null, role: null };
+        }
+    }
+
+    // Khi khởi tạo, luôn lấy token từ Cookie
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
+        const token = Cookies.get('token');
+        console.log('[AuthContext] useEffect khởi tạo, token:', token);
+        if (token && token !== 'undefined' && token !== 'null') {
             fetchUserProfile(token);
         } else {
             setLoading(false);
         }
     }, []);
 
-    // Helper: decode JWT để lấy userId
-    function getUserIdFromToken(token) {
+    const fetchUserProfile = async (tokenParam) => {
+        const token = tokenParam || Cookies.get('token');
+        console.log('[AuthContext] fetchUserProfile, token:', token);
         try {
-            const payload = token.split('.')[1];
-            const decoded = JSON.parse(window.atob(payload));
-            return decoded.id;
-        } catch {
-            return null;
-        }
-    }
-
-    const fetchUserProfile = async (token) => {
-        try {
-            console.log('FE: Gọi getProfile với token:', token);
-            const userId = getUserIdFromToken(token);
-            if (!userId) throw new Error('Không lấy được userId từ token');
-            const user = await userAPI.getProfile(token, userId);
+            const { id, role } = getUserInfoFromToken(token);
+            if (!id) throw new Error('Không lấy được userId từ token');
+            const user = await userAPI.getProfile(id);
+            // Nếu user không có role, lấy từ token
+            if (!user.role && role) {
+                user.role = role;
+            }
             setUser(user);
         } catch (error) {
             console.warn('FE: getProfile lỗi, thử refresh token', error);
-            const refreshToken = localStorage.getItem('refreshToken');
-            if (refreshToken) {
+            const refreshToken = Cookies.get('refreshToken');
+            if (refreshToken && refreshToken !== 'undefined' && refreshToken !== 'null') {
                 try {
-                    console.log('FE: Gọi refreshToken với:', refreshToken);
-                    const { accessToken } = await userAPI.refreshToken(refreshToken);
-                    localStorage.setItem('token', accessToken);
-                    const userId = getUserIdFromToken(accessToken);
-                    if (!userId) throw new Error('Không lấy được userId từ token');
-                    const user = await userAPI.getProfile(accessToken, userId);
+                    const { accessToken, refreshToken: newRefreshToken } = await userAPI.refreshToken(refreshToken);
+                    console.log('[AuthContext] refresh nhận về:', accessToken, newRefreshToken);
+                    if (!accessToken || !newRefreshToken) {
+                        console.error('[AuthContext] Không nhận được token mới khi refresh:', accessToken, newRefreshToken);
+                        throw new Error('Không nhận được token mới khi refresh');
+                    }
+                    Cookies.set('token', accessToken, { expires: 7, path: '/', sameSite: 'Lax' });
+                    Cookies.set('refreshToken', newRefreshToken, { expires: 7, path: '/', sameSite: 'Lax' });
+                    console.log('[AuthContext] set token/refreshToken khi refresh:', accessToken, newRefreshToken);
+                    const { id: newUserId, role: newRole } = getUserInfoFromToken(accessToken);
+                    if (!newUserId) throw new Error('Không lấy được userId từ token');
+                    const user = await userAPI.getProfile(newUserId);
+                    // Nếu user không có role, lấy từ token
+                    if (!user.role && newRole) {
+                        user.role = newRole;
+                    }
                     setUser(user);
                     return;
                 } catch (refreshError) {
                     console.error('FE: Refresh token cũng lỗi', refreshError);
-                    localStorage.clear();
-                    setUser(null);
+                    handleSessionExpired();
                 }
             } else {
-                localStorage.clear();
-                setUser(null);
+                handleSessionExpired();
             }
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSessionExpired = () => {
+        console.log('[AuthContext] handleSessionExpired: XÓA COOKIE');
+        Cookies.remove('token', { path: '/' });
+        Cookies.remove('refreshToken', { path: '/' });
+        setUser(null);
+        message.error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại!');
+        if (onRequireLogin) onRequireLogin();
     };
 
     const loginStep1 = async (email, password) => {
@@ -69,34 +96,55 @@ export const AuthProvider = ({ children }) => {
             const { otpToken } = await userAPI.loginStep1(email, password);
             return { otpToken };
         } catch (error) {
-            message.error(error.response?.data?.message || 'Sai email hoặc mật khẩu!');
-            throw error;
+            const msg = error?.response?.data?.message || error?.message || 'Sai email hoặc mật khẩu!';
+            message.error(msg);
+            throw { ...error, message: msg, status: error?.response?.status };
         }
     };
 
     const loginStep2 = async (otpToken, otp) => {
         try {
             const data = await userAPI.loginStep2(otpToken, otp);
-            console.log('DATA loginStep2:', data);
-            console.log("otpToken", otpToken);
-            console.log("otp", otp);
             if (!data) {
-                console.warn('loginStep2: Không nhận được data từ userAPI.loginStep2');
+                throw new Error('Không nhận được data từ API');
             }
-            // Nếu chỉ có otpToken, báo lỗi rõ ràng
-            if (data && data.otpToken && !data.accessToken) {
-                message.error('API trả về sai format! Đăng nhập OTP phải trả về user, accessToken, refreshToken.');
-                throw new Error('API trả về sai format cho loginStep2');
+            const { user, accessToken, refreshToken } = data;
+            if (!accessToken || !refreshToken) {
+                throw new Error('Không nhận được accessToken hoặc refreshToken');
             }
-            const { user, accessToken, refreshToken } = data || {};
-            localStorage.setItem('token', accessToken);
-            localStorage.setItem('refreshToken', refreshToken);
+            if (accessToken && accessToken !== 'undefined' && accessToken !== 'null') {
+                Cookies.set('token', accessToken, { expires: 7, path: '/', sameSite: 'Lax' });
+                console.log('[AuthContext] set token khi login:', accessToken);
+            }
+            if (refreshToken && refreshToken !== 'undefined' && refreshToken !== 'null') {
+                Cookies.set('refreshToken', refreshToken, { expires: 7, path: '/', sameSite: 'Lax' });
+                console.log('[AuthContext] set refreshToken khi login:', refreshToken);
+            }
             setUser(user);
             message.success('Đăng nhập thành công!');
+            navigateToRoleBasedPage(user?.role);
             return user;
         } catch (error) {
-            message.error(error.response?.data?.message || error.message || 'OTP không đúng hoặc đã hết hạn!');
-            throw error;
+            const msg = error?.response?.data?.message || error?.message || 'OTP không đúng hoặc đã hết hạn!';
+            message.error(msg);
+            throw { ...error, message: msg, status: error?.response?.status };
+        }
+    };
+
+    const navigateToRoleBasedPage = (role) => {
+        switch (role) {
+            case 'Khách Hàng':
+                navigate('/');
+                break;
+            case 'Nhân Viên':
+            case 'Quản Lý Kho':
+            case 'Quản Lý Nhân Sự':
+            case 'Quản Lý Đơn Hàng':
+            case 'Quản Lý Chính':
+                navigate('/admin');
+                break;
+            default:
+                navigate('/');
         }
     };
 
@@ -105,17 +153,20 @@ export const AuthProvider = ({ children }) => {
             const { otpToken } = await userAPI.sendOTP(email);
             return { otpToken };
         } catch (error) {
-            message.error(error.response?.data?.message || 'Không gửi được OTP!');
+            const msg = error?.response?.data?.message || 'Không gửi được OTP!';
+            message.error(msg);
             throw error;
         }
     };
 
     const verifyRegisterOTP = async (otpToken, otp) => {
         try {
-            const { otpToken: verifiedOtpToken } = await userAPI.verifyOTP(otpToken, otp);
-            return { verifiedOtpToken };
+            const { otpToken: verifiedOtpToken, user } = await userAPI.verifyOTP(otpToken, otp);
+            setUser(user);
+            return { verifiedOtpToken, user };
         } catch (error) {
-            message.error(error.response?.data?.message || 'OTP không đúng hoặc đã hết hạn!');
+            const msg = error?.response?.data?.message || 'OTP không đúng hoặc đã hết hạn!';
+            message.error(msg);
             throw error;
         }
     };
@@ -123,22 +174,107 @@ export const AuthProvider = ({ children }) => {
     const register = async (userData, verifiedOtpToken) => {
         try {
             const { user, accessToken, refreshToken } = await userAPI.register(userData, verifiedOtpToken);
-            localStorage.setItem('token', accessToken);
-            localStorage.setItem('refreshToken', refreshToken);
+            if (!accessToken || !refreshToken) {
+                throw new Error('Không nhận được accessToken hoặc refreshToken');
+            }
+            if (accessToken && accessToken !== 'undefined' && accessToken !== 'null') {
+                Cookies.set('token', accessToken, { expires: 7, path: '/', sameSite: 'Lax' });
+                console.log('[AuthContext] set token khi register:', accessToken);
+            }
+            if (refreshToken && refreshToken !== 'undefined' && refreshToken !== 'null') {
+                Cookies.set('refreshToken', refreshToken, { expires: 7, path: '/', sameSite: 'Lax' });
+                console.log('[AuthContext] set refreshToken khi register:', refreshToken);
+            }
             setUser(user);
             message.success('Đăng ký thành công!');
+            navigateToRoleBasedPage(user?.role);
             return user;
         } catch (error) {
-            message.error(error.response?.data?.message || 'Đăng ký thất bại!');
+            const msg = error?.response?.data?.message || 'Đăng ký thất bại!';
+            message.error(msg);
+            throw error;
+        }
+    };
+
+    const forgotPassword = async (email) => {
+        try {
+            const { otpToken } = await userAPI.forgotPassword(email);
+            return { otpToken };
+        } catch (error) {
+            const msg = error?.response?.data?.message || 'Không gửi được OTP!';
+            message.error(msg);
+            throw error;
+        }
+    };
+
+    const resetPassword = async (newPassword, otpToken) => {
+        try {
+            await userAPI.resetPassword(newPassword, otpToken);
+            message.success('Đặt lại mật khẩu thành công!');
+        } catch (error) {
+            const msg = error?.response?.data?.message || 'Đặt lại mật khẩu thất bại!';
+            message.error(msg);
+            throw error;
+        }
+    };
+
+    const updateProfile = async (userId, userData) => {
+        try {
+            const updatedUser = await userAPI.updateProfile(userId, userData);
+            setUser(updatedUser);
+            message.success('Cập nhật thông tin thành công!');
+            return updatedUser;
+        } catch (error) {
+            const msg = error?.response?.data?.message || 'Cập nhật thông tin thất bại!';
+            message.error(msg);
+            throw error;
+        }
+    };
+
+    const updateAccountStatus = async (userId, status) => {
+        try {
+            const updatedUser = await userAPI.updateAccountStatus(userId, status);
+            setUser(updatedUser);
+            message.success('Cập nhật trạng thái thành công!');
+            return updatedUser;
+        } catch (error) {
+            const msg = error?.response?.data?.message || 'Cập nhật trạng thái thất bại!';
+            message.error(msg);
+            throw error;
+        }
+    };
+
+    const verifyPin = async (userId, pin) => {
+        try {
+            return await userAPI.verifyPin(userId, pin);
+        } catch (error) {
+            const msg = error?.response?.data?.message || 'Xác thực PIN thất bại!';
+            message.error(msg);
+            throw error;
+        }
+    };
+
+    const updatePin = async (userId, pin) => {
+        try {
+            await userAPI.updatePin(userId, pin);
+            message.success('Cập nhật PIN thành công!');
+        } catch (error) {
+            const msg = error?.response?.data?.message || 'Cập nhật PIN thất bại!';
+            message.error(msg);
             throw error;
         }
     };
 
     const logout = () => {
-        localStorage.clear();
+        console.log('[AuthContext] LOGOUT: XÓA COOKIE');
+        Cookies.remove('token', { path: '/' });
+        Cookies.remove('refreshToken', { path: '/' });
         setUser(null);
         message.success('Đăng xuất thành công!');
+        navigate('/');
+        if (onRequireLogin) onRequireLogin();
     };
+
 
     const value = {
         user,
@@ -148,8 +284,16 @@ export const AuthProvider = ({ children }) => {
         sendRegisterOTP,
         verifyRegisterOTP,
         register,
+        forgotPassword,
+        resetPassword,
+        updateProfile,
+        updateAccountStatus,
+        verifyPin,
+        updatePin,
         logout,
         setUser,
+        fetchUserProfile,
+        handleSessionExpired
     };
 
     return (
@@ -157,4 +301,13 @@ export const AuthProvider = ({ children }) => {
             {!loading && children}
         </AuthContext.Provider>
     );
-}; 
+};
+
+export const AuthProviderWithNavigate = ({ children, onRequireLogin }) => {
+    const navigate = useNavigate();
+    return (
+        <AuthProvider navigate={navigate} onRequireLogin={onRequireLogin}>
+            {children}
+        </AuthProvider>
+    );
+};

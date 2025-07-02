@@ -15,7 +15,15 @@ import {
   Row,
   Col,
   Typography,
-  Divider
+  Divider,
+  Card as AntCard,
+  Pagination,
+  Modal,
+  Form,
+  InputNumber,
+  Dropdown,
+  Menu,
+  Timeline
 } from 'antd';
 import {
   PlusOutlined,
@@ -24,17 +32,83 @@ import {
   SearchOutlined,
   VideoCameraOutlined,
   FilterOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  HistoryOutlined,
+  SwapOutlined,
+  PlusSquareOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import productService from '../../../services/productService';
 import categoryService from '../../../services/categoryService';
 import debounce from 'lodash/debounce';
 import './ProductManagement.scss';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useAuthModal } from '../../../contexts/AuthModalContext';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+const ProductCard = ({ product, imageUrl, categories, onEdit, onDelete, onInventory, onChangeStatus, onShowLogs }) => {
+  const mainImage = product.mediaFiles?.images?.[0];
+  const statusConfig = {
+    active: { color: 'green', text: 'Hoạt động' },
+    inactive: { color: 'red', text: 'Không hoạt động' },
+    draft: { color: 'orange', text: 'Bản nháp' }
+  };
+  const config = statusConfig[product.basicInformation?.status] || { color: 'default', text: product.basicInformation?.status || 'N/A' };
+  const categoryNames = (product.basicInformation?.categoryIds || []).map((category) => {
+    if (typeof category === 'object' && category.name) return category.name;
+    const found = categories.find((cat) => String(cat._id) === String(category));
+    return found ? found.name : `Unknown (${category})`;
+  });
+  return (
+    <AntCard
+      className="product-card"
+      cover={mainImage ? (
+        <Image
+          src={imageUrl || `${API_URL}/media${mainImage.path}`}
+          alt={mainImage.filename}
+          width={180}
+          height={180}
+          style={{ objectFit: 'cover', borderRadius: 8, margin: 'auto', marginTop: 12 }}
+          preview={false}
+        />
+      ) : (
+        <div className="no-image-placeholder" style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa', borderRadius: 8 }}>
+          <Text type="secondary">Không có ảnh</Text>
+        </div>
+      )}
+      actions={[
+        <Tooltip title="Sửa sản phẩm" key="edit"><Button type="link" icon={<EditOutlined />} onClick={onEdit} /></Tooltip>,
+        <Popconfirm title="Bạn có chắc chắn muốn xóa sản phẩm này?" onConfirm={onDelete} okText="Có" cancelText="Không"><Tooltip title="Xóa sản phẩm"><Button type="link" danger icon={<DeleteOutlined />} /></Tooltip></Popconfirm>,
+        <Tooltip title="Nhập kho" key="inventory"><Button type="link" icon={<PlusSquareOutlined />} onClick={onInventory} /></Tooltip>,
+        <Dropdown
+          overlay={<Menu onClick={({ key }) => onChangeStatus(key)}>
+            <Menu.Item key="Hiển Thị">Hiển Thị</Menu.Item>
+            <Menu.Item key="Ẩn">Ẩn</Menu.Item>
+            <Menu.Item key="Ngừng Bán">Ngừng Bán</Menu.Item>
+          </Menu>}
+          trigger={['click']}
+        >
+          <Tooltip title="Đổi trạng thái"><Button type="link" icon={<SwapOutlined />} /></Tooltip>
+        </Dropdown>,
+        <Tooltip title="Lịch sử thao tác" key="logs"><Button type="link" icon={<HistoryOutlined />} onClick={onShowLogs} /></Tooltip>
+      ]}
+      hoverable
+      bodyStyle={{ padding: 16 }}
+    >
+      <div className="product-card-content">
+        <div className="product-name" style={{ fontWeight: 600, fontSize: 16 }}>{product.basicInformation?.productName}</div>
+        <div className="product-sku" style={{ color: '#999', fontSize: 12 }}>SKU: {product.basicInformation?.sku || 'N/A'}</div>
+        <div className="product-price" style={{ color: '#1890ff', fontWeight: 600, margin: '8px 0' }}>{parseFloat(product.pricingAndInventory?.salePrice || 0).toLocaleString('vi-VN')} {product.pricingAndInventory?.currency || 'VND'}</div>
+        <div className="product-stock"><Tag color={product.pricingAndInventory?.stockQuantity > 10 ? 'green' : product.pricingAndInventory?.stockQuantity > 0 ? 'orange' : 'red'}>{product.pricingAndInventory?.stockQuantity ?? 0} tồn kho</Tag></div>
+        <div className="product-status"><Tag color={config.color}>{config.text}</Tag></div>
+        <div className="product-categories" style={{ marginTop: 4 }}>{categoryNames.map((name, idx) => <Tag color="blue" key={idx}>{name}</Tag>)}</div>
+      </div>
+    </AntCard>
+  );
+};
 
 const ProductManagement = () => {
   // Các state quản lý dữ liệu, bộ lọc, sắp xếp và phân trang
@@ -54,6 +128,14 @@ const ProductManagement = () => {
     total: 0,
   });
   const [imageUrls, setImageUrls] = useState({}); // key: product._id, value: objectURL
+  const [statusModal, setStatusModal] = useState({ visible: false, product: null });
+  const [logsModal, setLogsModal] = useState({ visible: false, product: null, logs: [], loading: false });
+  const [form] = Form.useForm();
+  const { logout, handleSessionExpired } = useAuth();
+  const { setShowLogin } = useAuthModal();
+  const [loginMessage, setLoginMessage] = useState('');
+  const pinInputRef = React.useRef();
+  const [inventoryModal, setInventoryModal] = useState({ visible: false, product: null });
 
   const navigate = useNavigate();
 
@@ -61,17 +143,14 @@ const ProductManagement = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-
       let response;
       if (filters.category) {
-        // Sử dụng API lấy sản phẩm theo danh mục
         response = await productService.getProductsByCategory(filters.category, {
           page: pagination.current,
           limit: pagination.pageSize,
           status: filters.status
         });
       } else {
-        // Sử dụng API lấy tất cả sản phẩm
         response = await productService.getAllProducts({
           page: pagination.current,
           limit: pagination.pageSize,
@@ -80,26 +159,39 @@ const ProductManagement = () => {
         });
       }
 
-      if (response && response.data && response.data.data) {
-        const productsData = response.data.data;
-        console.log('Products data:', productsData); // Debug log
-        setAllProducts(productsData);
+      let productsData = [];
+      if (Array.isArray(response)) {
+        productsData = response;
+      } else if (Array.isArray(response?.data)) {
+        productsData = response.data;
+      } else if (Array.isArray(response?.data?.data)) {
+        productsData = response.data.data;
+      } else if (Array.isArray(response?.data?.products)) {
+        productsData = response.data.products;
+      }
 
-        // Cập nhật pagination từ API response
-        setPagination(prev => ({
-          ...prev,
-          total: response.data.totalItems || 0,
-          current: response.data.currentPage || 1,
-          pageSize: response.data.perPage || 10
-        }));
-      } else {
-        console.error('Invalid products response:', response);
-        setAllProducts([]);
-        message.error('Không thể tải danh sách sản phẩm');
+      setAllProducts(productsData);
+      setPagination(prev => ({
+        ...prev,
+        total: response?.data?.totalItems || productsData.length || 0,
+        current: response?.data?.currentPage || 1,
+        pageSize: response?.data?.perPage || pagination.pageSize
+      }));
+
+      if (!productsData || productsData.length === 0) {
+        message.info('Không có sản phẩm nào để hiển thị');
       }
     } catch (error) {
       console.error('Error fetching products:', error);
+
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+
       setAllProducts([]);
+      setPagination(prev => ({ ...prev, total: 0 }));
       message.error('Không thể tải danh sách sản phẩm');
     } finally {
       setLoading(false);
@@ -111,7 +203,6 @@ const ProductManagement = () => {
     setLoadingCategories(true);
     try {
       const response = await categoryService.getAllCategories();
-      // Chuẩn hóa lấy đúng mảng danh mục
       if (response && Array.isArray(response.data)) {
         setCategories(response.data.map(cat => ({
           ...cat,
@@ -123,6 +214,14 @@ const ProductManagement = () => {
         message.error('Không thể tải danh mục sản phẩm');
       }
     } catch (error) {
+      console.error('Error fetching categories:', error);
+
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+
       setCategories([]);
       message.error('Không thể tải danh mục sản phẩm');
     } finally {
@@ -289,258 +388,123 @@ const ProductManagement = () => {
       message.success('Xóa sản phẩm thành công');
       fetchProducts();
     } catch (error) {
+      console.error('Error deleting product:', error);
+
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+
       message.error('Không thể xóa sản phẩm');
     }
   };
 
-  // Hiển thị chi tiết sản phẩm trong hàng mở rộng
-  const expandedRowRender = (record) => (
-    <div className="expanded-row-content">
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12}>
-          <div className="detail-section">
-            <Text strong>Mô tả chi tiết:</Text>
-            <Text>{record.description?.detailedDescription || 'N/A'}</Text>
-          </div>
-        </Col>
-        <Col xs={24} sm={12}>
-          <div className="detail-section">
-            <Text strong>Thành phần:</Text>
-            <Text>{record.description?.ingredients || 'N/A'}</Text>
-          </div>
-        </Col>
-        <Col xs={24} sm={12}>
-          <div className="detail-section">
-            <Text strong>Hướng dẫn sử dụng:</Text>
-            <Text>{record.description?.usageInstructions || 'N/A'}</Text>
-          </div>
-        </Col>
-        <Col xs={24} sm={12}>
-          <div className="detail-section">
-            <Text strong>Hạn sử dụng:</Text>
-            <Text>{record.description?.expiration || 'N/A'}</Text>
-          </div>
-        </Col>
-      </Row>
+  // Đổi trạng thái sản phẩm
+  const handleChangeStatus = async (status) => {
+    if (!statusModal.product) return;
+    if (status === statusModal.product.basicInformation.status) {
+      message.info('Sản phẩm đã ở trạng thái này.');
+      return;
+    }
+    try {
+      await productService.changeStatus(statusModal.product._id, status);
+      message.success('Đổi trạng thái thành công');
+      setStatusModal({ visible: false, product: null });
+      fetchProducts();
+    } catch (error) {
+      console.error('Error changing status:', error);
 
-      {record.mediaFiles?.videos?.length > 0 && (
-        <div className="media-section">
-          <Text strong>Videos:</Text>
-          <div className="video-links">
-            {record.mediaFiles.videos.map((video, index) => (
-              <a
-                key={index}
-                href={video.path}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="video-link"
-              >
-                Video {index + 1} <VideoCameraOutlined />
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        handleSessionExpired();
+        return;
+      }
 
-      {record.mediaFiles?.images?.length > 1 && (
-        <div className="media-section">
-          <Text strong>Hình ảnh bổ sung:</Text>
-          <div className="additional-images">
-            {record.mediaFiles.images.slice(1).map((image, index) => (
-              <Image
-                key={index}
-                src={image.path}
-                alt={`Sản phẩm ${index + 2}`}
-                width={80}
-                height={80}
-                className="additional-image"
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+      message.error(error?.message || 'Đổi trạng thái thất bại');
+    }
+  };
 
-  // Định nghĩa các cột cho bảng sản phẩm
-  const columns = [
-    {
-      title: 'Hình ảnh',
-      dataIndex: 'mediaFiles',
-      key: 'mediaFiles',
-      render: (mediaFiles, record) => {
-        console.log('Record:', record);
-        console.log('Media Files:', mediaFiles);
+  const openStatusModal = (product) => setStatusModal({ visible: true, product });
 
-        // Lấy đường dẫn hình ảnh từ mediaFiles.images[0]
-        const mainImage = mediaFiles?.images?.[0];
-        console.log('Main Image:', mainImage);
+  // Xem log thao tác sản phẩm
+  const handleShowLogs = async (product) => {
+    setLogsModal({ visible: true, product, logs: [], loading: true });
+    try {
+      const res = await productService.getProductLogs(product._id);
+      setLogsModal({ visible: true, product, logs: res.data?.data || [], loading: false });
+    } catch (error) {
+      console.error('Error fetching logs:', error);
 
-        return mainImage ? (
-          <Image
-            src={imageUrls[record._id] || `${API_URL}/media${mainImage.path}`}
-            alt={mainImage.filename}
-            width={50}
-            height={50}
-            className="product-image"
-            preview={{
-              src: imageUrls[record._id] || `${API_URL}/media${mainImage.path}`,
-            }}
-            onError={(e) => {
-              console.error('Image load error:', e);
-              e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNGMEYwRjAiLz48dGV4dCB4PSIzMCIgeT0iMzAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg==';
-            }}
-          />
-        ) : (
-          <div className="no-image-placeholder">
-            <Text type="secondary">Không có ảnh</Text>
-          </div>
-        );
-      },
-      width: 70,
-    },
-    {
-      title: 'Tên sản phẩm',
-      dataIndex: ['basicInformation', 'productName'],
-      key: 'basicInformation.productName',
-      sorter: true,
-      render: (productName, record) => (
-        <Tooltip title={record.description?.shortDescription || ''}>
-          <div className="product-name">
-            <Text strong>{productName}</Text>
-            <Text type="secondary" className="product-sku">
-              SKU: {record.basicInformation?.sku || 'N/A'}
-            </Text>
-          </div>
-        </Tooltip>
-      ),
-      width: 250,
-    },
-    {
-      title: 'Thương hiệu',
-      dataIndex: ['basicInformation', 'brand'],
-      key: 'basicInformation.brand',
-      render: (brand) => <Text>{brand || 'N/A'}</Text>,
-      width: 120,
-    },
-    {
-      title: 'Giá',
-      dataIndex: ['pricingAndInventory', 'salePrice'],
-      key: 'pricingAndInventory.salePrice',
-      sorter: true,
-      render: (salePrice, record) => {
-        const currency = record.pricingAndInventory?.currency || 'VND';
-        if (salePrice === undefined || salePrice === null)
-          return <Text type="secondary">N/A</Text>;
-        return (
-          <div className="price-info">
-            <Text strong className="price">
-              {parseFloat(salePrice).toLocaleString('vi-VN')} {currency}
-            </Text>
-          </div>
-        );
-      },
-      width: 130,
-    },
-    {
-      title: 'Tồn kho',
-      dataIndex: ['pricingAndInventory', 'stockQuantity'],
-      key: 'pricingAndInventory.stockQuantity',
-      sorter: true,
-      render: (stockQuantity) => {
-        const quantity = stockQuantity !== undefined && stockQuantity !== null ? stockQuantity : 0;
-        const color = quantity > 10 ? 'green' : quantity > 0 ? 'orange' : 'red';
-        return (
-          <Tag color={color} className="stock-tag">
-            {quantity}
-          </Tag>
-        );
-      },
-      width: 100,
-    },
-    {
-      title: 'Danh mục',
-      dataIndex: ['basicInformation', 'categoryIds'],
-      key: 'categories',
-      render: (categoryIds) => {
-        if (!categoryIds || categoryIds.length === 0) return <Text type="secondary">N/A</Text>;
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        handleSessionExpired();
+        return;
+      }
 
-        const names = categoryIds.map((category) => {
-          // Nếu category là object (đã populate từ API)
-          if (typeof category === 'object' && category.name) {
-            return category.name;
-          }
-          // Nếu category là ID, tìm trong danh sách categories
-          const foundCategory = categories.find((cat) => String(cat._id) === String(category));
-          return foundCategory ? foundCategory.name : `Unknown (${category})`;
-        }).filter(Boolean);
+      setLogsModal({ visible: true, product, logs: [], loading: false });
+      message.error('Không thể tải lịch sử thao tác');
+    }
+  };
 
-        return names.length > 0 ? (
-          <div className="categories">
-            {names.map((name, index) => (
-              <Tag key={index} color="blue" className="category-tag">
-                {name}
-              </Tag>
-            ))}
-          </div>
-        ) : (
-          <Text type="secondary">N/A</Text>
-        );
-      },
-      width: 180,
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: ['basicInformation', 'status'],
-      key: 'basicInformation.status',
-      render: (status) => {
-        const statusConfig = {
-          active: { color: 'green', text: 'Hoạt động' },
-          inactive: { color: 'red', text: 'Không hoạt động' },
-          draft: { color: 'orange', text: 'Bản nháp' }
-        };
-        const config = statusConfig[status] || { color: 'default', text: status || 'N/A' };
-        return <Tag color={config.color} className="status-tag">{config.text}</Tag>;
-      },
-      width: 120,
-    },
-    {
-      title: 'Thao tác',
-      key: 'actions',
-      fixed: 'right',
-      render: (_, record) => (
-        <Space size="small" className="action-buttons">
-          <Tooltip title="Sửa sản phẩm">
-            <Button
-              type="primary"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => navigate(`/admin/products/${record._id}`)}
-              className="edit-btn"
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa sản phẩm này?"
-            description="Hành động này không thể hoàn tác."
-            onConfirm={() => handleDelete(record._id)}
-            okText="Có"
-            cancelText="Không"
-            placement="top"
-          >
-            <Tooltip title="Xóa sản phẩm">
-              <Button
-                danger
-                size="small"
-                icon={<DeleteOutlined />}
-                className="delete-btn"
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
-      width: 120,
-    },
-  ];
+  const handleInventory = (product) => {
+    setInventoryModal({ visible: true, product });
+    form.resetFields();
+  };
+
+  const handleInventoryOk = async () => {
+    try {
+      const values = await form.validateFields();
+
+      // Validate PIN: phải là 6 số
+      if (!values.pin || !/^\d{6}$/.test(values.pin)) {
+        message.error('Mã PIN phải gồm đúng 6 chữ số!');
+        pinInputRef.current?.focus();
+        return;
+      }
+
+      // Nếu cả hai trường đều rỗng
+      if (!values.quantity && !values.originalPrice) {
+        message.error('Vui lòng nhập số lượng hoặc giá nhập mới!');
+        return;
+      }
+
+      // Chuẩn hóa payload
+      const payload = {
+        quantity: values.quantity || 0,
+        originalPrice: values.originalPrice || undefined,
+        pin: values.pin
+      };
+
+      // Gọi API nhập kho
+      await productService.updateInventory(
+        inventoryModal.product._id,
+        payload
+      );
+
+      message.success('Nhập kho thành công');
+      setInventoryModal({ visible: false, product: null });
+      form.resetFields();
+      fetchProducts();
+    } catch (error) {
+      console.error('Error updating inventory:', error);
+
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+
+      const errorMessage = error?.response?.data?.message || error?.message || 'Nhập kho thất bại';
+
+      if (errorMessage.toLowerCase().includes('pin')) {
+        message.error(errorMessage);
+        pinInputRef.current?.focus();
+      } else {
+        message.error(errorMessage);
+      }
+    }
+  };
 
   return (
     <div className="product-management">
@@ -569,101 +533,243 @@ const ProductManagement = () => {
         <Divider />
 
         {/* Filters */}
-        <Card className="filters-card" size="small">
-          <div className="filters-header">
-            <FilterOutlined className="filter-icon" />
-            <Text strong>Bộ lọc tìm kiếm</Text>
-          </div>
-
-          <Row gutter={[16, 16]} className="filters-row">
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Input
-                placeholder="Tìm kiếm sản phẩm..."
-                prefix={<SearchOutlined />}
-                onChange={handleSearchChange}
-                className="search-input"
-                allowClear
+        <div className="filters-modern">
+          <Row gutter={[16, 16]} align="middle" justify="center">
+            <Col xs={24} sm={12} md={6} lg={5} xl={5}>
+              <div className="filter-field">
+                <label className="filter-label"><SearchOutlined style={{ marginRight: 4 }} />Từ khóa</label>
+                <Input
+                  size="large"
+                  placeholder="Nhập tên, mô tả, SKU..."
+                  onChange={handleSearchChange}
+                  className="search-input"
+                  allowClear
+                  bordered
+                  style={{ borderRadius: 12, background: '#fff' }}
+                />
+              </div>
+            </Col>
+            <Col xs={24} sm={12} md={6} lg={5} xl={5}>
+              <div className="filter-field">
+                <label className="filter-label"><FilterOutlined style={{ marginRight: 4 }} />Danh mục</label>
+                <Select
+                  size="large"
+                  placeholder="Chọn danh mục"
+                  allowClear
+                  onChange={handleCategoryChange}
+                  value={filters.category}
+                  disabled={!Array.isArray(categories) || categories.length === 0}
+                  className="filter-select"
+                  loading={loadingCategories}
+                  bordered
+                  style={{ borderRadius: 12, background: '#fff', width: '100%' }}
+                >
+                  {!Array.isArray(categories) || categories.length === 0 ? (
+                    <Option value="" disabled>Không có danh mục</Option>
+                  ) : (
+                    categories.map((category) => (
+                      <Option key={category._id} value={category._id}>
+                        {category.name}
+                      </Option>
+                    ))
+                  )}
+                </Select>
+              </div>
+            </Col>
+            <Col xs={24} sm={12} md={6} lg={5} xl={5}>
+              <div className="filter-field">
+                <label className="filter-label"><FilterOutlined style={{ marginRight: 4 }} />Trạng thái</label>
+                <Select
+                  size="large"
+                  placeholder="Chọn trạng thái"
+                  allowClear
+                  onChange={handleStatusChange}
+                  value={filters.status}
+                  className="filter-select"
+                  bordered
+                  style={{ borderRadius: 12, background: '#fff', width: '100%' }}
+                >
+                  <Option value="active">Hoạt động</Option>
+                  <Option value="inactive">Không hoạt động</Option>
+                  <Option value="draft">Bản nháp</Option>
+                </Select>
+              </div>
+            </Col>
+            <Col xs={24} sm={12} md={6} lg={5} xl={5} style={{ textAlign: 'center', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={handleResetFilters}
+                className="reset-btn"
+                size="large"
+                style={{ borderRadius: 12, background: '#f6f8fa', border: 'none', color: '#666', marginTop: 8 }}
               />
             </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Select
-                placeholder="Chọn danh mục"
-                allowClear
-                onChange={handleCategoryChange}
-                value={filters.category}
-                disabled={!Array.isArray(categories) || categories.length === 0}
-                className="filter-select"
-                loading={loadingCategories}
-              >
-                {!Array.isArray(categories) || categories.length === 0 ? (
-                  <Option value="" disabled>Không có danh mục</Option>
-                ) : (
-                  categories.map((category) => (
-                    <Option key={category._id} value={category._id}>
-                      {category.name}
-                    </Option>
-                  ))
-                )}
-              </Select>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Select
-                placeholder="Chọn trạng thái"
-                allowClear
-                onChange={handleStatusChange}
-                value={filters.status}
-                className="filter-select"
-              >
-                <Option value="active">Hoạt động</Option>
-                <Option value="inactive">Không hoạt động</Option>
-                <Option value="draft">Bản nháp</Option>
-              </Select>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Space>
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={handleResetFilters}
-                  className="reset-btn"
-                >
-                  Làm mới
-                </Button>
-                <Button
-                  type="primary"
-                  onClick={fetchProducts}
-                  loading={loading}
-                  className="refresh-btn"
-                >
-                  Tải lại
-                </Button>
-              </Space>
-            </Col>
           </Row>
-        </Card>
+        </div>
 
         {/* Table */}
-        <Card className="table-card" size="small">
-          <Table
-            columns={columns}
-            dataSource={sortedProducts}
-            rowKey="_id"
-            loading={loading}
-            pagination={{
-              ...pagination,
-              showSizeChanger: true,
-              pageSizeOptions: ['10', '20', '50'],
-              showQuickJumper: true,
-              showTotal: (total, range) =>
-                `${range[0]}-${range[1]} của ${total} sản phẩm`,
-            }}
-            onChange={handleTableChange}
-            expandable={{ expandedRowRender }}
-            scroll={{ x: 1200 }}
-            className="products-table"
-            size="middle"
-          />
+        <Card className="table-card" size="small" style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}>
+          {loading ? (
+            <Spin style={{ width: '100%', margin: '40px 0' }} />
+          ) : (
+            <Row gutter={[24, 24]}>
+              {sortedProducts.length === 0 ? (
+                <Col span={24} style={{ textAlign: 'center', padding: 40 }}>
+                  <Text type="secondary">Không có sản phẩm nào</Text>
+                </Col>
+              ) : (
+                sortedProducts.slice((pagination.current - 1) * pagination.pageSize, pagination.current * pagination.pageSize).map((product) => (
+                  <Col xs={24} sm={12} md={8} lg={6} xl={6} key={product._id}>
+                    <ProductCard
+                      product={product}
+                      imageUrl={imageUrls[product._id]}
+                      categories={categories}
+                      onEdit={() => navigate(`/admin/products/${product._id}`)}
+                      onDelete={() => handleDelete(product._id)}
+                      onInventory={() => handleInventory(product)}
+                      onChangeStatus={(status) => { setStatusModal({ visible: true, product }); handleChangeStatus(status); }}
+                      onShowLogs={() => handleShowLogs(product)}
+                    />
+                  </Col>
+                ))
+              )}
+            </Row>
+          )}
+          {/* Pagination dưới dạng menu/card */}
+          <div style={{ marginTop: 32, textAlign: 'center' }}>
+            <Pagination
+              current={pagination.current}
+              pageSize={pagination.pageSize}
+              total={pagination.total}
+              showSizeChanger
+              pageSizeOptions={['10', '20', '50']}
+              showQuickJumper
+              showTotal={(total, range) => `${range[0]}-${range[1]} của ${total} sản phẩm`}
+              onChange={(page, pageSize) => setPagination((prev) => ({ ...prev, current: page, pageSize }))}
+              style={{ display: 'inline-block' }}
+            />
+          </div>
         </Card>
       </Card>
+
+      {/* Modal đổi trạng thái */}
+      <Modal
+        title={`Đổi trạng thái: ${statusModal.product?.basicInformation?.productName || ''}`}
+        visible={statusModal.visible}
+        onCancel={() => setStatusModal({ visible: false, product: null })}
+        footer={null}
+      >
+        <Menu onClick={({ key }) => handleChangeStatus(key)}>
+          <Menu.Item key="Hiển Thị" disabled={statusModal.product?.basicInformation?.status === 'Hiển Thị'}>Hiển Thị</Menu.Item>
+          <Menu.Item key="Ẩn" disabled={statusModal.product?.basicInformation?.status === 'Ẩn'}>Ẩn</Menu.Item>
+          <Menu.Item key="Ngừng Bán" disabled={statusModal.product?.basicInformation?.status === 'Ngừng Bán'}>Ngừng Bán</Menu.Item>
+        </Menu>
+      </Modal>
+
+      {/* Modal log thao tác */}
+      <Modal
+        title={`Lịch sử thao tác: ${logsModal.product?.basicInformation?.productName || ''}`}
+        visible={logsModal.visible}
+        onCancel={() => setLogsModal({ visible: false, product: null, logs: [], loading: false })}
+        footer={null}
+        width={600}
+      >
+        {logsModal.loading ? <Spin /> : (
+          <Timeline>
+            {logsModal.logs.map((log, idx) => (
+              <Timeline.Item key={idx} color="blue">
+                <div><b>Hành động:</b> {log.action}</div>
+                <div><b>Thời gian:</b> {new Date(log.createdAt).toLocaleString('vi-VN')}</div>
+                <div><b>Người thao tác:</b> {log.operatorId?.name || 'N/A'}</div>
+                <div><b>Chi tiết:</b> <pre style={{ margin: 0, background: '#f6f8fa', padding: 8, borderRadius: 4 }}>{JSON.stringify(log.payload, null, 2)}</pre></div>
+              </Timeline.Item>
+            ))}
+          </Timeline>
+        )}
+      </Modal>
+
+      {/* Modal nhập kho */}
+      <Modal
+        title={`Nhập kho: ${inventoryModal.product?.basicInformation?.productName || ''}`}
+        visible={inventoryModal.visible}
+        onOk={handleInventoryOk}
+        onCancel={() => {
+          setInventoryModal({ visible: false, product: null });
+          form.resetFields();
+        }}
+        okText="Nhập kho"
+        cancelText="Hủy"
+        width={500}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            name="quantity"
+            label="Số lượng nhập thêm"
+            rules={[{
+              validator: (_, value) => {
+                if (!value && !form.getFieldValue('originalPrice')) {
+                  return Promise.reject('Vui lòng nhập số lượng hoặc giá nhập mới!');
+                }
+                if (value && value <= 0) {
+                  return Promise.reject('Số lượng phải lớn hơn 0');
+                }
+                return Promise.resolve();
+              }
+            }]}
+          >
+            <InputNumber
+              min={0}
+              style={{ width: '100%' }}
+              placeholder="Nhập số lượng (nếu có)"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="originalPrice"
+            label="Giá nhập mới (nếu có)"
+            rules={[{
+              validator: (_, value) => {
+                if (!value && !form.getFieldValue('quantity')) {
+                  return Promise.reject('Vui lòng nhập số lượng hoặc giá nhập mới!');
+                }
+                if (value && value <= 0) {
+                  return Promise.reject('Giá nhập phải lớn hơn 0');
+                }
+                return Promise.resolve();
+              }
+            }]}
+          >
+            <InputNumber
+              min={0}
+              style={{ width: '100%' }}
+              placeholder="Nhập giá nhập mới (nếu có)"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="pin"
+            label="Mã PIN xác nhận"
+            rules={[
+              { required: true, message: 'Vui lòng nhập mã PIN!' },
+              { pattern: /^\d{6}$/, message: 'Mã PIN phải gồm đúng 6 chữ số!' }
+            ]}
+          >
+            <Input.Password
+              placeholder="Nhập mã PIN"
+              maxLength={6}
+              ref={pinInputRef}
+            />
+          </Form.Item>
+
+          <div style={{ color: '#888', fontSize: 12, marginTop: 8 }}>
+            <Text type="secondary">
+              • Bạn có thể nhập chỉ số lượng, chỉ giá nhập mới hoặc cả hai.<br />
+              • Mã PIN là bắt buộc để xác nhận thao tác nhập kho.<br />
+              • Thao tác này sẽ được ghi lại trong lịch sử.
+            </Text>
+          </div>
+        </Form>
+      </Modal>
     </div>
   );
 };
