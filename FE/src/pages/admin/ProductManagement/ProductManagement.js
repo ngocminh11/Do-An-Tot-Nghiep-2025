@@ -44,6 +44,7 @@ import debounce from 'lodash/debounce';
 import './ProductManagement.scss';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useAuthModal } from '../../../contexts/AuthModalContext';
+import { getProductMainImageUrl } from '../../../services/productService';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
@@ -52,9 +53,9 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const ProductCard = ({ product, imageUrl, categories, onEdit, onDelete, onInventory, onChangeStatus, onShowLogs }) => {
   const mainImage = product.mediaFiles?.images?.[0];
   const statusConfig = {
-    active: { color: 'green', text: 'Hoạt động' },
-    inactive: { color: 'red', text: 'Không hoạt động' },
-    draft: { color: 'orange', text: 'Bản nháp' }
+    'Hiển Thị': { color: 'green', text: 'Hiển Thị' },
+    'Ẩn': { color: 'orange', text: 'Ẩn' },
+    'Ngừng Bán': { color: 'red', text: 'Ngừng Bán' }
   };
   const config = statusConfig[product.basicInformation?.status] || { color: 'default', text: product.basicInformation?.status || 'N/A' };
   const categoryNames = (product.basicInformation?.categoryIds || []).map((category) => {
@@ -67,8 +68,8 @@ const ProductCard = ({ product, imageUrl, categories, onEdit, onDelete, onInvent
       className="product-card"
       cover={mainImage ? (
         <Image
-          src={imageUrl || `${API_URL}/media${mainImage.path}`}
-          alt={mainImage.filename}
+          src={getProductMainImageUrl(product)}
+          alt={mainImage.filename || 'Ảnh sản phẩm'}
           width={180}
           height={180}
           style={{ objectFit: 'cover', borderRadius: 8, margin: 'auto', marginTop: 12 }}
@@ -136,8 +137,25 @@ const ProductManagement = () => {
   const [loginMessage, setLoginMessage] = useState('');
   const pinInputRef = React.useRef();
   const [inventoryModal, setInventoryModal] = useState({ visible: false, product: null });
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState('');
 
   const navigate = useNavigate();
+
+  // Hàm chuẩn hóa dữ liệu sản phẩm từ { product, detail }
+  function normalizeProduct(item) {
+    if (!item || !item.product) return null;
+    const { product, detail } = item;
+    let merged = { ...product };
+    if (detail) {
+      merged = {
+        ...merged,
+        pricingAndInventory: detail.pricingAndInventory,
+        mediaFiles: detail.mediaFiles,
+      };
+    }
+    return merged;
+  }
 
   // Lấy dữ liệu sản phẩm từ API với JSON có cấu trúc { totalItems, currentPage, pageSize, products }
   const fetchProducts = async () => {
@@ -160,36 +178,35 @@ const ProductManagement = () => {
       }
 
       let productsData = [];
-      if (Array.isArray(response)) {
+      if (Array.isArray(response?.data?.data)) {
+        productsData = response.data.data;
+      } else if (Array.isArray(response)) {
         productsData = response;
       } else if (Array.isArray(response?.data)) {
         productsData = response.data;
-      } else if (Array.isArray(response?.data?.data)) {
-        productsData = response.data.data;
       } else if (Array.isArray(response?.data?.products)) {
         productsData = response.data.products;
       }
 
-      setAllProducts(productsData);
+      // CHUẨN HÓA DỮ LIỆU
+      const normalized = productsData.map(normalizeProduct).filter(Boolean);
+      setAllProducts(normalized);
       setPagination(prev => ({
         ...prev,
-        total: response?.data?.totalItems || productsData.length || 0,
+        total: response?.data?.totalItems || normalized.length || 0,
         current: response?.data?.currentPage || 1,
         pageSize: response?.data?.perPage || pagination.pageSize
       }));
 
-      if (!productsData || productsData.length === 0) {
+      if (!normalized || normalized.length === 0) {
         message.info('Không có sản phẩm nào để hiển thị');
       }
     } catch (error) {
       console.error('Error fetching products:', error);
-
-      // Handle authentication errors
       if (error?.response?.status === 401) {
         handleSessionExpired();
         return;
       }
-
       setAllProducts([]);
       setPagination(prev => ({ ...prev, total: 0 }));
       message.error('Không thể tải danh sách sản phẩm');
@@ -432,16 +449,10 @@ const ProductManagement = () => {
     setLogsModal({ visible: true, product, logs: [], loading: true });
     try {
       const res = await productService.getProductLogs(product._id);
-      setLogsModal({ visible: true, product, logs: res.data?.data || [], loading: false });
+      // Đảm bảo lấy đúng mảng log từ response
+      const logs = Array.isArray(res?.data?.data) ? res.data.data : [];
+      setLogsModal({ visible: true, product, logs, loading: false });
     } catch (error) {
-      console.error('Error fetching logs:', error);
-
-      // Handle authentication errors
-      if (error?.response?.status === 401) {
-        handleSessionExpired();
-        return;
-      }
-
       setLogsModal({ visible: true, product, logs: [], loading: false });
       message.error('Không thể tải lịch sử thao tác');
     }
@@ -507,6 +518,27 @@ const ProductManagement = () => {
     }
   };
 
+  const handleInventoryClick = () => {
+    setShowPinModal(true);
+  };
+
+  const handlePinOk = () => {
+    if (!/^\d{6}$/.test(pinInput)) {
+      message.error('Mã PIN phải gồm đúng 6 chữ số!');
+      return;
+    }
+    // Lưu tạm mã PIN vào sessionStorage (hoặc state quản lý toàn cục)
+    sessionStorage.setItem('inventoryPin', pinInput);
+    setShowPinModal(false);
+    setPinInput('');
+    navigate('/admin/inventory-import');
+  };
+
+  const handlePinCancel = () => {
+    setShowPinModal(false);
+    setPinInput('');
+  };
+
   return (
     <div className="product-management">
       <Card className="main-card">
@@ -520,15 +552,26 @@ const ProductManagement = () => {
               Quản lý danh sách sản phẩm trong hệ thống
             </Text>
           </div>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => navigate('/admin/products/add')}
-            className="add-product-btn"
-            size="large"
-          >
-            Thêm sản phẩm
-          </Button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => navigate('/admin/products/add')}
+              className="add-product-btn"
+              size="large"
+            >
+              Thêm sản phẩm
+            </Button>
+            <Button
+              type="default"
+              icon={<PlusSquareOutlined />}
+              onClick={handleInventoryClick}
+              className="inventory-import-btn"
+              size="large"
+            >
+              Nhập kho
+            </Button>
+          </div>
         </div>
 
         <Divider />
@@ -590,9 +633,9 @@ const ProductManagement = () => {
                   bordered
                   style={{ borderRadius: 12, background: '#fff', width: '100%' }}
                 >
-                  <Option value="active">Hoạt động</Option>
-                  <Option value="inactive">Không hoạt động</Option>
-                  <Option value="draft">Bản nháp</Option>
+                  <Option value="Hiển Thị">Hiển Thị</Option>
+                  <Option value="Ẩn">Ẩn</Option>
+                  <Option value="Ngừng Bán">Ngừng Bán</Option>
                 </Select>
               </div>
             </Col>
@@ -627,7 +670,6 @@ const ProductManagement = () => {
                       categories={categories}
                       onEdit={() => navigate(`/admin/products/${product._id}`)}
                       onDelete={() => handleDelete(product._id)}
-                      onInventory={() => handleInventory(product)}
                       onChangeStatus={(status) => { setStatusModal({ visible: true, product }); handleChangeStatus(status); }}
                       onShowLogs={() => handleShowLogs(product)}
                     />
@@ -677,7 +719,7 @@ const ProductManagement = () => {
       >
         {logsModal.loading ? <Spin /> : (
           <Timeline>
-            {logsModal.logs.map((log, idx) => (
+            {(Array.isArray(logsModal.logs) ? logsModal.logs : []).map((log, idx) => (
               <Timeline.Item key={idx} color="blue">
                 <div><b>Hành động:</b> {log.action}</div>
                 <div><b>Thời gian:</b> {new Date(log.createdAt).toLocaleString('vi-VN')}</div>
@@ -689,95 +731,21 @@ const ProductManagement = () => {
         )}
       </Modal>
 
-      {/* Modal nhập kho */}
       <Modal
-        title={`Nhập kho: ${inventoryModal.product?.basicInformation?.productName || ''}`}
-        visible={inventoryModal.visible}
-        onOk={handleInventoryOk}
-        onCancel={() => {
-          setInventoryModal({ visible: false, product: null });
-          form.resetFields();
-        }}
-        okText="Nhập kho"
+        title="Nhập mã PIN xác nhận"
+        visible={showPinModal}
+        onOk={handlePinOk}
+        onCancel={handlePinCancel}
+        okText="Xác nhận"
         cancelText="Hủy"
-        width={500}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="quantity"
-            label="Số lượng nhập thêm"
-            rules={[{
-              validator: (_, value) => {
-                if (!value && !form.getFieldValue('originalPrice')) {
-                  return Promise.reject('Vui lòng nhập số lượng hoặc giá nhập mới!');
-                }
-                if (value && value <= 0) {
-                  return Promise.reject('Số lượng phải lớn hơn 0');
-                }
-                return Promise.resolve();
-              }
-            }]}
-          >
-            <InputNumber
-              min={0}
-              style={{ width: '100%' }}
-              placeholder="Nhập số lượng (nếu có)"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="originalPrice"
-            label="Giá nhập mới (nếu có)"
-            rules={[{
-              validator: (_, value) => {
-                if (!value && !form.getFieldValue('quantity')) {
-                  return Promise.reject('Vui lòng nhập số lượng hoặc giá nhập mới!');
-                }
-                if (value && value <= 0) {
-                  return Promise.reject('Giá nhập phải lớn hơn 0');
-                }
-                return Promise.resolve();
-              }
-            }]}
-          >
-            <InputNumber
-              min={0}
-              style={{ width: '100%' }}
-              placeholder="Nhập giá nhập mới (nếu có)"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="pin"
-            label="Mã PIN xác nhận"
-            rules={[
-              { required: true, message: 'Vui lòng nhập mã PIN!' },
-              { pattern: /^\d{6}$/, message: 'Mã PIN phải gồm đúng 6 chữ số!' }
-            ]}
-          >
-            <Input.Password
-              placeholder="Nhập mã PIN"
-              maxLength={6}
-              ref={pinInputRef}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="batchCode"
-            label="Mã lô hàng (Batch Code)"
-            rules={[{ required: false, message: 'Nhập mã lô hàng nếu có!' }]}
-          >
-            <Input placeholder="Nhập mã lô hàng (nếu có)" />
-          </Form.Item>
-
-          <div style={{ color: '#888', fontSize: 12, marginTop: 8 }}>
-            <Text type="secondary">
-              • Bạn có thể nhập chỉ số lượng, chỉ giá nhập mới hoặc cả hai.<br />
-              • Mã PIN là bắt buộc để xác nhận thao tác nhập kho.<br />
-              • Thao tác này sẽ được ghi lại trong lịch sử.
-            </Text>
-          </div>
-        </Form>
+        <Input.Password
+          placeholder="Nhập mã PIN 6 số"
+          maxLength={6}
+          value={pinInput}
+          onChange={e => setPinInput(e.target.value)}
+          onPressEnter={handlePinOk}
+        />
       </Modal>
     </div>
   );

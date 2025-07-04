@@ -25,6 +25,7 @@ const promotionCtrl = require('../Controllers/promotion.controller');
 const postCtrl = require('../Controllers/post.controller');
 const orderCtrl = require('../Controllers/order.controller');
 const dashboardCtrl = require('../Controllers/dashboard.controller');
+const storageCtrl = require('../Controllers/StorageController');
 
 /* ==== Middlewares ==== */
 const validateImageUpload = require('../Middlewares/upload.middleware');
@@ -73,10 +74,6 @@ router.delete('/products/:id',
   productCtrl.deleteProduct);
 
 /* --- kho & trạng thái (yêu cầu PIN) --- */
-router.patch('/products/:id/inventory',
-  authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']),
-  productCtrl.updateInventory);
-
 router.patch('/products/:id/status',
   authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']),
   productCtrl.changeStatus);
@@ -90,6 +87,15 @@ router.get('/products/logs/all',
   authenticateUser, authorizeRoles(...ADMIN_ROLES),
   productCtrl.getAllProductLogs);
 
+router.post('/products/bulk-import', productCtrl.bulkImportInventory);
+
+router.post('/storage/approve',
+  authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']),
+  productCtrl.approveImportInventory);
+
+router.get('/storage/import-list',
+  authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']),
+  productCtrl.getAllImportStorage);
 
 /* =========================================================================
  * 2) CATEGORY  (CRUD – Kho & Chính)
@@ -115,14 +121,14 @@ router
  * ========================================================================= */
 router
   .route('/tags')
-  .get(authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']), tagCtrl.getAllTags)
-  .post(authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']), tagCtrl.createTag);
+  .get(tagCtrl.getAllTags)
+  .post(tagCtrl.createTag);
 
 router
   .route('/tags/:id')
-  .get(authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']), tagCtrl.getTagById)
-  .put(authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']), tagCtrl.updateTag)
-  .delete(authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']), tagCtrl.deleteTag);
+  .get(tagCtrl.getTagById)
+  .put(tagCtrl.updateTag)
+  .delete(tagCtrl.deleteTag);
 
 
 /* =========================================================================
@@ -281,5 +287,13 @@ router.get('/media/:id', mediaCtrl.streamImageById);
 router.get('/carts', cartCtrl.getAllCarts);
 router.get('/carts/:userId', cartCtrl.getCartByUserId);
 router.delete('/carts/:userId', cartCtrl.clearCartByUserId);
+
+// CRUD Storage
+router.get('/storage', authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']), storageCtrl.getAll);
+router.get('/storage/:id', authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']), storageCtrl.getById);
+router.post('/storage', authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']), storageCtrl.create);
+router.put('/storage/:id', authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']), storageCtrl.update);
+router.delete('/storage/:id', authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']), storageCtrl.delete);
+router.patch('/storage/:id/status', authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']), storageCtrl.changeStatus);
 
 module.exports = router;

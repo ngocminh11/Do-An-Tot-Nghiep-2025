@@ -197,6 +197,11 @@ const Checkout = () => {
                 promotionCode: values.voucher || ''
             };
 
+            // Nếu chọn MoMo thì set luôn trạng thái đã thanh toán
+            if (orderData.paymentMethod === 'Momo') {
+                orderData.status = 'Đã thanh toán';
+            }
+
             console.log('Sending order data:', orderData); // Debug log
 
             await orderService.createOrder(orderData);

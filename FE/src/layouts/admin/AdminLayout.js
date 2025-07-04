@@ -38,6 +38,10 @@ const AdminLayout = ({ children }) => {
             icon: <ShoppingCartOutlined />, label: 'Quản lý đơn hàng',
         },
         {
+            key: '/admin/import-storage',
+            icon: <ShoppingOutlined />, label: 'Quản lý phiếu nhập kho',
+        },
+        {
             key: '/admin/promotion',
             icon: <GiftOutlined />, label: 'Quản lý khuyến mãi',
         },

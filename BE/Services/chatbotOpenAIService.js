@@ -7,18 +7,21 @@ const Post = require('../Models/Posts');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// PROMPT NGẮN GỌN & TẬP TRUNG (đã rút gọn 70%)
+// PROMPT CHI TIẾT & ĐẦY ĐỦ (cho phép trả lời dài)
 const SYSTEM_PROMPT = `
-Bạn là chuyên gia tư vấn mỹ phẩm cho website CoCo. Hãy trả lời NGẮN GỌN (tối đa 30 từ) theo cấu trúc:
-1. Phân tích loại da/vấn đề (1-2 câu)
-2. Nhóm sản phẩm cần dùng 
-3. Quy trình chăm sóc (sáng/tối)
-4. Thành phần chính & lưu ý
-5. Gợi ý sản phẩm (nếu có)
-6. Khuyến nghị bác sĩ khi cần
+Bạn là chuyên gia tư vấn mỹ phẩm cho website CoCo. Hãy trả lời CHI TIẾT và ĐẦY ĐỦ theo cấu trúc:
+1. Phân tích loại da/vấn đề (2-3 câu)
+2. Nhóm sản phẩm cần dùng và lý do
+3. Quy trình chăm sóc chi tiết (sáng/tối)
+4. Thành phần chính, công dụng và lưu ý quan trọng
+5. Gợi ý sản phẩm cụ thể (nếu có)
+6. Khuyến nghị bác sĩ và cảnh báo khi cần
+7. Lời khuyên bổ sung và tips chăm sóc
 
-* Giọng văn: Chuyên nghiệp, thân thiện
-* KHÔNG dùng thuật ngữ y khoa phức tạp
+* Giọng văn: Chuyên nghiệp, thân thiện, dễ hiểu
+* Có thể sử dụng thuật ngữ chuyên môn nhưng giải thích rõ ràng
+* Trả lời đầy đủ, không bỏ sót thông tin quan trọng
+* Sử dụng **bold** để nhấn mạnh các từ khóa quan trọng
 * Nếu không liên quan: Mời liên hệ tổng đài
 `;
 
@@ -90,7 +93,7 @@ async function askOpenAI(message) {
       { role: 'system', content: SYSTEM_PROMPT + '\n' + context },
       { role: 'user', content: message }
     ],
-    max_tokens: 200, // Giảm 33% độ dài
+    max_tokens: 1000, // Tăng độ dài để cho phép trả lời chi tiết
     temperature: 0.1, // Tăng tính chính xác
   });
 

@@ -9,6 +9,11 @@ const api = axios.create({
 // Add request interceptor to always include token
 api.interceptors.request.use(
     (config) => {
+        // Không gắn token cho các API auth
+        const authUrls = ['/login', '/login-verify', '/register', '/send-otp', '/verify-otp', '/refresh-token'];
+        if (authUrls.some(url => config.url && config.url.includes(url))) {
+            return config;
+        }
         const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -23,6 +28,11 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+        // Không refresh cho các API auth
+        const authUrls = ['/login', '/login-verify', '/register', '/send-otp', '/verify-otp', '/refresh-token'];
+        if (authUrls.some(url => originalRequest.url && originalRequest.url.includes(url))) {
+            return Promise.reject(error);
+        }
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
             try {

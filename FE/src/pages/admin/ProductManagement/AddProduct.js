@@ -35,7 +35,6 @@ const AddProduct = () => {
   const [hasDraft, setHasDraft] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const [brands, setBrands] = useState([]);
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
   const [isTagModalVisible, setIsTagModalVisible] = useState(false);
   const [categoryForm] = Form.useForm();
@@ -379,29 +378,10 @@ const AddProduct = () => {
   }, []);
 
   useEffect(() => {
-    const fetchBrands = async () => {
-      try {
-        const response = await productService.getAllBrands();
-        setBrands(response.data || []);
-      } catch (error) {
-        console.error('Error fetching brands:', error);
-        message.error('Không thể tải danh sách thương hiệu');
-      }
-    };
-    fetchBrands();
-  }, []);
-
-  useEffect(() => {
     const fetchTags = async () => {
       setLoadingTags(true);
       try {
-        const response = await tagService.getAllTags();
-        let tagArr = [];
-        if (Array.isArray(response?.data)) {
-          tagArr = response.data;
-        } else if (Array.isArray(response?.data?.data)) {
-          tagArr = response.data.data;
-        }
+        const { data: tagArr } = await tagService.getAllTags();
         setTags(tagArr);
         if (tagArr.length === 0) {
           message.info('Chưa có tag nào, hãy thêm tag mới!');
@@ -437,9 +417,6 @@ const AddProduct = () => {
         setLoading(false);
         return;
       }
-      console.log('TagIds gửi lên:', tagIds, tagIds.map(x => typeof x), 'typeof:', typeof tagIds);
-      console.log('CategoryIds gửi lên:', categoryIds, 'typeof:', typeof categoryIds);
-
       // Đảm bảo các trường array khác là mảng
       const description = {
         shortDescription: values.description.shortDescription,
@@ -450,14 +427,15 @@ const AddProduct = () => {
         expiration: values.description.expiration || ''
       };
       const technicalDetails = {
-        specifications: ensureArray(values.technicalDetails.specifications),
-        dimensions: values.technicalDetails.dimensions || {},
-        weight: values.technicalDetails.weight || {},
         sizeOrWeight: values.technicalDetails.sizeOrWeight || '',
         suitableSkinTypes: ensureArray(values.technicalDetails.suitableSkinTypes),
         origin: values.technicalDetails.origin || '',
         certifications: ensureArray(values.technicalDetails.certifications)
       };
+      // Nếu trường nào là object thì chuyển thành chuỗi rỗng (theo backend)
+      Object.keys(technicalDetails).forEach(key => {
+        if (typeof technicalDetails[key] === 'object' && technicalDetails[key] !== null && !Array.isArray(technicalDetails[key])) technicalDetails[key] = '';
+      });
       const seo = {
         metaTitle: values.seo.metaTitle || '',
         metaDescription: values.seo.metaDescription || '',
@@ -465,59 +443,44 @@ const AddProduct = () => {
         urlSlug: values.seo.urlSlug || ''
       };
       const policy = {
-        warranty: values.policy.warranty || '',
-        returnPolicy: values.policy.returnPolicy || '',
-        shippingPolicy: values.policy.shippingPolicy || '',
         additionalOptions: ensureArray(values.policy.additionalOptions),
         shippingReturnWarranty: ensureArray(values.policy.shippingReturnWarranty)
       };
-
       // Validate images
       if (!values.media?.mainImage?.[0]?.originFileObj) {
         throw new Error('Vui lòng tải lên ảnh chính cho sản phẩm');
       }
-
       const mainImage = values.media.mainImage[0];
       const galleryImages = values.media.galleryImages || [];
-
-      // Validate total images
       if (galleryImages.length > 5) {
         throw new Error('Tối đa chỉ được tải lên 5 ảnh gallery');
       }
-
-      // Validate total size
       const totalSize = [mainImage, ...galleryImages].reduce((sum, file) => sum + file.originFileObj.size, 0);
       if (totalSize > 30 * 1024 * 1024) {
         throw new Error('Tổng kích thước ảnh không được vượt quá 30MB');
       }
-
       // Format data
       const basicInformation = {
         productName: values.basicInformation.productName,
         sku: values.basicInformation.sku,
-        status: 'active',
+        status: 'Hiển Thị',
         brand: 'CoCo',
         categoryIds: categoryIds,
         tagIds: tagIds
       };
-
       const pricingAndInventory = {
         originalPrice: Number(values.pricingAndInventory.originalPrice),
         salePrice: Number(values.pricingAndInventory.salePrice),
-        currency: 'VND',
         stockQuantity: Number(values.pricingAndInventory.stockQuantity),
         unit: values.pricingAndInventory.unit
       };
-
-      // Create FormData
+      // Tạo FormData
       const formData = new FormData();
-
       // Add all images to a single field
       formData.append('images', mainImage.originFileObj);
       galleryImages.forEach(image => {
         formData.append('images', image.originFileObj);
       });
-
       // Add other data as JSON strings
       formData.append('basicInformation', JSON.stringify(basicInformation));
       formData.append('pricingAndInventory', JSON.stringify(pricingAndInventory));
@@ -525,27 +488,30 @@ const AddProduct = () => {
       formData.append('technicalDetails', JSON.stringify(technicalDetails));
       formData.append('seo', JSON.stringify(seo));
       formData.append('policy', JSON.stringify(policy));
-
-      // Debug FormData contents
-      console.log('FormData contents:');
-      for (let [key, value] of formData.entries()) {
-        if (value instanceof File) {
-          console.log(`${key}: File(${value.name}, ${value.type}, ${value.size} bytes)`);
-        } else {
-          console.log(`${key}: ${value}`);
-        }
-      }
-
+      console.log(formData);
+      // Gửi dữ liệu lên backend, nhận về object đã merge
       const response = await productService.createProduct(formData);
-      console.log('Product created successfully:', response);
+      // Xử lý kết quả trả về (object đã merge Products + ProductDetail)
       message.success('Thêm sản phẩm thành công!');
       navigate('/admin/products');
     } catch (error) {
-      // Hiển thị lỗi rõ ràng khi trùng tên hoặc SKU
+      // Xử lý lỗi trả về từ backend
       if (error?.message?.includes('PRODUCT_NAME_EXISTS') || (typeof error === 'string' && error.includes('PRODUCT_NAME_EXISTS'))) {
         message.error('Tên sản phẩm đã tồn tại. Vui lòng chọn tên khác!');
       } else if (error?.message?.includes('SKU_EXISTS') || (typeof error === 'string' && error.includes('SKU_EXISTS'))) {
         message.error('SKU đã tồn tại. Vui lòng chọn SKU khác!');
+      } else if (error?.message?.includes('URLSLUG_EXISTS') || (typeof error === 'string' && error.includes('URLSLUG_EXISTS'))) {
+        message.error('Slug URL đã tồn tại. Vui lòng chọn slug khác!');
+      } else if (error?.message?.includes('Vui lòng chọn ít nhất một tag')) {
+        message.error('Vui lòng chọn ít nhất một tag từ danh sách có sẵn!');
+      } else if (error?.message?.includes('Vui lòng chọn ít nhất một danh mục')) {
+        message.error('Vui lòng chọn ít nhất một danh mục từ danh sách có sẵn!');
+      } else if (error?.message?.includes('Vui lòng nhập đầy đủ thông tin giá và tồn kho')) {
+        message.error('Vui lòng nhập đầy đủ thông tin giá và tồn kho!');
+      } else if (error?.message?.includes('Vui lòng tải lên ít nhất một hình ảnh') || error?.message?.includes('Vui lòng tải lên ảnh chính cho sản phẩm')) {
+        message.error('Vui lòng tải lên ít nhất một hình ảnh cho sản phẩm!');
+      } else if (error?.message?.includes('Tên sản phẩm là bắt buộc')) {
+        message.error('Tên sản phẩm và SKU là bắt buộc!');
       } else {
         message.error(error.message || 'Có lỗi xảy ra khi thêm sản phẩm');
       }
