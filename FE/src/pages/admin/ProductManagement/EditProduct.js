@@ -58,66 +58,43 @@ const EditProduct = () => {
 
                 const product = response.data;
 
-                // Phân biệt mainImage và gallery
-                let mainPath = '';
-                let galleryPaths = [];
-                if (product.mediaFiles && Array.isArray(product.mediaFiles.images) && product.mediaFiles.images.length > 0) {
-                    mainPath = product.mediaFiles.images[0].path;
-                    galleryPaths = product.mediaFiles.images.slice(1).map(img => img.path);
-                } else {
-                    if (product.media && product.media.mainImage) {
-                        mainPath = product.media.mainImage;
-                    }
-                    if (product.media && Array.isArray(product.media.imageGallery)) {
-                        galleryPaths = product.media.imageGallery;
-                    }
-                }
                 // Main image
                 let mainImageArr = [];
-                if (mainPath) {
-                    try {
-                        const blob = await productService.getImageById(mainPath.replace('/media/', ''));
-                        const objectUrl = URL.createObjectURL(blob);
+                if (product.mediaFiles?.images?.length > 0) {
+                    const img = product.mediaFiles.images[0];
+                    const imageId = img._id || img.id;
+                    if (imageId) {
+                        const url = `${API_URL}/admin/media/${imageId}`;
                         mainImageArr = [{
                             uid: '-main',
-                            name: 'main-image',
+                            name: img.filename,
                             status: 'done',
-                            url: objectUrl,
-                            type: blob.type,
-                            originFileObj: blob
+                            url,
+                            type: img.mimetype,
+                            originFileObj: null
                         }];
-                    } catch {
-                        mainImageArr = [];
                     }
                 }
                 setMainImageList(mainImageArr);
                 // Gallery images
-                const galleryArr = await Promise.all(galleryPaths.map(async (path, index) => {
-                    try {
-                        const blob = await productService.getImageById(path.replace('/media/', ''));
-                        const objectUrl = URL.createObjectURL(blob);
-                        return {
-                            uid: `-gallery-${index}`,
-                            name: `gallery-image-${index}`,
-                            status: 'done',
-                            url: objectUrl,
-                            type: blob.type,
-                            originFileObj: blob
-                        };
-                    } catch {
+                let galleryArr = [];
+                if (product.mediaFiles?.images?.length > 1) {
+                    galleryArr = product.mediaFiles.images.slice(1).map((img, index) => {
+                        const imageId = img._id || img.id;
+                        if (imageId) {
+                            return {
+                                uid: `-gallery-${index}`,
+                                name: img.filename,
+                                status: 'done',
+                                url: `${API_URL}/admin/media/${imageId}`,
+                                type: img.mimetype,
+                                originFileObj: null
+                            };
+                        }
                         return null;
-                    }
-                }));
-                setGalleryList(galleryArr.filter(Boolean));
-
-                // Xử lý categoryIds và tagIds
-                const categoryIds = product.basicInformation?.categoryIds?.map(cat =>
-                    typeof cat === 'object' ? cat._id : cat
-                ) || [];
-
-                const tagIds = product.basicInformation?.tagIds?.map(tag =>
-                    typeof tag === 'object' ? tag._id : tag
-                ) || [];
+                    }).filter(Boolean);
+                }
+                setGalleryList(galleryArr);
 
                 // Set giá trị vào form
                 form.setFieldsValue({
@@ -125,41 +102,73 @@ const EditProduct = () => {
                     basicInformation: {
                         productName: product.basicInformation?.productName || '',
                         sku: product.basicInformation?.sku || '',
-                        brand: 'CoCo',
-                        categoryIds: categoryIds,
-                        tagIds: tagIds
+                        brand: product.basicInformation?.brand || 'CoCo',
+                        categoryIds: (product.basicInformation?.categoryIds || []).map(cat => typeof cat === 'object' ? cat._id : cat),
+                        tagIds: (product.basicInformation?.tagIds || []).map(tag => typeof tag === 'object' ? tag._id : tag),
                     },
                     pricingAndInventory: {
-                        originalPrice: product.pricingAndInventory?.originalPrice || 0,
-                        salePrice: product.pricingAndInventory?.salePrice || 0,
-                        stockQuantity: product.pricingAndInventory?.stockQuantity || 0,
+                        originalPrice: product.pricingAndInventory?.originalPrice ?? 0,
+                        salePrice: product.pricingAndInventory?.salePrice ?? 0,
+                        stockQuantity: product.pricingAndInventory?.stockQuantity ?? 0,
                         unit: product.pricingAndInventory?.unit || '',
                         currency: product.pricingAndInventory?.currency || 'VND'
                     },
                     description: {
                         shortDescription: product.description?.shortDescription || '',
                         detailedDescription: product.description?.detailedDescription || '',
-                        ingredients: product.description?.ingredients || '',
-                        usageInstructions: product.description?.usageInstructions || '',
+                        ingredients: Array.isArray(product.description?.ingredients)
+                            ? product.description.ingredients.join(', ')
+                            : (product.description?.ingredients || ''),
+                        usageInstructions: Array.isArray(product.description?.usageInstructions)
+                            ? product.description.usageInstructions.join('\n')
+                            : (product.description?.usageInstructions || ''),
                         expiration: product.description?.expiration || ''
                     },
                     technicalDetails: {
-                        sizeOrWeight: product.technicalDetails?.sizeOrWeight || '',
-                        suitableSkinTypes: product.technicalDetails?.suitableSkinTypes || '',
+                        sizeOrWeight: product.technicalDetails?.sizeOrWeight || product.technicalDetails?.weight || '',
+                        suitableSkinTypes: Array.isArray(product.technicalDetails?.suitableSkinTypes)
+                            ? product.technicalDetails.suitableSkinTypes
+                            : (product.technicalDetails?.suitableSkinTypes
+                                ? [product.technicalDetails.suitableSkinTypes]
+                                : []),
                         origin: product.technicalDetails?.origin || '',
-                        certifications: product.technicalDetails?.certifications || ''
+                        certifications: Array.isArray(product.technicalDetails?.certifications)
+                            ? product.technicalDetails.certifications
+                            : (product.technicalDetails?.certifications
+                                ? [product.technicalDetails.certifications]
+                                : [])
                     },
                     seo: {
-                        keywords: product.seo?.keywords || '',
+                        keywords: Array.isArray(product.seo?.keywords)
+                            ? product.seo.keywords
+                            : (product.seo?.keywords ? [product.seo.keywords] : []),
                         metaTitle: product.seo?.metaTitle || '',
                         metaDescription: product.seo?.metaDescription || '',
                         urlSlug: product.seo?.urlSlug || ''
                     },
                     policy: {
-                        shippingReturnWarranty: product.policy?.shippingReturnWarranty || '',
-                        additionalOptions: product.policy?.additionalOptions || ''
+                        shippingReturnWarranty: Array.isArray(product.policy?.shippingReturnWarranty)
+                            ? product.policy.shippingReturnWarranty
+                            : (product.policy?.shippingReturnWarranty
+                                ? [product.policy.shippingReturnWarranty]
+                                : []),
+                        additionalOptions: Array.isArray(product.policy?.additionalOptions)
+                            ? product.policy.additionalOptions
+                            : (product.policy?.additionalOptions
+                                ? [product.policy.additionalOptions]
+                                : [])
                     }
                 });
+                // Chọn sẵn danh mục và tag trên Select
+                setTimeout(() => {
+                    form.setFieldsValue({
+                        basicInformation: {
+                            ...form.getFieldValue('basicInformation'),
+                            categoryIds: (product.basicInformation?.categoryIds || []).map(cat => typeof cat === 'object' ? cat._id : cat),
+                            tagIds: (product.basicInformation?.tagIds || []).map(tag => typeof tag === 'object' ? tag._id : tag),
+                        }
+                    });
+                }, 0);
             } catch (error) {
                 console.error('Error fetching product:', error);
                 message.error(error.message || 'Không thể lấy thông tin sản phẩm');
@@ -194,13 +203,7 @@ const EditProduct = () => {
         const fetchTags = async () => {
             setLoadingTags(true);
             try {
-                const response = await tagService.getAllTags();
-                let tagArr = [];
-                if (Array.isArray(response?.data)) {
-                    tagArr = response.data;
-                } else if (Array.isArray(response?.data?.data)) {
-                    tagArr = response.data.data;
-                }
+                const { data: tagArr } = await tagService.getAllTags();
                 setTags(tagArr);
                 if (tagArr.length === 0) {
                     message.info('Chưa có tag nào, hãy thêm tag mới!');
@@ -220,11 +223,11 @@ const EditProduct = () => {
 
     const handleFinish = async (values) => {
         try {
-            // DEBUG: log tagIds
-            console.log('TagIds gửi lên:', values.basicInformation?.tagIds);
             // Đảm bảo tagIds luôn là mảng
             const tagIds = Array.isArray(values.basicInformation?.tagIds) ? values.basicInformation.tagIds : [];
             if (tagIds.length === 0) throw new Error('Vui lòng chọn ít nhất một tag');
+            const categoryIds = Array.isArray(values.basicInformation?.categoryIds) ? values.basicInformation.categoryIds : [];
+            if (categoryIds.length === 0) throw new Error('Vui lòng chọn ít nhất một danh mục');
             const formData = new FormData();
 
             // Append basic information
@@ -233,9 +236,9 @@ const EditProduct = () => {
                     productName: values.basicInformation.productName,
                     sku: values.basicInformation.sku,
                     brand: 'CoCo',
-                    categoryIds: values.basicInformation.categoryIds,
+                    categoryIds: categoryIds,
                     tagIds: tagIds,
-                    status: 'active'
+                    status: 'Hiển Thị' // luôn đúng enum backend
                 }));
             }
 
@@ -245,8 +248,7 @@ const EditProduct = () => {
                     originalPrice: values.pricingAndInventory.originalPrice,
                     salePrice: values.pricingAndInventory.salePrice,
                     stockQuantity: values.pricingAndInventory.stockQuantity,
-                    unit: values.pricingAndInventory.unit,
-                    currency: values.pricingAndInventory.currency || 'VND'
+                    unit: values.pricingAndInventory.unit
                 }));
             }
 

@@ -315,18 +315,14 @@ exports.resetPassword = async (req, res) => {
 ============================================================================ */
 exports.refreshToken = async (req, res) => {
   const { refreshToken } = req.body;
-  console.log('[REFRESH] Nhận refreshToken:', refreshToken);
   if (!refreshToken) {
-    console.log('[REFRESH] Thiếu refresh token');
     return sendError(res, 400, 'Thiếu refresh token.');
   }
 
   try {
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     const acc = await Account.findById(decoded.id);
-    console.log('[REFRESH] refreshToken trong DB:', acc?.refreshToken);
     if (!acc || acc.refreshToken !== refreshToken) {
-      console.log('[REFRESH] Refresh token không hợp lệ!');
       return sendError(res, 401, 'Refresh token không hợp lệ.');
     }
 
@@ -342,10 +338,8 @@ exports.refreshToken = async (req, res) => {
       accountStatus: acc.accountStatus,
       emailVerified: acc.emailVerified
     };
-    console.log('[REFRESH] Làm mới accessToken thành công cho:', acc.email);
     return sendSuccess(res, 200, { accessToken: newAccess, refreshToken, user: userInfo, role: acc.role }, 'Làm mới token thành công.');
   } catch (err) {
-    console.log('[REFRESH] Lỗi verify refreshToken:', err);
     return sendError(res, 401, 'Refresh token không hợp lệ.');
   }
 };

@@ -88,8 +88,6 @@ exports.getCommentById = async (req, res) => {
 exports.createComment = async (req, res) => {
   try {
     const { userId, productId, orderId, rating, content } = req.body;
-    console.log('=== DEBUG CREATE COMMENT ===');
-    console.log('Request body:', { userId, productId, orderId, rating, content });
 
     if (!userId || !productId || !orderId || !content || rating == null)
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Thiếu thông tin bắt buộc.');
@@ -111,10 +109,8 @@ exports.createComment = async (req, res) => {
       'items.product': productId,
       status: { $in: ['Đã hoàn thành', 'completed', 'hoanthanh', 'done', 'thanhcong', 'success'] }
     };
-    console.log('Order query:', JSON.stringify(orderQuery, null, 2));
 
     const order = await Order.findOne(orderQuery);
-    console.log('Order found:', order ? 'YES' : 'NO');
     if (order) {
       console.log('Order status:', order.status);
       console.log('Order user:', order.user);

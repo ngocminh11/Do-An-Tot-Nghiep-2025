@@ -7,42 +7,46 @@ const ProductDetailSchema = new Schema(
 
     batchCode: { type: String }, // Mã lô hàng
 
-    /** ---------- moved here ---------- */
     pricingAndInventory: {
-      originalPrice: { type: Number },            // giá nhập gốc
-      salePrice:     { type: Number },            // giá bán
+      originalPrice: { type: Number, default: 0 },
+      salePrice: { type: Number, default: 0 },
       stockQuantity: { type: Number, default: 0 },
-      unit:          { type: String }
+      unit: { type: String },
+      currency: { type: String, default: 'VND' }
     },
-    /** --------------------------------- */
- 
+
     description: {
       shortDescription: { type: String },
-      longDescription:  { type: String }
+      detailedDescription: { type: String },
+      features: [{ type: String }],
+      ingredients: [{ type: String }],
+      usageInstructions: [{ type: String }],
+      expiration: { type: String }
     },
 
     technicalDetails: {
-      origin:      String,
-      ingredients: String,
-      weight:      String
-      // …
+      sizeOrWeight: { type: String },
+      suitableSkinTypes: [{ type: String }],
+      origin: { type: String },
+      certifications: [{ type: String }]
     },
 
     seo: {
-      urlSlug: { type: String, unique: true, index: true },
-      metaTitle:       String,
-      metaDescription: String
+      keywords: [{ type: String }],
+      metaTitle: { type: String },
+      metaDescription: { type: String },
+      urlSlug: { type: String, unique: true, index: true }
     },
 
     policy: {
-      warranty: String,
-      exchange: String
+      shippingReturnWarranty: [{ type: String }],
+      additionalOptions: [{ type: String }]
     },
 
     media: {
-      mainImage:    String,
-      imageGallery: [String],
-      videoUrl:     String
+      mainImage: { type: String, require: true },
+      imageGallery: [{ type: String }],
+      videoUrl: { type: String }
     },
 
     mediaFiles: {
@@ -52,6 +56,11 @@ const ProductDetailSchema = new Schema(
       videos: [{
         path: String, filename: String, mimetype: String, size: Number
       }]
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true
     }
   },
   { timestamps: true, _id: false }

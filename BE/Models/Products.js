@@ -3,6 +3,7 @@ const { Schema } = mongoose;
 
 const ProductSchema = new Schema(
   {
+    // Thông tin cơ bản của sản phẩm
     basicInformation: {
       productName: {
         type: String,
@@ -48,6 +49,11 @@ const ProductSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'ProductDetail',
       required: true
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true
     }
   },
   {

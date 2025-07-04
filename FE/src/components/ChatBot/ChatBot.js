@@ -5,6 +5,14 @@ import './ChatBot.scss';
 import { MessageOutlined, UserOutlined, RobotOutlined, ShoppingOutlined, CustomerServiceOutlined, QuestionCircleOutlined, SendOutlined, CloseOutlined, CheckCircleOutlined, HeartOutlined, GiftOutlined } from '@ant-design/icons';
 import productService, { getImageUrl } from '../../services/productService';
 
+// Function to convert markdown to HTML
+const convertMarkdownToHTML = (text) => {
+    return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
+        .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
+        .replace(/\n/g, '<br>'); // Line breaks
+};
+
 // API URL configuration
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -205,7 +213,17 @@ const ChatBot = () => {
                                     )}
                                 </div>
                                 <div className="message-bubble">
-                                    <div className="message-content" dangerouslySetInnerHTML={{ __html: message.content }} />
+                                    <div
+                                        className="message-content"
+                                        dangerouslySetInnerHTML={{
+                                            __html: message.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                        }}
+                                        style={{
+                                            maxHeight: 'none',
+                                            overflow: 'visible',
+                                            wordBreak: 'break-word'
+                                        }}
+                                    />
                                     <div className="message-time">{new Date(message.timestamp).toLocaleTimeString()}</div>
                                 </div>
                             </div>

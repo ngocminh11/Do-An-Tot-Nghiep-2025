@@ -87,14 +87,13 @@ const ProductCard = React.memo(({ product, categories, imageUrl, productRatings,
         return cat ? cat.name : 'Không phân loại';
     }, [categories, product]);
 
-    const price = useMemo(() => {
-        let priceValue = product.price;
-        if (typeof priceValue !== 'number') {
-            priceValue = product.pricingAndInventory?.salePrice;
-        }
-        if (typeof priceValue !== 'number') priceValue = 0;
-        return priceValue.toLocaleString('vi-VN') + ' VNĐ';
-    }, [product.price, product.pricingAndInventory?.salePrice]);
+    // === GIÁ TIỀN ===
+    const priceInfo = useMemo(() => {
+        const originalPrice = product.pricingAndInventory?.originalPrice || product.price || 0;
+        const salePrice = product.pricingAndInventory?.salePrice || product.price || 0;
+        const discount = originalPrice > salePrice ? Math.round(((originalPrice - salePrice) / originalPrice) * 100) : 0;
+        return { originalPrice, salePrice, discount };
+    }, [product]);
 
     const description = useMemo(() => {
         const desc = typeof product.description === 'string'
@@ -140,7 +139,19 @@ const ProductCard = React.memo(({ product, categories, imageUrl, productRatings,
                     description={
                         <>
                             <div className="category">{categoryName}</div>
-                            <div className="price">{price}</div>
+                            <div className="price">
+                                {priceInfo.salePrice.toLocaleString('vi-VN')} VNĐ
+                                {priceInfo.discount > 0 && (
+                                    <>
+                                        <span className="original-price" style={{ marginLeft: 8, textDecoration: 'line-through', color: '#888' }}>
+                                            {priceInfo.originalPrice.toLocaleString('vi-VN')} VNĐ
+                                        </span>
+                                        <span className="discount-badge" style={{ marginLeft: 8, color: '#fff', background: '#f5222d', borderRadius: 4, padding: '2px 6px', fontSize: 12 }}>
+                                            -{priceInfo.discount}%
+                                        </span>
+                                    </>
+                                )}
+                            </div>
                             <div className="rating">
                                 <Rate
                                     disabled

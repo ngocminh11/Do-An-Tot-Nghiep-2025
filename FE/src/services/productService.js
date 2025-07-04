@@ -58,11 +58,12 @@ const productService = {
   /**
    * Tạo sản phẩm mới (ADMIN)
    * @param {FormData|Object} formData
+   * Trả về object đã merge từ backend (bao gồm cả thông tin cơ bản và chi tiết)
    */
   createProduct: async (formData) => {
     try {
-      const isFormData = typeof FormData !== 'undefined' && formData instanceof FormData;
       const response = await api.post('/admin/products', formData);
+      // Trả về object đã merge (Products + ProductDetail)
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -73,11 +74,12 @@ const productService = {
    * Cập nhật sản phẩm (ADMIN)
    * @param {string} id
    * @param {FormData|Object} formData
+   * Trả về object đã merge từ backend (bao gồm cả thông tin cơ bản và chi tiết)
    */
   updateProduct: async (id, formData) => {
     try {
-      const isFormData = typeof FormData !== 'undefined' && formData instanceof FormData;
       const response = await api.put(`/admin/products/${id}`, formData);
+      // Trả về object đã merge (Products + ProductDetail)
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -86,10 +88,12 @@ const productService = {
 
   /**
    * Xóa sản phẩm (ADMIN)
+   * Trả về object đã merge từ backend (bao gồm cả thông tin cơ bản và chi tiết trước khi xóa)
    */
   deleteProduct: async (id) => {
     try {
       const response = await api.delete(`/admin/products/${id}`);
+      // Trả về object đã merge (Products + ProductDetail)
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -496,7 +500,67 @@ const productService = {
     } catch (error) {
       throw error.response?.data || error.message;
     }
-  }
+  },
+
+  /**
+   * Nhập kho nhiều sản phẩm (ADMIN)
+   */
+  bulkImportInventory: async (payload) => {
+    try {
+      // Payload gồm: billCode, billDate, createdBy, receivedBy, supplier, ... , products: [{productId, quantity, ...}]
+      const response = await api.post('/admin/products/bulk-import', payload);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Duyệt phiếu nhập kho (ADMIN)
+   */
+  approveImportInventory: async (storageId) => {
+    try {
+      const response = await api.post('/admin/storage/approve', { storageId });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Lấy log thao tác của 1 sản phẩm (ADMIN)
+   */
+  getProductLogs: async (productId, params = {}) => {
+    try {
+      const { page = 1, limit = 20 } = params;
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+      });
+      const response = await api.get(`/admin/products/${productId}/logs?${queryParams}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Lấy danh sách phiếu nhập kho (ADMIN)
+   */
+  getAllImportStorage: async (params = {}) => {
+    try {
+      const { page = 1, limit = 20, status } = params;
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        ...(status && { status })
+      });
+      const response = await api.get(`/admin/storage/import-list?${queryParams}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 // Helper function để lấy URL hình ảnh
@@ -559,5 +623,13 @@ export const getImageByIdUser = async (id) => {
     throw error.response?.data || error.message;
   }
 };
+
+export function getProductMainImageUrl(product) {
+  const imageId = product?.mediaFiles?.images?.[0]?._id || product?.mediaFiles?.images?.[0]?.id;
+  if (imageId) {
+    return `${API_URL}/admin/media/${imageId}`;
+  }
+  return '/images/products/default.jpg';
+}
 
 export default productService;

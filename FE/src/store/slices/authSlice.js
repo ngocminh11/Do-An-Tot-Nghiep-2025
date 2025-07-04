@@ -33,11 +33,20 @@ const authSlice = createSlice({
 export const { setCredentials, logout, setLoading, setError } = authSlice.actions;
 
 // Thunks
-export const login = (email, password) => async (dispatch) => {
+export const login = (email, password, otp) => async (dispatch) => {
     try {
         dispatch(setLoading(true));
-        const user = await userAPI.login(email, password);
-        dispatch(setCredentials({ user, token: 'mock-token' }));
+        // Bước 1: Lấy otpToken
+        const { otpToken } = await userAPI.loginStep1(email, password);
+        // Bước 2: Xác thực OTP, lấy accessToken và refreshToken
+        const { user, accessToken, refreshToken } = await userAPI.loginStep2(otpToken, otp);
+        if (accessToken) {
+            localStorage.setItem('token', accessToken);
+        }
+        if (refreshToken) {
+            localStorage.setItem('refreshToken', refreshToken);
+        }
+        dispatch(setCredentials({ user, token: accessToken }));
         dispatch(setError(null));
     } catch (error) {
         dispatch(setError(error.message));
@@ -46,11 +55,17 @@ export const login = (email, password) => async (dispatch) => {
     }
 };
 
-export const register = (userData) => async (dispatch) => {
+export const register = (userData, otpToken) => async (dispatch) => {
     try {
         dispatch(setLoading(true));
-        const user = await userAPI.register(userData);
-        dispatch(setCredentials({ user, token: 'mock-token' }));
+        const { user, accessToken, refreshToken } = await userAPI.register(userData, otpToken);
+        if (accessToken) {
+            localStorage.setItem('token', accessToken);
+        }
+        if (refreshToken) {
+            localStorage.setItem('refreshToken', refreshToken);
+        }
+        dispatch(setCredentials({ user, token: accessToken }));
         dispatch(setError(null));
     } catch (error) {
         dispatch(setError(error.message));
@@ -63,7 +78,8 @@ export const updateProfile = (userId, data) => async (dispatch) => {
     try {
         dispatch(setLoading(true));
         const updatedUser = await userAPI.updateProfile(userId, data);
-        dispatch(setCredentials({ user: updatedUser, token: 'mock-token' }));
+        const token = localStorage.getItem('token');
+        dispatch(setCredentials({ user: updatedUser, token }));
         dispatch(setError(null));
     } catch (error) {
         dispatch(setError(error.message));
