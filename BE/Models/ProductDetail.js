@@ -13,7 +13,7 @@ const ProductDetailSchema = new Schema(
       unit:          { type: String }
     },
     /** --------------------------------- */
-
+ 
     description: {
       shortDescription: { type: String },
       longDescription:  { type: String }
