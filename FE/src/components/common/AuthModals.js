@@ -21,9 +21,14 @@ export function LoginModal({ open, onClose }) {
             setStep(1);
             setOtpToken('');
             setLoginEmail(''); // RESET EMAIL
-            form.resetFields();
+            // Chỉ reset form khi form đã được mount
+            setTimeout(() => {
+                if (form && form.resetFields) {
+                    form.resetFields();
+                }
+            }, 0);
         }
-    }, [open, form]);
+    }, [open]);
 
     const handleFinish = async (values) => {
         setLoading(true);
@@ -33,7 +38,9 @@ export function LoginModal({ open, onClose }) {
                 setOtpToken(otpToken);
                 setLoginEmail(values.email); // LƯU EMAIL ĐỂ HIỂN THỊ Ở BƯỚC 2
                 setStep(2);
-                form.resetFields(['otp']); // CHỈ RESET OTP, GIỮ NGUYÊN EMAIL
+                if (form && form.resetFields) {
+                    form.resetFields(['otp']); // CHỈ RESET OTP, GIỮ NGUYÊN EMAIL
+                }
                 message.success('Đã gửi OTP đến email!');
             } else if (step === 2) {
                 const otpValue = form.getFieldValue('otp');
@@ -41,7 +48,9 @@ export function LoginModal({ open, onClose }) {
                 setStep(1);
                 setOtpToken('');
                 setLoginEmail(''); // RESET EMAIL
-                form.resetFields();
+                if (form && form.resetFields) {
+                    form.resetFields();
+                }
                 onClose && onClose();
             }
         } catch (err) {
@@ -54,7 +63,9 @@ export function LoginModal({ open, onClose }) {
     const handleCancel = () => {
         setStep(1);
         setOtpToken('');
-        form.resetFields();
+        if (form && form.resetFields) {
+            form.resetFields();
+        }
         onClose && onClose();
         setLoading(false);
     };

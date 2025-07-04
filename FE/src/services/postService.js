@@ -1,16 +1,10 @@
-import axios from 'axios';
-import config from '../config';
-import Cookies from 'js-cookie';
-
-const API_URL = config.API_BASE_URL;
+import api from './axiosInstance';
 
 const postService = {
     // Lấy tất cả bài viết (có phân trang)
     getAllPosts: async (params = {}) => {
-        const token = Cookies.get('token');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         try {
-            const response = await axios.get(`${API_URL}/admin/posts`, { params, headers });
+            const response = await api.get('/admin/posts', { params });
             if (response.data && response.data.data) {
                 return {
                     data: response.data.data.data,
@@ -28,7 +22,7 @@ const postService = {
     // Lấy bài viết theo ID
     getPostById: async (id) => {
         try {
-            const response = await axios.get(`${API_URL}/admin/posts/${id}`);
+            const response = await api.get(`/admin/posts/${id}`);
             if (response.data && response.data.data) {
                 return response.data.data;
             }
@@ -49,7 +43,7 @@ const postService = {
                 config.headers = { 'Content-Type': 'application/json' };
                 data = JSON.stringify(postData);
             }
-            const response = await axios.post(`${API_URL}/admin/posts`, data, config);
+            const response = await api.post('/admin/posts', data, config);
             if (response.data && response.data.data) {
                 return response.data.data;
             }
@@ -62,7 +56,7 @@ const postService = {
     // Cập nhật bài viết
     updatePost: async (id, postData) => {
         try {
-            const response = await axios.put(`${API_URL}/admin/posts/${id}`, postData);
+            const response = await api.put(`/admin/posts/${id}`, postData);
             if (response.data && response.data.data) {
                 return response.data.data;
             }
@@ -75,7 +69,7 @@ const postService = {
     // Xóa bài viết
     deletePost: async (id) => {
         try {
-            const response = await axios.delete(`${API_URL}/admin/posts/${id}`);
+            const response = await api.delete(`/admin/posts/${id}`);
             return response.data;
         } catch (error) {
             throw error.response?.data || error;
@@ -87,7 +81,7 @@ const postService = {
         try {
             const formData = new FormData();
             formData.append('image', file);
-            const response = await axios.post(`${API_URL}/admin/upload`, formData, {
+            const response = await api.post('/admin/upload', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }

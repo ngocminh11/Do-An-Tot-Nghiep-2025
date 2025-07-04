@@ -160,8 +160,8 @@ exports.register = async (req, res) => {
       await session.commitTransaction();
       session.endSession();
 
-      const accessTokenReg = generateToken({ id: acc._id, role: acc.role }, process.env.JWT_SECRET, '30m');
-      const refreshTokenReg = generateToken({ id: acc._id, role: acc.role }, process.env.JWT_REFRESH_SECRET, '7d');
+      const accessTokenReg = generateToken({ id: acc._id, role: acc.role }, process.env.JWT_SECRET, '7d');
+      const refreshTokenReg = generateToken({ id: acc._id, role: acc.role }, process.env.JWT_REFRESH_SECRET, '14d');
       acc.refreshToken = refreshTokenReg;
       await acc.save();
       console.log("Đăng ký thành công.");
@@ -240,8 +240,8 @@ exports.loginStep2 = async (req, res) => {
       return sendError(res, 403, 'Tài khoản đã bị khóa.');
 
     // Luôn tạo token với {id, role} từ DB
-    const accessTokenLogin = generateToken({ id: acc._id, role: acc.role }, process.env.JWT_SECRET, '30m');
-    const refreshTokenLogin = generateToken({ id: acc._id, role: acc.role }, process.env.JWT_REFRESH_SECRET, '7d');
+    const accessTokenLogin = generateToken({ id: acc._id, role: acc.role }, process.env.JWT_SECRET, '7d');
+    const refreshTokenLogin = generateToken({ id: acc._id, role: acc.role }, process.env.JWT_REFRESH_SECRET, '14d');
     await Account.findByIdAndUpdate(acc._id, { refreshToken: refreshTokenLogin, lastLogin: new Date() });
 
     // Trả về userInfo đầy đủ
@@ -330,10 +330,8 @@ exports.refreshToken = async (req, res) => {
       return sendError(res, 401, 'Refresh token không hợp lệ.');
     }
 
-    // Luôn tạo token với {id, role} từ DB
-    const newAccess = generateToken({ id: acc._id, role: acc.role }, process.env.JWT_SECRET, '30m');
-    const newRefresh = generateToken({ id: acc._id, role: acc.role }, process.env.JWT_REFRESH_SECRET, '7d');
-    await Account.findByIdAndUpdate(acc._id, { refreshToken: newRefresh });
+    // KHÔNG tạo refresh token mới, chỉ tạo accessToken mới
+    const newAccess = generateToken({ id: acc._id, role: acc.role }, process.env.JWT_SECRET, '7d');
     // Trả về userInfo đầy đủ
     const userInfo = {
       _id: acc._id,
@@ -344,11 +342,11 @@ exports.refreshToken = async (req, res) => {
       accountStatus: acc.accountStatus,
       emailVerified: acc.emailVerified
     };
-    console.log('[REFRESH] Làm mới token thành công cho:', acc.email);
-    return sendSuccess(res, 200, { accessToken: newAccess, refreshToken: newRefresh, user: userInfo, role: acc.role }, 'Làm mới token thành công.');
+    console.log('[REFRESH] Làm mới accessToken thành công cho:', acc.email);
+    return sendSuccess(res, 200, { accessToken: newAccess, refreshToken, user: userInfo, role: acc.role }, 'Làm mới token thành công.');
   } catch (err) {
-    console.log('[REFRESH] Lỗi verify hoặc hết hạn:', err?.message || err);
-    return sendError(res, 401, 'Refresh token hết hạn hoặc không hợp lệ.');
+    console.log('[REFRESH] Lỗi verify refreshToken:', err);
+    return sendError(res, 401, 'Refresh token không hợp lệ.');
   }
 };
 
@@ -362,3 +360,48 @@ function updateLoginAttempts(email) {
   loginAttempts.set(email, cur);
   return cur.count;
 }
+
+// ===================== LOGIN DIRECT (không cần OTP nếu còn accessToken) =====================
+exports.loginDirect = async (req, res) => {
+  const { email, password, accessToken } = req.body;
+  if (!email || !password) return sendError(res, 400, 'Thiếu email hoặc mật khẩu.');
+
+  try {
+    // Nếu có accessToken, kiểm tra hợp lệ
+    if (accessToken) {
+      try {
+        const decoded = jwt.verify(accessToken, process.env.JWT_SECRET);
+        // Nếu token hợp lệ, trả về user info luôn
+        const acc = await Account.findById(decoded.id).select('-passwordHash -refreshToken -pin');
+        if (!acc) return sendError(res, 404, 'Không tìm thấy tài khoản.');
+        if (acc.accountStatus === 'Đã bị khóa')
+          return sendError(res, 403, 'Tài khoản đã bị khóa.');
+        // Tạo token mới nếu cần
+        const newAccessToken = generateToken({ id: acc._id, role: acc.role }, process.env.JWT_SECRET, '7d');
+        const newRefreshToken = generateToken({ id: acc._id, role: acc.role }, process.env.JWT_REFRESH_SECRET, '14d');
+        await Account.findByIdAndUpdate(acc._id, { refreshToken: newRefreshToken, lastLogin: new Date() });
+        return sendSuccess(res, 200, {
+          user: acc,
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
+          role: acc.role
+        }, 'Đăng nhập thành công (không cần OTP)');
+      } catch (err) {
+        // Nếu accessToken hết hạn hoặc không hợp lệ, tiếp tục kiểm tra mật khẩu
+      }
+    }
+    // Nếu không có accessToken hoặc accessToken hết hạn, kiểm tra mật khẩu
+    const acc = await Account.findOne({ email });
+    if (!acc) return failLogin(res, email);
+    if (!isHashed(acc.passwordHash)) {
+      acc.passwordHash = await bcrypt.hash(acc.passwordHash, 10);
+      await acc.save();
+    }
+    const match = await bcrypt.compare(password, acc.passwordHash);
+    if (!match) return failLogin(res, email);
+    // Nếu đúng mật khẩu nhưng không có accessToken hợp lệ, báo FE chuyển sang OTP
+    return sendError(res, 401, 'Yêu cầu xác thực OTP');
+  } catch (err) {
+    return sendError(res, 500, err.message);
+  }
+};

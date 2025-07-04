@@ -13,7 +13,7 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     }
 
     if (!user) {
-        // Chỉ mở modal nếu đã xác thực xong mà vẫn chưa có user
+        // Không redirect sang /login, chỉ mở modal login và render giao diện user thường
         setTimeout(() => setShowLogin(true), 0);
         return <Navigate to="/" replace />;
     }

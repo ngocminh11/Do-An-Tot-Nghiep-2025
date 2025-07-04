@@ -28,8 +28,12 @@ exports.getAllComments = async (req, res) => {
     if (userId && isValidObjectId(userId)) query.userId = userId;
     if (productId && isValidObjectId(productId)) query.productId = productId;
     if (rating) query.rating = Number(rating);
-    if (content) query.content = new RegExp(content, 'i');
-    if (status) query.status = status;
+    if (content && typeof content === 'string' && content.trim()) {
+      query.content = new RegExp(content.trim(), 'i');
+    }
+    if (status && typeof status === 'string' && status.trim()) {
+      query.status = status.trim();
+    }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const sortField = ['createdAt', 'updatedAt'].includes(sortBy) ? sortBy : 'updatedAt';
@@ -277,6 +281,43 @@ exports.getCommentsByProduct = async (req, res) => {
     }, Messages.COMMENT_FETCH_SUCCESS);
   } catch (error) {
     console.error('[GetCommentsByProduct]', error);
+    return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
+  }
+};
+
+/**
+ * GET /admin/comments/stats
+ * Thống kê bình luận (admin)
+ */
+exports.getCommentStats = async (req, res) => {
+  try {
+    const totalComments = await Comment.countDocuments();
+    const pendingComments = await Comment.countDocuments({ status: 'pending' });
+    const visibleComments = await Comment.countDocuments({ status: 'visible' });
+    const hiddenComments = await Comment.countDocuments({ status: 'hidden' });
+    const repliedComments = await Comment.countDocuments({ 'reply.content': { $exists: true, $ne: null } });
+
+    // Thống kê theo rating
+    const ratingStats = await Comment.aggregate([
+      { $group: { _id: '$rating', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const ratingData = {};
+    ratingStats.forEach(item => {
+      ratingData[`${item._id}star`] = item.count;
+    });
+
+    return sendSuccess(res, StatusCodes.SUCCESS_OK, {
+      totalComments,
+      pendingComments,
+      visibleComments,
+      hiddenComments,
+      repliedComments,
+      ratingStats: ratingData
+    }, 'Thống kê bình luận');
+  } catch (error) {
+    console.error('[GetCommentStats]', error);
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, Messages.INTERNAL_SERVER_ERROR);
   }
 };

@@ -43,21 +43,45 @@ exports.authenticateUser = async (req, res, next) => {
  * Trong route:  router.post('/xxx', authenticateUser, authorizeRoles('Quản Lý Chính', 'Quản Lý Kho'), ...)
  */
 exports.authorizeRoles = (...allowed) => (req, res, next) => {
-  if (!req.user) return sendError(res, 401, Messages.AUTH_FAILED);
+  try {
+    if (!req.user) return sendError(res, 401, Messages.AUTH_FAILED);
 
-  // Ưu tiên dùng role từ token (đã được verify)
-  const userRole = req.user.roleFromToken || req.user.role;
+    // Ưu tiên dùng role từ token (đã được verify)
+    const userRole = req.user.roleFromToken || req.user.role;
 
-  // Chuẩn hóa để so sánh
-  const normalizedUserRole = userRole.trim().toLowerCase();
-  const normalizedAllowed = allowed.map(r => r.trim().toLowerCase());
+    // Chuẩn hóa để so sánh
+    const normalizedUserRole = (typeof userRole === 'string' ? userRole : '').trim().toLowerCase();
+    
+    // Log chi tiết để debug
+    console.log('[AUTHZ] Debug - Allowed before filter:', allowed);
+    console.log('[AUTHZ] Debug - Allowed types:', allowed?.map(r => ({ value: r, type: typeof r })));
+    
+    // Flatten array nếu cần (xử lý trường hợp allowed là [[...]])
+    const flattenedAllowed = Array.isArray(allowed) ? allowed.flat(Infinity) : allowed;
+    console.log('[AUTHZ] Debug - Flattened allowed:', flattenedAllowed);
+    
+    const normalizedAllowed = (Array.isArray(flattenedAllowed) ? flattenedAllowed : [])
+      .filter(r => {
+        const isValid = r && typeof r === 'string';
+        if (!isValid) {
+          console.log('[AUTHZ] Debug - Filtered out:', r, 'type:', typeof r);
+        }
+        return isValid;
+      })
+      .map(r => r.trim().toLowerCase());
 
-  console.log('[AUTHZ] Role check:', userRole, '| Normalized:', normalizedUserRole, '| Allowed:', allowed, '| Normalized allowed:', normalizedAllowed);
+    console.log('[AUTHZ] Role check:', userRole, '| Normalized:', normalizedUserRole, '| Allowed:', allowed, '| Allowed type:', typeof allowed, '| Is array:', Array.isArray(allowed), '| Normalized allowed:', normalizedAllowed);
 
-  if (!normalizedAllowed.includes(normalizedUserRole))
-    return sendError(res, 403, Messages.ERROR_FORBIDDEN);
+    if (!normalizedAllowed.includes(normalizedUserRole))
+      return sendError(res, 403, Messages.ERROR_FORBIDDEN);
 
-  next();
+    next();
+  } catch (error) {
+    console.error('[AUTHZ] Error in authorizeRoles:', error);
+    console.error('[AUTHZ] Allowed:', allowed);
+    console.error('[AUTHZ] User role:', req.user?.roleFromToken || req.user?.role);
+    return sendError(res, 500, 'Lỗi xác thực quyền');
+  }
 };
 
 /* Một helper khác: chỉ check nhóm role dùng PIN (nếu cần) */

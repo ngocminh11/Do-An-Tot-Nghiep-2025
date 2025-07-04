@@ -5,6 +5,8 @@ const ProductDetailSchema = new Schema(
   {
     _id: { type: Schema.Types.ObjectId, ref: 'Product' },
 
+    batchCode: { type: String }, // Mã lô hàng
+
     /** ---------- moved here ---------- */
     pricingAndInventory: {
       originalPrice: { type: Number },            // giá nhập gốc

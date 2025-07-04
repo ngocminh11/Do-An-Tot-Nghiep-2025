@@ -1,14 +1,10 @@
-import axios from 'axios';
-import config from '../config';
-import Cookies from 'js-cookie';
-
-const API_URL = config.API_BASE_URL;
+import api from './axiosInstance';
 
 const categoryService = {
     // Lấy tất cả danh mục cho user (public access)
     getCategories: async (params = {}) => {
         try {
-            const response = await axios.get(`${API_URL}/categories`, { params });
+            const response = await api.get('/categories', { params });
             // Chuẩn hóa dữ liệu trả về cho FE
             if (response.data && response.data.data) {
                 return {
@@ -26,10 +22,8 @@ const categoryService = {
 
     // Lấy tất cả danh mục (có phân trang)
     getAllCategories: async (params = {}) => {
-        const token = Cookies.get('token');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         try {
-            const response = await axios.get(`${API_URL}/admin/categories`, { params, headers });
+            const response = await api.get('/admin/categories', { params });
             // Chuẩn hóa dữ liệu trả về cho FE
             if (response.data && response.data.data) {
                 return {
@@ -48,7 +42,7 @@ const categoryService = {
     // Lấy danh mục theo ID
     getCategoryById: async (id) => {
         try {
-            const response = await axios.get(`${API_URL}/categories/${id}`);
+            const response = await api.get(`/categories/${id}`);
             // BE trả về { data: {...} }
             if (response.data && response.data.data) {
                 return response.data.data;
@@ -69,7 +63,7 @@ const categoryService = {
                 ...(status && { status })
             });
 
-            const response = await axios.get(`${API_URL}/categories/${id}/products?${queryParams}`);
+            const response = await api.get(`/categories/${id}/products?${queryParams}`);
             return response.data;
         } catch (error) {
             throw error.response?.data || error;
@@ -79,7 +73,7 @@ const categoryService = {
     // Tạo danh mục mới
     createCategory: async (categoryData) => {
         try {
-            const response = await axios.post(`${API_URL}/admin/categories`, {
+            const response = await api.post('/admin/categories', {
                 name: categoryData.name,
                 description: categoryData.description,
                 status: categoryData.status || 'active'
@@ -97,7 +91,7 @@ const categoryService = {
     // Cập nhật danh mục
     updateCategory: async (id, categoryData) => {
         try {
-            const response = await axios.put(`${API_URL}/admin/categories/${id}`, {
+            const response = await api.put(`/admin/categories/${id}`, {
                 name: categoryData.name,
                 description: categoryData.description,
                 status: categoryData.status
@@ -115,7 +109,7 @@ const categoryService = {
     // Xóa danh mục
     deleteCategory: async (id) => {
         try {
-            const response = await axios.delete(`${API_URL}/admin/categories/${id}`);
+            const response = await api.delete(`/admin/categories/${id}`);
             // BE trả về { data: null, message }
             return response.data;
         } catch (error) {

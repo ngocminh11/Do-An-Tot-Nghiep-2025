@@ -1,15 +1,11 @@
-import axios from 'axios';
-import config from '../config';
-import Cookies from 'js-cookie';
-
-const API_URL = config.API_BASE_URL;
+import api from './axiosInstance';
 
 const commentService = {
     // ========== USER ==========
     // Lấy tất cả bình luận cho user (public)
     getComments: async (params = {}) => {
         try {
-            const response = await axios.get(`${API_URL}/comments`, { params });
+            const response = await api.get('/comments', { params });
             if (response.data && response.data.data) {
                 return {
                     data: response.data.data.data || response.data.data,
@@ -26,7 +22,7 @@ const commentService = {
     // Lấy bình luận theo sản phẩm
     getCommentsByProduct: async (productId, params = {}) => {
         try {
-            const response = await axios.get(`${API_URL}/comments/product/${productId}`, { params });
+            const response = await api.get(`/comments/product/${productId}`, { params });
             console.log('getCommentsByProduct response:', response.data);
 
             // Xử lý response structure: data.data.data (nested)
@@ -49,7 +45,7 @@ const commentService = {
     // Tạo bình luận mới (user)
     createComment: async (commentData) => {
         try {
-            const response = await axios.post(`${API_URL}/comments`, commentData);
+            const response = await api.post('/comments', commentData);
             return response.data?.data || null;
         } catch (error) {
             throw error.response?.data || error;
@@ -58,7 +54,7 @@ const commentService = {
     // Cập nhật bình luận của user
     updateComment: async (id, commentData) => {
         try {
-            const response = await axios.put(`${API_URL}/comments/${id}`, commentData);
+            const response = await api.put(`/comments/${id}`, commentData);
             return response.data?.data || null;
         } catch (error) {
             throw error.response?.data || error;
@@ -67,7 +63,7 @@ const commentService = {
     // Xóa bình luận của user
     deleteComment: async (id) => {
         try {
-            const response = await axios.delete(`${API_URL}/comments/${id}`);
+            const response = await api.delete(`/comments/${id}`);
             return response.data;
         } catch (error) {
             throw error.response?.data || error;
@@ -76,7 +72,7 @@ const commentService = {
     // Lấy chi tiết bình luận (user)
     getCommentById: async (id) => {
         try {
-            const response = await axios.get(`${API_URL}/comments/${id}`);
+            const response = await api.get(`/comments/${id}`);
             if (response.data && response.data.data) {
                 return response.data.data;
             }
@@ -88,7 +84,7 @@ const commentService = {
     // Phản hồi bình luận (user - có thể dùng cho admin reply)
     replyToComment: async (id, replyContent) => {
         try {
-            const response = await axios.put(`${API_URL}/comments/${id}/reply`, { replyContent });
+            const response = await api.put(`/comments/${id}/reply`, { replyContent });
             return response.data;
         } catch (error) {
             throw error.response?.data || error;
@@ -97,10 +93,8 @@ const commentService = {
     // ========== ADMIN ==========
     // Lấy tất cả bình luận (admin)
     getAllComments: async (params = {}) => {
-        const token = Cookies.get('token');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         try {
-            const response = await axios.get(`${API_URL}/admin/comments`, { params, headers });
+            const response = await api.get('/admin/comments', { params });
             if (response.data && response.data.data) {
                 return {
                     data: response.data.data.data || response.data.data,
@@ -117,7 +111,7 @@ const commentService = {
     // Duyệt hoặc từ chối bình luận
     approveComment: async (id, status) => {
         try {
-            const response = await axios.patch(`${API_URL}/admin/comments/${id}/status`, { status });
+            const response = await api.patch(`/admin/comments/${id}/status`, { status });
             return response.data;
         } catch (error) {
             throw error.response?.data || error;
@@ -126,7 +120,10 @@ const commentService = {
     // Xuất bình luận ra Excel
     exportComments: async (params = {}) => {
         try {
-            const response = await axios.get(`${API_URL}/admin/comments/export`, { params, responseType: 'blob' });
+            const response = await api.get('/admin/comments/export', { 
+                params, 
+                responseType: 'blob' 
+            });
             return response.data;
         } catch (error) {
             throw error.response?.data || error;
@@ -135,7 +132,7 @@ const commentService = {
     // Lấy thống kê bình luận
     getCommentStats: async () => {
         try {
-            const response = await axios.get(`${API_URL}/admin/comments/stats`);
+            const response = await api.get('/admin/comments/stats');
             return response.data?.data || {};
         } catch (error) {
             throw error.response?.data || error;

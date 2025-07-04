@@ -1,9 +1,5 @@
-import axios from 'axios';
-import config from '../config';
+import api from './axiosInstance';
 import { io } from 'socket.io-client';
-import Cookies from 'js-cookie';
-
-const API_URL = config.API_BASE_URL;
 
 const socket = io('http://localhost:5000', {
     withCredentials: true
@@ -13,9 +9,7 @@ const cartService = {
     // ADMIN: Lấy tất cả giỏ hàng
     getAllCarts: async (params = {}) => {
         try {
-            const token = Cookies.get('token');
-            const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            const response = await axios.get(`${API_URL}/admin/carts`, { params, headers });
+            const response = await api.get('/admin/carts', { params });
             if (response.data && response.data.data) {
                 return {
                     data: response.data.data.data || response.data.data,
@@ -32,10 +26,7 @@ const cartService = {
     // ADMIN: Lấy giỏ hàng theo userId
     getCartByUserId: async (userId) => {
         try {
-            const token = Cookies.get('token');
-            const response = await axios.get(`${API_URL}/admin/carts/${userId}`, {
-                headers: token ? { Authorization: `Bearer ${token}` } : {}
-            });
+            const response = await api.get(`/admin/carts/${userId}`);
             if (response.data && response.data.data) {
                 return response.data.data;
             }
@@ -47,10 +38,7 @@ const cartService = {
     // ADMIN: Xóa giỏ hàng theo userId
     clearCartByUserId: async (userId) => {
         try {
-            const token = Cookies.get('token');
-            const response = await axios.delete(`${API_URL}/admin/carts/${userId}`, {
-                headers: token ? { Authorization: `Bearer ${token}` } : {}
-            });
+            const response = await api.delete(`/admin/carts/${userId}`);
             return response.data;
         } catch (error) {
             throw error.response?.data || error;
@@ -59,10 +47,7 @@ const cartService = {
     // USER: Lấy giỏ hàng của chính mình
     getMyCart: async () => {
         try {
-            const token = Cookies.get('token');
-            const response = await axios.get(`${API_URL}/carts/my-cart`, {
-                headers: token ? { Authorization: `Bearer ${token}` } : {}
-            });
+            const response = await api.get('/carts/my-cart');
             if (response.data && response.data.data) {
                 return response.data.data;
             }
@@ -74,10 +59,7 @@ const cartService = {
     // USER: Xóa toàn bộ giỏ hàng của mình
     clearMyCart: async () => {
         try {
-            const token = Cookies.get('token');
-            const response = await axios.delete(`${API_URL}/carts/clear`, {
-                headers: token ? { Authorization: `Bearer ${token}` } : {}
-            });
+            const response = await api.delete('/carts/clear');
             return response.data;
         } catch (error) {
             throw error.response?.data || error;
@@ -86,12 +68,7 @@ const cartService = {
     // USER: Thêm sản phẩm vào giỏ hàng
     addToCart: async (productId, quantity = 1) => {
         try {
-            const token = Cookies.get('token');
-            const response = await axios.post(
-                `${API_URL}/carts/add`,
-                { productId, quantity },
-                { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-            );
+            const response = await api.post('/carts/add', { productId, quantity });
             return response.data;
         } catch (error) {
             throw error.response?.data || error;
@@ -100,12 +77,7 @@ const cartService = {
     // USER: Cập nhật số lượng sản phẩm trong giỏ hàng
     updateQuantity: async (productId, quantity) => {
         try {
-            const token = Cookies.get('token');
-            const response = await axios.put(
-                `${API_URL}/carts/update`,
-                { productId, quantity },
-                { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-            );
+            const response = await api.put('/carts/update', { productId, quantity });
             return response.data;
         } catch (error) {
             throw error.response?.data || error;
@@ -114,14 +86,9 @@ const cartService = {
     // USER: Xóa sản phẩm khỏi giỏ hàng
     removeFromCart: async (productId) => {
         try {
-            const token = Cookies.get('token');
-            const response = await axios.delete(
-                `${API_URL}/carts/remove`,
-                {
-                    headers: token ? { Authorization: `Bearer ${token}` } : {},
-                    data: { productId }
-                }
-            );
+            const response = await api.delete('/carts/remove', {
+                data: { productId }
+            });
             return response.data;
         } catch (error) {
             throw error.response?.data || error;
@@ -130,10 +97,7 @@ const cartService = {
     // USER: Lấy đơn hàng của mình
     getUserOrders: async () => {
         try {
-            const token = Cookies.get('token');
-            const response = await axios.get(`${API_URL}/orders/my-orders`, {
-                headers: token ? { Authorization: `Bearer ${token}` } : {}
-            });
+            const response = await api.get('/orders/my-orders');
             return response.data;
         } catch (error) {
             throw error.response?.data || error;
@@ -142,10 +106,7 @@ const cartService = {
     // USER: Gửi yêu cầu hủy đơn hàng
     cancelOrder: async (orderId, data = {}) => {
         try {
-            const token = Cookies.get('token');
-            const response = await axios.post(`${API_URL}/orders/${orderId}/cancel-request`, data, {
-                headers: token ? { Authorization: `Bearer ${token}` } : {}
-            });
+            const response = await api.post(`/orders/${orderId}/cancel-request`, data);
             return response.data;
         } catch (error) {
             throw error.response?.data || error;

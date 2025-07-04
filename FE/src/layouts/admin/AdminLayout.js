@@ -85,7 +85,7 @@ const AdminLayout = ({ children }) => {
     const handleMenuClick = ({ key }) => {
         if (key === 'logout') {
             localStorage.removeItem('adminToken');
-            navigate('/login');
+            navigate('/'); // Logout luôn về trang chủ
         } else if (key === 'profile') {
             navigate('/admin/profile');
         }

@@ -2,7 +2,6 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { message } from 'antd';
 import { userAPI } from '../services/userService';
 import { useNavigate } from 'react-router-dom';
-import Cookies from 'js-cookie';
 
 const AuthContext = createContext();
 
@@ -24,9 +23,9 @@ export const AuthProvider = ({ children, navigate: navigateProp, onRequireLogin 
         }
     }
 
-    // Khi khởi tạo, luôn lấy token từ Cookie
+    // Khi khởi tạo, luôn lấy token từ localStorage
     useEffect(() => {
-        const token = Cookies.get('token');
+        const token = localStorage.getItem('token');
         console.log('[AuthContext] useEffect khởi tạo, token:', token);
         if (token && token !== 'undefined' && token !== 'null') {
             fetchUserProfile(token);
@@ -36,11 +35,12 @@ export const AuthProvider = ({ children, navigate: navigateProp, onRequireLogin 
     }, []);
 
     const fetchUserProfile = async (tokenParam) => {
-        const token = tokenParam || Cookies.get('token');
+        const token = tokenParam || localStorage.getItem('token');
         console.log('[AuthContext] fetchUserProfile, token:', token);
         try {
             const { id, role } = getUserInfoFromToken(token);
             if (!id) throw new Error('Không lấy được userId từ token');
+            // Luôn gọi API lấy profile cho mọi role
             const user = await userAPI.getProfile(id);
             // Nếu user không có role, lấy từ token
             if (!user.role && role) {
@@ -49,7 +49,7 @@ export const AuthProvider = ({ children, navigate: navigateProp, onRequireLogin 
             setUser(user);
         } catch (error) {
             console.warn('FE: getProfile lỗi, thử refresh token', error);
-            const refreshToken = Cookies.get('refreshToken');
+            const refreshToken = localStorage.getItem('refreshToken');
             if (refreshToken && refreshToken !== 'undefined' && refreshToken !== 'null') {
                 try {
                     const { accessToken, refreshToken: newRefreshToken } = await userAPI.refreshToken(refreshToken);
@@ -58,9 +58,10 @@ export const AuthProvider = ({ children, navigate: navigateProp, onRequireLogin 
                         console.error('[AuthContext] Không nhận được token mới khi refresh:', accessToken, newRefreshToken);
                         throw new Error('Không nhận được token mới khi refresh');
                     }
-                    Cookies.set('token', accessToken, { expires: 7, path: '/', sameSite: 'Lax' });
-                    Cookies.set('refreshToken', newRefreshToken, { expires: 7, path: '/', sameSite: 'Lax' });
-                    console.log('[AuthContext] set token/refreshToken khi refresh:', accessToken, newRefreshToken);
+                    localStorage.setItem('token', accessToken);
+                    console.log('[DEBUG] Token mới đã lưu:', localStorage.getItem('token'));
+                    localStorage.setItem('refreshToken', newRefreshToken);
+                    console.log('[DEBUG] RefreshToken mới đã lưu:', localStorage.getItem('refreshToken'));
                     const { id: newUserId, role: newRole } = getUserInfoFromToken(accessToken);
                     if (!newUserId) throw new Error('Không lấy được userId từ token');
                     const user = await userAPI.getProfile(newUserId);
@@ -83,12 +84,18 @@ export const AuthProvider = ({ children, navigate: navigateProp, onRequireLogin 
     };
 
     const handleSessionExpired = () => {
-        console.log('[AuthContext] handleSessionExpired: XÓA COOKIE');
-        Cookies.remove('token', { path: '/' });
-        Cookies.remove('refreshToken', { path: '/' });
+        // Chỉ xóa localStorage khi chắc chắn hết hạn phiên (401 từ cả accessToken và refreshToken)
+        // Không xóa localStorage khi chỉ gặp lỗi tạm thời hoặc F5
+        if (localStorage.getItem('token') || localStorage.getItem('refreshToken')) {
+            localStorage.removeItem('token');
+            console.log('[DEBUG] Token sau khi xóa:', localStorage.getItem('token'));
+            localStorage.removeItem('refreshToken');
+            console.log('[DEBUG] RefreshToken sau khi xóa:', localStorage.getItem('refreshToken'));
+        }
         setUser(null);
         message.error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại!');
         if (onRequireLogin) onRequireLogin();
+        if (typeof setShowLogin === 'function') setShowLogin(true);
     };
 
     const loginStep1 = async (email, password) => {
@@ -113,12 +120,12 @@ export const AuthProvider = ({ children, navigate: navigateProp, onRequireLogin 
                 throw new Error('Không nhận được accessToken hoặc refreshToken');
             }
             if (accessToken && accessToken !== 'undefined' && accessToken !== 'null') {
-                Cookies.set('token', accessToken, { expires: 7, path: '/', sameSite: 'Lax' });
-                console.log('[AuthContext] set token khi login:', accessToken);
+                localStorage.setItem('token', accessToken);
+                console.log('[DEBUG] Token mới đã lưu:', localStorage.getItem('token'));
             }
             if (refreshToken && refreshToken !== 'undefined' && refreshToken !== 'null') {
-                Cookies.set('refreshToken', refreshToken, { expires: 7, path: '/', sameSite: 'Lax' });
-                console.log('[AuthContext] set refreshToken khi login:', refreshToken);
+                localStorage.setItem('refreshToken', refreshToken);
+                console.log('[DEBUG] RefreshToken mới đã lưu:', localStorage.getItem('refreshToken'));
             }
             setUser(user);
             message.success('Đăng nhập thành công!');
@@ -132,20 +139,8 @@ export const AuthProvider = ({ children, navigate: navigateProp, onRequireLogin 
     };
 
     const navigateToRoleBasedPage = (role) => {
-        switch (role) {
-            case 'Khách Hàng':
-                navigate('/');
-                break;
-            case 'Nhân Viên':
-            case 'Quản Lý Kho':
-            case 'Quản Lý Nhân Sự':
-            case 'Quản Lý Đơn Hàng':
-            case 'Quản Lý Chính':
-                navigate('/admin');
-                break;
-            default:
-                navigate('/');
-        }
+        // Luôn về trang chủ cho mọi role
+        navigate('/');
     };
 
     const sendRegisterOTP = async (email) => {
@@ -178,12 +173,12 @@ export const AuthProvider = ({ children, navigate: navigateProp, onRequireLogin 
                 throw new Error('Không nhận được accessToken hoặc refreshToken');
             }
             if (accessToken && accessToken !== 'undefined' && accessToken !== 'null') {
-                Cookies.set('token', accessToken, { expires: 7, path: '/', sameSite: 'Lax' });
-                console.log('[AuthContext] set token khi register:', accessToken);
+                localStorage.setItem('token', accessToken);
+                console.log('[DEBUG] Token mới đã lưu:', localStorage.getItem('token'));
             }
             if (refreshToken && refreshToken !== 'undefined' && refreshToken !== 'null') {
-                Cookies.set('refreshToken', refreshToken, { expires: 7, path: '/', sameSite: 'Lax' });
-                console.log('[AuthContext] set refreshToken khi register:', refreshToken);
+                localStorage.setItem('refreshToken', refreshToken);
+                console.log('[DEBUG] RefreshToken mới đã lưu:', localStorage.getItem('refreshToken'));
             }
             setUser(user);
             message.success('Đăng ký thành công!');
@@ -246,7 +241,7 @@ export const AuthProvider = ({ children, navigate: navigateProp, onRequireLogin 
 
     const verifyPin = async (userId, pin) => {
         try {
-            return await userAPI.verifyPin(userId, pin);
+            return await userAPI.verifyPin(userId, String(pin).trim());
         } catch (error) {
             const msg = error?.response?.data?.message || 'Xác thực PIN thất bại!';
             message.error(msg);
@@ -266,9 +261,11 @@ export const AuthProvider = ({ children, navigate: navigateProp, onRequireLogin 
     };
 
     const logout = () => {
-        console.log('[AuthContext] LOGOUT: XÓA COOKIE');
-        Cookies.remove('token', { path: '/' });
-        Cookies.remove('refreshToken', { path: '/' });
+        console.log('[AuthContext] LOGOUT: XÓA localStorage');
+        localStorage.removeItem('token');
+        console.log('[DEBUG] Token sau khi xóa:', localStorage.getItem('token'));
+        localStorage.removeItem('refreshToken');
+        console.log('[DEBUG] RefreshToken sau khi xóa:', localStorage.getItem('refreshToken'));
         setUser(null);
         message.success('Đăng xuất thành công!');
         navigate('/');

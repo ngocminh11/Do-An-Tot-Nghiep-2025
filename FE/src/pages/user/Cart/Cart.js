@@ -17,7 +17,8 @@ import { DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import './Cart.scss';
 import cartService from '../../../services/cartService';
-import productService from '../../../services/productService';
+import { productService, getImageByIdUser } from '../../../services/productService';
+import config from '../../../config';
 
 const { Title, Text } = Typography;
 
@@ -80,13 +81,26 @@ const CartSummary = React.memo(({ subtotal, total, onCheckout, cartItems }) => {
     );
 });
 
+const getImageUrl = async (imgPath) => {
+    if (!imgPath) return '/images/products/default.jpg';
+    try {
+        const response = await fetch(`${config.API_BASE_URL}${imgPath}`);
+        if (!response.ok) throw new Error('Image fetch failed');
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+    } catch {
+        if (imgPath.startsWith('http')) return imgPath;
+        return `${config.API_BASE_URL}${imgPath}`;
+    }
+};
+
 const Cart = () => {
     const navigate = useNavigate();
     const [cartItems, setCartItems] = useState([]);
     const [subtotal, setSubtotal] = useState(0);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
-    const [imageUrls, setImageUrls] = useState({}); // key: productId, value: objectURL
+    const [imageUrls, setImageUrls] = useState({});
     const [selectedRowKeys, setSelectedRowKeys] = useState([]);
     const [selectedItems, setSelectedItems] = useState([]);
 
@@ -258,9 +272,8 @@ const Cart = () => {
 
             if (imgPath && !imageUrls[pid]) {
                 try {
-                    const blob = await productService.getImageById(imgPath.replace('/media/', ''));
-                    const objectUrl = URL.createObjectURL(blob);
-                    return { productId: pid, url: objectUrl };
+                    const url = await getImageUrl(imgPath);
+                    return { productId: pid, url };
                 } catch (e) {
                     return null;
                 }

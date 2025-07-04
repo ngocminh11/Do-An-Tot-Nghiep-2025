@@ -1,63 +1,4 @@
-import axios from 'axios';
-import config from '../config';
-import Cookies from 'js-cookie';
-
-const api = axios.create({
-    baseURL: config.API_BASE_URL,
-    timeout: config.API_TIMEOUT
-});
-
-// Add request interceptor to always include token
-api.interceptors.request.use(
-    (config) => {
-        const token = Cookies.get('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
-
-// Sửa phần interceptor response
-api.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-        const originalRequest = error.config;
-
-        if (error.response?.status === 401 && !originalRequest._retry) {
-            originalRequest._retry = true;
-
-            try {
-                const refreshToken = Cookies.get('refreshToken');
-                if (!refreshToken) throw new Error('No refresh token available');
-
-                // Sửa thành POST với body đúng format
-                const response = await axios.post(
-                    `${config.API_BASE_URL}/refresh-token`,
-                    { refreshToken } // Đúng payload backend yêu cầu
-                );
-
-                const { accessToken, refreshToken: newRefreshToken } = response.data?.data || response.data;
-
-                Cookies.set('token', accessToken, { expires: 7, path: '/', sameSite: 'Lax' });
-                Cookies.set('refreshToken', newRefreshToken, { expires: 7, path: '/', sameSite: 'Lax' });
-                console.log('[userService] set token/refreshToken khi refresh:', accessToken, newRefreshToken);
-
-                originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-                return api(originalRequest);
-            } catch (refreshError) {
-                Cookies.remove('token', { path: '/' });
-                Cookies.remove('refreshToken', { path: '/' });
-                console.log('[userService] XÓA COOKIE khi refresh lỗi');
-                throw refreshError;
-            }
-        }
-        return Promise.reject(error);
-    }
-);
+import api from './axiosInstance';
 
 export const userAPI = {
     // Gửi OTP (cho đăng ký, quên mật khẩu...)
@@ -115,9 +56,7 @@ export const userAPI = {
     },
     // Lấy profile: cần truyền userId và accessToken
     getProfile: async (userId) => {
-        const token = Cookies.get('token');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const res = await api.get(`/accounts/${userId}`, { headers });
+        const res = await api.get(`/accounts/${userId}`);
         return res.data.data; // user
     },
     // Quên mật khẩu: gửi OTP
@@ -144,12 +83,17 @@ export const userAPI = {
     },
     // Xác thực PIN (admin routes)
     verifyPin: async (userId, pin) => {
-        const res = await api.post(`/accounts/${userId}/verify-pin`, { pin });
+        const res = await api.post(`/accounts/${userId}/verify-pin`, { pin: String(pin).trim() });
         return res.data.data;
     },
     // Đổi PIN (admin routes)
     updatePin: async (userId, pin) => {
         const res = await api.patch(`/accounts/${userId}/pin`, { pin });
         return res.data.data;
+    },
+    // Đăng nhập trực tiếp (nếu còn accessToken)
+    loginDirect: async (email, password, accessToken) => {
+        const res = await api.post('/login-direct', { email, password, accessToken });
+        return res.data.data; // { user, accessToken, refreshToken, role }
     }
 }; 

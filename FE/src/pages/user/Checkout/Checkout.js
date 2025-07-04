@@ -21,11 +21,24 @@ import orderService from '../../../services/orderService';
 import AddressForm from '../../../components/common/AddressForm';
 import { useAuth } from '../../../contexts/AuthContext';
 import accountService from '../../../services/accountService';
-import productService from '../../../services/productService';
-import { getImageUrl } from '../../../services/productService';
+import { productService, getImageByIdUser } from '../../../services/productService';
+import config from '../../../config';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+
+const getImageUrl = async (imgPath) => {
+    if (!imgPath) return '/images/products/default.jpg';
+    try {
+        const response = await fetch(`${config.API_BASE_URL}${imgPath}`);
+        if (!response.ok) throw new Error('Image fetch failed');
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+    } catch {
+        if (imgPath.startsWith('http')) return imgPath;
+        return `${config.API_BASE_URL}${imgPath}`;
+    }
+};
 
 const Checkout = () => {
     const navigate = useNavigate();
@@ -61,11 +74,8 @@ const Checkout = () => {
             let imgPath = item.imageUrl;
             if (imgPath && !imageUrls[pid]) {
                 try {
-                    // Nếu imgPath là /media/abc.jpg hoặc /uploads/abc.jpg, chỉ lấy phần sau /media/
-                    const cleanPath = imgPath.replace('/media/', '');
-                    const blob = await productService.getImageById(cleanPath);
-                    const objectUrl = URL.createObjectURL(blob);
-                    return { productId: pid, url: objectUrl };
+                    const url = await getImageUrl(imgPath);
+                    return { productId: pid, url };
                 } catch (e) {
                     return null;
                 }
@@ -223,7 +233,7 @@ const Checkout = () => {
                                 <img
                                     width={54}
                                     height={54}
-                                    src={imageUrls[item.productId || item._id] || item.imageUrl || '/images/products/default.jpg'}
+                                    src={imageUrls[item._id] || '/images/products/default.jpg'}
                                     alt={item.name}
                                     style={{ borderRadius: 8, objectFit: 'cover', marginRight: 12 }}
                                 />

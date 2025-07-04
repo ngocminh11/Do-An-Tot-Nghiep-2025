@@ -473,7 +473,8 @@ const ProductManagement = () => {
       const payload = {
         quantity: values.quantity || 0,
         originalPrice: values.originalPrice || undefined,
-        pin: values.pin
+        pin: values.pin,
+        batchCode: values.batchCode || undefined
       };
 
       // Gọi API nhập kho
@@ -759,6 +760,14 @@ const ProductManagement = () => {
               maxLength={6}
               ref={pinInputRef}
             />
+          </Form.Item>
+
+          <Form.Item
+            name="batchCode"
+            label="Mã lô hàng (Batch Code)"
+            rules={[{ required: false, message: 'Nhập mã lô hàng nếu có!' }]}
+          >
+            <Input placeholder="Nhập mã lô hàng (nếu có)" />
           </Form.Item>
 
           <div style={{ color: '#888', fontSize: 12, marginTop: 8 }}>

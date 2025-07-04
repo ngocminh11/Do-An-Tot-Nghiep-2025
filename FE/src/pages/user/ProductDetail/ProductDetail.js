@@ -2,10 +2,13 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Row, Col, Card, Button, InputNumber, Rate, Tabs, message, Spin, Badge, Tag } from 'antd';
 import { ShoppingCartOutlined, HeartOutlined, StarFilled, ExclamationCircleOutlined } from '@ant-design/icons';
-import productService, { getImageUrl } from '../../../services/productService';
+import { productService, getImageByIdUser, getProductByIdUser } from '../../../services/productService';
 import cartService from '../../../services/cartService';
 import commentService from '../../../services/commentService';
 import './ProductDetail.scss';
+import config from '../../../config';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useAuthModal } from '../../../contexts/AuthModalContext';
 
 const { TabPane } = Tabs;
 
@@ -83,6 +86,19 @@ const ReviewItem = React.memo(({ comment, idx }) => {
     );
 });
 
+const getImageUrl = async (imgPath) => {
+    if (!imgPath) return '/images/products/default.jpg';
+    try {
+        const response = await fetch(`${config.API_BASE_URL}${imgPath}`);
+        if (!response.ok) throw new Error('Image fetch failed');
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+    } catch {
+        if (imgPath.startsWith('http')) return imgPath;
+        return `${config.API_BASE_URL}${imgPath}`;
+    }
+};
+
 const ProductDetail = () => {
     const { productId: id } = useParams();
     const navigate = useNavigate();
@@ -98,34 +114,48 @@ const ProductDetail = () => {
     const [ratingFilter, setRatingFilter] = useState(0); // 0 = tất cả, 1-5 = filter theo sao
     const [sortBy, setSortBy] = useState('newest'); // newest, oldest, rating
     const [selectedImage, setSelectedImage] = useState(0);
+    const [stockWarning, setStockWarning] = useState('');
+    const { user } = useAuth();
+    const { setShowLogin } = useAuthModal();
 
     // Memoized event handlers
     const handleQuantityChange = useCallback((value) => {
-        setQuantity(value);
-    }, []);
+        const stock = product?.pricingAndInventory?.stockQuantity || 0;
+        if (value > stock) {
+            setStockWarning('Không đủ số lượng sản phẩm');
+            setQuantity(stock > 0 ? stock : 1);
+            message.error('Không đủ số lượng sản phẩm');
+        } else {
+            setStockWarning('');
+            setQuantity(value);
+        }
+    }, [product]);
 
     const handleAddToCart = useCallback(async () => {
+        if (!user) {
+            setShowLogin(true);
+            return;
+        }
         try {
             await cartService.addToCart(id, quantity);
             message.success('Đã thêm sản phẩm vào giỏ hàng!');
         } catch (err) {
             message.error(err?.message || 'Thêm vào giỏ hàng thất bại!');
         }
-    }, [id, quantity]);
+    }, [id, quantity, user, setShowLogin]);
 
     const handleBuyNow = useCallback(() => {
-        // Kiểm tra nếu product chưa được load
+        if (!user) {
+            setShowLogin(true);
+            return;
+        }
         if (!product) {
             message.error('Vui lòng đợi thông tin sản phẩm được tải xong');
             return;
         }
-
-        // Tính giá trực tiếp từ product thay vì sử dụng discountInfo
         const originalPrice = product?.pricingAndInventory?.originalPrice || 0;
         const salePrice = product?.pricingAndInventory?.salePrice || originalPrice;
         const finalPrice = salePrice;
-
-        // Lưu thông tin sản phẩm vào localStorage để checkout có thể đọc
         const checkoutItem = {
             _id: id,
             productId: id,
@@ -134,12 +164,9 @@ const ProductDetail = () => {
             price: finalPrice,
             quantity: quantity
         };
-
-        // Lưu vào localStorage với key 'checkoutItems' (dạng array)
         localStorage.setItem('checkoutItems', JSON.stringify([checkoutItem]));
-
         navigate(`/checkout?productId=${id}&quantity=${quantity}`);
-    }, [navigate, id, quantity, product, mainImageUrl]);
+    }, [navigate, id, quantity, product, mainImageUrl, user, setShowLogin]);
 
     const handleImageSelect = useCallback((index) => {
         setSelectedImage(index);
@@ -227,62 +254,6 @@ const ProductDetail = () => {
         };
     }, [productData.priceInfo]);
 
-    // Optimized image loading
-    const loadProductImages = useCallback(async (productData) => {
-        const media = productData.media || {};
-        const mediaFiles = productData.mediaFiles || {};
-        let mainPath = '';
-        let galleryPaths = [];
-
-        if (mediaFiles.images && mediaFiles.images.length > 0) {
-            mainPath = mediaFiles.images[0].path;
-            galleryPaths = mediaFiles.images.map(img => img.path);
-        } else if (media.mainImage) {
-            mainPath = media.mainImage;
-        }
-
-        // Load main image
-        if (mainPath) {
-            try {
-                const blob = await productService.getImageById(mainPath.replace('/media/', ''));
-                setMainImageUrl(URL.createObjectURL(blob));
-            } catch (e) {
-                setMainImageUrl('');
-            }
-        } else {
-            setMainImageUrl('');
-        }
-
-        // Load gallery images in parallel
-        if (galleryPaths.length > 0) {
-            const imagePromises = galleryPaths.map(async (p) => {
-                try {
-                    const blob = await productService.getImageById(p.replace('/media/', ''));
-                    return URL.createObjectURL(blob);
-                } catch {
-                    return '';
-                }
-            });
-
-            const urls = await Promise.all(imagePromises);
-            setImageUrls(urls.filter(Boolean));
-        } else if (media.imageGallery && media.imageGallery.length > 0) {
-            const imagePromises = media.imageGallery.map(async (p) => {
-                try {
-                    const blob = await productService.getImageById(p.replace('/media/', ''));
-                    return URL.createObjectURL(blob);
-                } catch {
-                    return '';
-                }
-            });
-
-            const urls = await Promise.all(imagePromises);
-            setImageUrls(urls.filter(Boolean));
-        } else {
-            setImageUrls([]);
-        }
-    }, []);
-
     // Optimized useEffect for product fetching
     useEffect(() => {
         if (!id) {
@@ -298,7 +269,7 @@ const ProductDetail = () => {
             setLoading(true);
             setErrorMsg('');
             try {
-                const res = await productService.getProductById(id);
+                const res = await getProductByIdUser(id);
                 console.log('API response for getProductById:', res);
 
                 if (!isMounted) return;
@@ -309,9 +280,6 @@ const ProductDetail = () => {
                 } else {
                     setProduct(res.data);
                     console.log('Fetched product:', res.data);
-
-                    // Load images in background
-                    loadProductImages(res.data);
                 }
             } catch (err) {
                 if (!isMounted) return;
@@ -330,7 +298,7 @@ const ProductDetail = () => {
         return () => {
             isMounted = false;
         };
-    }, [id, loadProductImages]);
+    }, [id]);
 
     // Optimized useEffect for comments fetching
     useEffect(() => {
@@ -378,6 +346,38 @@ const ProductDetail = () => {
         };
     }, [id]);
 
+    useEffect(() => {
+        const loadImages = async () => {
+            const media = productData.media || {};
+            const mediaFiles = productData.mediaFiles || {};
+            let mainPath = '';
+            let galleryPaths = [];
+            if (mediaFiles.images && mediaFiles.images.length > 0) {
+                mainPath = mediaFiles.images[0].path;
+                galleryPaths = mediaFiles.images.map(img => img.path);
+            } else if (media.mainImage) {
+                mainPath = media.mainImage;
+            }
+            if (mainPath) {
+                const url = await getImageUrl(mainPath);
+                setMainImageUrl(url);
+            } else {
+                setMainImageUrl('/images/products/default.jpg');
+            }
+            if (galleryPaths.length > 0) {
+                const urls = await Promise.all(galleryPaths.map(getImageUrl));
+                setImageUrls(urls.filter(Boolean));
+            } else if (media.imageGallery && media.imageGallery.length > 0) {
+                const urls = await Promise.all(media.imageGallery.map(getImageUrl));
+                setImageUrls(urls.filter(Boolean));
+            } else {
+                setImageUrls([]);
+            }
+        };
+        loadImages();
+        // eslint-disable-next-line
+    }, [productData]);
+
     if (loading) return (
         <div className="loading-container">
             <Spin size="large" />
@@ -408,12 +408,12 @@ const ProductDetail = () => {
                 <Col xs={24} md={12}>
                     <div className="product-images hover-lift">
                         <img
-                            src={mainImage}
+                            src={mainImageUrl}
                             alt={basic.productName}
                             className="main-image"
                         />
                         <div className="thumbnail-list custom-scrollbar">
-                            {images.map((url, index) => (
+                            {imageUrls.map((url, index) => (
                                 <img
                                     key={index}
                                     src={url}
@@ -460,18 +460,25 @@ const ProductDetail = () => {
                             <span>Số lượng:</span>
                             <InputNumber
                                 min={1}
-                                max={priceInfo.stockQuantity || 99}
+                                max={priceInfo.stockQuantity || 0}
                                 value={quantity}
                                 onChange={handleQuantityChange}
+                                disabled={(priceInfo.stockQuantity || 0) < 1}
                             />
+                            <span style={{ marginLeft: 8, color: (priceInfo.stockQuantity || 0) < 1 ? '#ef4444' : '#10b981', fontWeight: 600 }}>
+                                {priceInfo.stockQuantity > 0 ? `Còn ${priceInfo.stockQuantity}` : 'Hết hàng'}
+                            </span>
                         </div>
-
+                        {stockWarning && (
+                            <div style={{ color: '#ef4444', fontWeight: 500, marginBottom: 8 }}>{stockWarning}</div>
+                        )}
                         <div className="actions">
                             <Button
                                 type="default"
                                 icon={<ShoppingCartOutlined />}
                                 size="large"
                                 onClick={handleAddToCart}
+                                disabled={(priceInfo.stockQuantity || 0) < 1}
                             >
                                 Thêm vào giỏ hàng
                             </Button>
@@ -479,6 +486,7 @@ const ProductDetail = () => {
                                 type="primary"
                                 size="large"
                                 onClick={handleBuyNow}
+                                disabled={(priceInfo.stockQuantity || 0) < 1}
                             >
                                 Mua ngay
                             </Button>

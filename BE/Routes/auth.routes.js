@@ -48,4 +48,6 @@ router.post('/login-verify', authCtrl.loginStep2);
 // Dùng refresh token hợp lệ để lấy access token mới (không cần OTP)
 router.post('/refresh-token', verifyRefreshToken, authCtrl.refreshToken);
 
+router.post('/login-direct', authCtrl.loginDirect);
+
 module.exports = router;

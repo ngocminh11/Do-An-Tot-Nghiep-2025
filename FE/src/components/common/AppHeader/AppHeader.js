@@ -44,6 +44,9 @@ const AppHeader = () => {
     const [showLogin, setShowLogin] = useState(false);
     const [showRegister, setShowRegister] = useState(false);
 
+    // Helper: xác định có phải admin/manager không
+    const isAdmin = user && user.role && user.role !== 'Khách Hàng';
+
     const handleSearch = (value) => {
         console.log('Tìm kiếm:', value);
         // Implement search logic here, e.g., navigate to search results page
@@ -65,6 +68,8 @@ const AppHeader = () => {
             message.info('Hiển thị thông báo...');
         } else if (e.key === 'cart') {
             navigate('/cart');
+        } else if (e.key === 'admin') {
+            navigate('/admin');
         }
     };
 
@@ -79,7 +84,10 @@ const AppHeader = () => {
             key: 'logout',
             label: 'Đăng xuất',
             icon: <LogoutOutlined />,
-            onClick: logout
+            onClick: () => {
+                logout();
+                // Logout luôn về trang chủ, không redirect sang /login
+            }
         },
     ];
 
@@ -108,6 +116,11 @@ const AppHeader = () => {
                         <Menu.Item key="products" icon={<ShoppingCartOutlined />}>Sản phẩm</Menu.Item>
                         <Menu.Item key="blog" icon={<ReadOutlined />}>Blog</Menu.Item>
                         <Menu.Item key="contact" icon={<PhoneOutlined />}>Liên hệ chúng tôi</Menu.Item>
+                        {isAdmin && (
+                            <Menu.Item key="admin" icon={<SettingOutlined />} onClick={() => navigate('/admin')} style={{ fontWeight: 600, color: '#C7A15A' }}>
+                                Quản trị
+                            </Menu.Item>
+                        )}
                     </Menu>
                 </div>
 

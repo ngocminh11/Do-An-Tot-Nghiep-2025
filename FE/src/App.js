@@ -69,7 +69,7 @@ const ProtectedRoute = React.memo(({ children, isAdmin }) => {
   }
 
   if (isAdmin) {
-    if (!user || !ADMIN_ROLES.includes(user.role)) {
+    if (!user || user.role === 'Khách Hàng') {
       return <Navigate to="/" replace />;
     }
     return children;

@@ -67,10 +67,12 @@ const CommentManagement = () => {
                 ...filters
             };
             const response = await commentService.getAllComments(params);
-            setComments(response.data || []);
+            setComments(response.data?.data || []);
             setPagination(prev => ({
                 ...prev,
-                total: response.totalItems || 0
+                total: response.totalItems || 0,
+                current: response.currentPage || 1,
+                pageSize: response.perPage || 10
             }));
         } catch (error) {
             message.error('Không thể tải danh sách bình luận');

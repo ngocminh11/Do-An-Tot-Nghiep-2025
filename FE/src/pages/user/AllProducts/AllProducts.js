@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Row, Col, Card, Input, Select, Button, Rate, Pagination } from 'antd';
 import { SearchOutlined, FilterOutlined } from '@ant-design/icons';
-import productService from '../../../services/productService';
+import { productService, getAllProductsUser, getImageByIdUser, getProductsByCategoryUser } from '../../../services/productService';
 import categoryService from '../../../services/categoryService';
 import commentService from '../../../services/commentService';
 import './AllProducts.scss';
 import { useNavigate } from 'react-router-dom';
+import config from '../../../config';
 
 const { Option } = Select;
 
@@ -49,15 +50,15 @@ const debugProductStructure = (product, categories) => {
 };
 
 // Memoized Product Card Component
-const ProductCard = React.memo(({ product, categories, imageUrls, productRatings, onProductClick }) => {
+const ProductCard = React.memo(({ product, categories, imageUrl, productRatings, onProductClick }) => {
     const productName = useMemo(() =>
         product.name || product.basicInformation?.productName || '',
         [product.name, product.basicInformation?.productName]
     );
 
     const productImage = useMemo(() => {
-        if (imageUrls[product._id]) {
-            return imageUrls[product._id];
+        if (imageUrl) {
+            return imageUrl;
         } else if (Array.isArray(product.imageUrls) && product.imageUrls[0]) {
             return product.imageUrls[0];
         } else if (product.media && product.media.mainImage) {
@@ -67,7 +68,7 @@ const ProductCard = React.memo(({ product, categories, imageUrls, productRatings
         } else {
             return '/images/products/default.jpg';
         }
-    }, [product, imageUrls]);
+    }, [product, imageUrl]);
 
     const categoryName = useMemo(() => {
         // Chuẩn hóa lấy categoryId dạng string
@@ -210,7 +211,7 @@ const AllProducts = () => {
         try {
             if (categoryId === 'all') {
                 // Load all products
-                const productRes = await productService.getAllProducts({ page: 1, limit: 100 });
+                const productRes = await getAllProductsUser({ page: 1, limit: 100 });
                 const products = Array.isArray(productRes?.data?.data) ? productRes.data.data :
                     Array.isArray(productRes?.data) ? productRes.data : [];
                 setProducts(products);
@@ -221,7 +222,7 @@ const AllProducts = () => {
                     setProducts(categoryProducts[categoryId]);
                 } else {
                     // Fetch from API
-                    const response = await productService.getProductsByCategory(categoryId, {
+                    const response = await getProductsByCategoryUser(categoryId, {
                         page: 1,
                         limit: 100,
                         status: 'active'
@@ -386,49 +387,26 @@ const AllProducts = () => {
         setProductRatings(prev => ({ ...prev, ...newRatings }));
     }, []);
 
-    // Optimized image loading
-    const loadProductImages = useCallback(async (products) => {
-        if (!isMountedRef.current) return;
-
-        const imagePromises = products.map(async (product) => {
-            if (!isMountedRef.current) return null;
-
-            let imgPath = '';
-            if (product.mediaFiles && Array.isArray(product.mediaFiles.images) && product.mediaFiles.images[0]?.path) {
-                imgPath = product.mediaFiles.images[0].path;
-            } else if (product.media && product.media.mainImage) {
-                imgPath = product.media.mainImage;
-            }
-
-            if (imgPath) {
-                try {
-                    const blob = await productService.getImageById(imgPath.replace('/media/', ''));
-
-                    if (!isMountedRef.current) return null;
-
-                    const objectUrl = URL.createObjectURL(blob);
-                    return { productId: product._id, url: objectUrl };
-                } catch (e) {
-                    console.error(`Error loading image for product ${product._id}:`, e);
-                    return null;
-                }
-            }
-            return null;
-        });
-
-        const results = await Promise.all(imagePromises);
-
-        if (!isMountedRef.current) return;
-
-        const newImageUrls = {};
-        results.forEach(result => {
-            if (result) {
-                newImageUrls[result.productId] = result.url;
-            }
-        });
-
-        setImageUrls(prev => ({ ...prev, ...newImageUrls }));
-    }, []);
+    // Thay thế toàn bộ logic loadProductImages và imageUrls bằng hàm getImageUrl
+    const getImageUrl = async (product) => {
+        let imgPath = '';
+        if (product.mediaFiles && Array.isArray(product.mediaFiles.images) && product.mediaFiles.images[0]?.path) {
+            imgPath = product.mediaFiles.images[0].path;
+        } else if (product.media && product.media.mainImage) {
+            imgPath = product.media.mainImage;
+        }
+        if (!imgPath) return '/images/products/default.jpg';
+        try {
+            const response = await fetch(`${config.API_BASE_URL}${imgPath}`);
+            if (!response.ok) throw new Error('Image fetch failed');
+            const blob = await response.blob();
+            return URL.createObjectURL(blob);
+        } catch {
+            // fallback sang URL trực tiếp
+            if (imgPath.startsWith('http')) return imgPath;
+            return `${config.API_BASE_URL}${imgPath}`;
+        }
+    };
 
     // Optimized useEffect for data fetching
     useEffect(() => {
@@ -437,7 +415,7 @@ const AllProducts = () => {
             setLoading(true);
             try {
                 const [productRes, categoryRes] = await Promise.all([
-                    productService.getAllProducts({ page: 1, limit: 100 }),
+                    getAllProductsUser({ page: 1, limit: 100 }),
                     categoryService.getCategories({ page: 1, limit: 100 })
                 ]);
                 const products = Array.isArray(productRes?.data?.data) ? productRes.data.data :
@@ -448,7 +426,6 @@ const AllProducts = () => {
                     setCategories(categories);
                     if (products.length > 0) {
                         await Promise.all([
-                            loadProductImages(products),
                             loadProductRatings(products)
                         ]);
                     }
@@ -469,6 +446,17 @@ const AllProducts = () => {
             isMountedRef.current = false;
         };
     }, []);
+
+    useEffect(() => {
+        if (!Array.isArray(products)) return;
+        products.forEach(async (product) => {
+            if (!imageUrls[product._id]) {
+                const url = await getImageUrl(product);
+                setImageUrls(prev => ({ ...prev, [product._id]: url }));
+            }
+        });
+        // eslint-disable-next-line
+    }, [products]);
 
     return (
         <div className="all-products">
@@ -525,7 +513,7 @@ const AllProducts = () => {
                             key={product._id}
                             product={product}
                             categories={categories}
-                            imageUrls={imageUrls}
+                            imageUrl={imageUrls[product._id]}
                             productRatings={productRatings}
                             onProductClick={handleProductClick}
                         />

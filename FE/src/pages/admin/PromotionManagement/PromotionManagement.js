@@ -28,6 +28,8 @@ import {
     SearchOutlined,
     EyeOutlined
 } from '@ant-design/icons';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import promotionService from '../../../services/PromotionService';
 import './PromotionManagement.scss';
 
@@ -36,6 +38,8 @@ const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 
 const PromotionManagement = () => {
+    const { user } = useAuth();
+    const navigate = useNavigate();
     const [promotions, setPromotions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
@@ -52,10 +56,27 @@ const PromotionManagement = () => {
     });
     const [stats, setStats] = useState({});
 
+    // Check if user has permission to access this page
     useEffect(() => {
-        fetchPromotions();
-        fetchStats();
-    }, [pagination.current, pagination.pageSize, filters]);
+        if (!user) {
+            navigate('/'); // Không redirect sang /login, về trang chủ
+            return;
+        }
+        
+        const allowedRoles = ['Quản Lý Kho', 'Quản Lý Chính', 'Nhân Viên'];
+        if (!allowedRoles.includes(user.role)) {
+            message.error('Bạn không có quyền truy cập trang này');
+            navigate('/admin');
+            return;
+        }
+    }, [user, navigate]);
+
+    useEffect(() => {
+        if (user && ['Quản Lý Kho', 'Quản Lý Chính', 'Nhân Viên'].includes(user.role)) {
+            fetchPromotions();
+            fetchStats();
+        }
+    }, [pagination.current, pagination.pageSize, filters, user]);
 
     const fetchPromotions = async () => {
         try {
@@ -66,10 +87,12 @@ const PromotionManagement = () => {
                 ...filters
             };
             const response = await promotionService.getAllPromotions(params);
-            setPromotions(response.data || []);
+            setPromotions(response.data?.data || []);
             setPagination(prev => ({
                 ...prev,
-                total: response.totalItems || 0
+                total: response.totalItems || 0,
+                current: response.currentPage || 1,
+                pageSize: response.perPage || 10
             }));
         } catch (error) {
             message.error('Không thể tải danh sách khuyến mãi');
@@ -81,7 +104,12 @@ const PromotionManagement = () => {
 
     const fetchStats = async () => {
         try {
-            const response = await promotionService.getPromotionStats();
+            const params = {};
+            Object.entries(filters).forEach(([key, value]) => {
+                if (typeof value === 'string' && value.trim() !== '') params[key] = value;
+                if (typeof value === 'number') params[key] = value;
+            });
+            const response = await promotionService.getPromotionStats(params);
             setStats(response);
         } catch (error) {
             console.error('Error fetching stats:', error);
@@ -89,12 +117,20 @@ const PromotionManagement = () => {
     };
 
     const handleCreatePromotion = () => {
+        if (!['Quản Lý Kho', 'Quản Lý Chính'].includes(user.role)) {
+            message.error('Bạn không có quyền tạo khuyến mãi');
+            return;
+        }
         setEditingPromotion(null);
         form.resetFields();
         setModalVisible(true);
     };
 
     const handleEditPromotion = (promotion) => {
+        if (!['Quản Lý Kho', 'Quản Lý Chính'].includes(user.role)) {
+            message.error('Bạn không có quyền chỉnh sửa khuyến mãi');
+            return;
+        }
         setEditingPromotion(promotion);
         form.setFieldsValue({
             ...promotion,
@@ -105,6 +141,10 @@ const PromotionManagement = () => {
     };
 
     const handleDeletePromotion = async (id) => {
+        if (!['Quản Lý Kho', 'Quản Lý Chính'].includes(user.role)) {
+            message.error('Bạn không có quyền xóa khuyến mãi');
+            return;
+        }
         try {
             await promotionService.deletePromotion(id);
             message.success('Xóa khuyến mãi thành công');
@@ -115,6 +155,10 @@ const PromotionManagement = () => {
     };
 
     const handleToggleStatus = async (id, currentStatus) => {
+        if (!['Quản Lý Kho', 'Quản Lý Chính'].includes(user.role)) {
+            message.error('Bạn không có quyền cập nhật trạng thái khuyến mãi');
+            return;
+        }
         try {
             const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
             await promotionService.togglePromotionStatus(id, newStatus);
@@ -241,35 +285,39 @@ const PromotionManagement = () => {
                             onClick={() => handleEditPromotion(record)}
                         />
                     </Tooltip>
-                    <Tooltip title="Chỉnh sửa">
-                        <Button
-                            icon={<EditOutlined />}
-                            size="small"
-                            onClick={() => handleEditPromotion(record)}
-                        />
-                    </Tooltip>
-                    <Tooltip title={record.status === 'active' ? 'Vô hiệu hóa' : 'Kích hoạt'}>
-                        <Switch
-                            checked={record.status === 'active'}
-                            onChange={() => handleToggleStatus(record._id, record.status)}
-                            size="small"
-                        />
-                    </Tooltip>
-                    <Tooltip title="Xóa">
-                        <Popconfirm
-                            title="Bạn có chắc muốn xóa khuyến mãi này?"
-                            onConfirm={() => handleDeletePromotion(record._id)}
-                            okText="Có"
-                            cancelText="Không"
-                        >
-                            <Button
-                                type="primary"
-                                danger
-                                icon={<DeleteOutlined />}
-                                size="small"
-                            />
-                        </Popconfirm>
-                    </Tooltip>
+                    {['Quản Lý Kho', 'Quản Lý Chính'].includes(user?.role) && (
+                        <>
+                            <Tooltip title="Chỉnh sửa">
+                                <Button
+                                    icon={<EditOutlined />}
+                                    size="small"
+                                    onClick={() => handleEditPromotion(record)}
+                                />
+                            </Tooltip>
+                            <Tooltip title={record.status === 'active' ? 'Vô hiệu hóa' : 'Kích hoạt'}>
+                                <Switch
+                                    checked={record.status === 'active'}
+                                    onChange={() => handleToggleStatus(record._id, record.status)}
+                                    size="small"
+                                />
+                            </Tooltip>
+                            <Tooltip title="Xóa">
+                                <Popconfirm
+                                    title="Bạn có chắc muốn xóa khuyến mãi này?"
+                                    onConfirm={() => handleDeletePromotion(record._id)}
+                                    okText="Có"
+                                    cancelText="Không"
+                                >
+                                    <Button
+                                        type="primary"
+                                        danger
+                                        icon={<DeleteOutlined />}
+                                        size="small"
+                                    />
+                                </Popconfirm>
+                            </Tooltip>
+                        </>
+                    )}
                 </Space>
             ),
         },
@@ -300,19 +348,23 @@ const PromotionManagement = () => {
                     >
                         Làm mới
                     </Button>
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={handleCreatePromotion}
-                    >
-                        Thêm khuyến mãi
-                    </Button>
-                    <Button
-                        icon={<DownloadOutlined />}
-                        onClick={handleExportPromotions}
-                    >
-                        Xuất Excel
-                    </Button>
+                    {['Quản Lý Kho', 'Quản Lý Chính'].includes(user?.role) && (
+                        <>
+                            <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                onClick={handleCreatePromotion}
+                            >
+                                Thêm khuyến mãi
+                            </Button>
+                            <Button
+                                icon={<DownloadOutlined />}
+                                onClick={handleExportPromotions}
+                            >
+                                Xuất Excel
+                            </Button>
+                        </>
+                    )}
                 </Space>
             </div>
 
@@ -322,7 +374,7 @@ const PromotionManagement = () => {
                     <Card>
                         <Statistic
                             title="Tổng khuyến mãi"
-                            value={stats.totalPromotions || 0}
+                            value={stats.total || 0}
                             valueStyle={{ color: '#3f8600' }}
                         />
                     </Card>
@@ -331,7 +383,7 @@ const PromotionManagement = () => {
                     <Card>
                         <Statistic
                             title="Đang hoạt động"
-                            value={stats.activePromotions || 0}
+                            value={stats.active || 0}
                             valueStyle={{ color: '#1890ff' }}
                         />
                     </Card>
@@ -339,19 +391,18 @@ const PromotionManagement = () => {
                 <Col span={6}>
                     <Card>
                         <Statistic
-                            title="Đã sử dụng"
-                            value={stats.usedPromotions || 0}
-                            valueStyle={{ color: '#cf1322' }}
+                            title="Không hoạt động"
+                            value={stats.inactive || 0}
+                            valueStyle={{ color: '#faad14' }}
                         />
                     </Card>
                 </Col>
                 <Col span={6}>
                     <Card>
                         <Statistic
-                            title="Tổng giảm giá"
-                            value={stats.totalDiscount || 0}
-                            suffix="VNĐ"
-                            valueStyle={{ color: '#722ed1' }}
+                            title="Đã hết hạn"
+                            value={stats.expired || 0}
+                            valueStyle={{ color: '#cf1322' }}
                         />
                     </Card>
                 </Col>

@@ -155,7 +155,6 @@ router.patch('/accounts/:id/pin',
   accountCtrl.updatePin);
 
 router.post('/accounts/:id/verify-pin',
-  authenticateUser, authorizeRoles(...['Quản Lý Nhân Sự', 'Quản Lý Chính']),
   accountCtrl.verifyPin);
 
 
@@ -166,6 +165,10 @@ router.post('/accounts/:id/verify-pin',
 router.get('/orders',
   authenticateUser, authorizeRoles(ADMIN_ROLES),
   orderCtrl.getAllOrders);
+
+router.get('/orders/stats',
+  authenticateUser, authorizeRoles(ADMIN_ROLES),
+  orderCtrl.getOrderStats);
 
 router.get('/orders/:id',
   authenticateUser, authorizeRoles(ADMIN_ROLES),
@@ -226,6 +229,10 @@ router.get('/comments',
   authenticateUser, authorizeRoles(ADMIN_ROLES),
   commentCtrl.getAllComments);
 
+router.get('/comments/stats',
+  authenticateUser, authorizeRoles(ADMIN_ROLES),
+  commentCtrl.getCommentStats);
+
 router.get('/comments/product/:productId',
   authenticateUser, authorizeRoles(ADMIN_ROLES),
   commentCtrl.getCommentsByProduct);
@@ -235,11 +242,11 @@ router.get('/comments/:id',
   commentCtrl.getCommentById);
 
 router.delete('/comments/:id',
-  authenticateUser, authorizeRoles(...['Quản Lý Chính']),
+  authenticateUser, authorizeRoles(ADMIN_ROLES),
   commentCtrl.deleteComment);
 
 router.put('/comments/:id/reply',
-  authenticateUser, authorizeRoles(['Quản Lý Chính']),
+  authenticateUser, authorizeRoles(ADMIN_ROLES),
   commentCtrl.replyToComment);
 
 

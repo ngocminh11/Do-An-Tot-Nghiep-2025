@@ -30,9 +30,9 @@ const parseJSON = (body, field) => {
 };
 const buildFilter = ({ name, status, categoryId }) => {
   const f = {};
-  if (name) f['basicInformation.productName'] = regex(name);
-  if (status) f['basicInformation.status'] = status;
-  if (categoryId) f['basicInformation.categoryIds'] = categoryId;
+  if (typeof name === 'string' && name.trim() !== '') f['basicInformation.productName'] = regex(name.trim());
+  if (typeof status === 'string' && status.trim() !== '') f['basicInformation.status'] = status.trim();
+  if (typeof categoryId === 'string' && categoryId.trim() !== '') f['basicInformation.categoryIds'] = categoryId.trim();
   return f;
 };
 const logAction = (productId, action, operatorId, payload = {}) =>
@@ -105,6 +105,7 @@ exports.createProduct = async (req, res) => {
     const tech = parseJSON(req.body, 'technicalDetails');
     const seo = parseJSON(req.body, 'seo');
     const pol = parseJSON(req.body, 'policy');
+    const batchCode = req.body.batchCode;
 
     // Tạo Product trước, chưa có detailId
     const product = new Product({ basicInformation: bi });
@@ -117,7 +118,8 @@ exports.createProduct = async (req, res) => {
       description: desc,
       technicalDetails: tech,
       seo: seo,
-      policy: pol
+      policy: pol,
+      batchCode: batchCode
     });
     await detail.save();
 
@@ -152,7 +154,12 @@ exports.updateProduct = async (req, res) => {
     const tech = parseJSON(req.body, 'technicalDetails');
     const seo = parseJSON(req.body, 'seo');
     const pol = parseJSON(req.body, 'policy');
+    const batchCode = req.body.batchCode;
     /* ... save & log như cũ ... */
+
+    if (req.body.batchCode !== undefined) {
+      await ProductDetail.findByIdAndUpdate(id, { batchCode: req.body.batchCode });
+    }
 
   } catch (err) {
     const code = err.message.includes('PIN') ? StatusCodes.ERROR_UNAUTHORIZED

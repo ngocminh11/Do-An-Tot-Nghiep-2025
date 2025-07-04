@@ -115,7 +115,17 @@ exports.createOrder = async (req, res) => {
     /* ----- Tạo OrderDetail + log ----- */
     await OrderDetail.create({
       order           : order._id,
-      shippingAddress : req.user.addresses.find(a => a.isDefault) || {},
+      shippingAddress : {
+        fullName: req.user.fullName || '',
+        phone: req.user.phone || '',
+        line1: req.user.address || '',
+        line2: '',
+        ward: '',
+        district: '',
+        province: '',
+        postalCode: '',
+        country: 'Vietnam'
+      },
       logs            : [{
         type   : 'create',
         message: 'Tạo đơn hàng',
@@ -194,11 +204,25 @@ exports.cancelRequestByUser = async (req, res) => {
  * 4. ADMIN – GET ALL                                            *
  * ============================================================ */
 exports.getAllOrders = async (req, res) => {
-  const { page = 1, limit = 10, status, paymentStatus } = req.query;
-  const query = { ...(status && { status }), ...(paymentStatus && { paymentStatus }) };
+  const { page = 1, limit = 10, status, paymentStatus, search } = req.query;
+  
+  // Xây dựng query an toàn
+  const query = {};
+  if (status && typeof status === 'string' && status.trim()) {
+    query.status = status.trim();
+  }
+  if (paymentStatus && typeof paymentStatus === 'string' && paymentStatus.trim()) {
+    query.paymentStatus = paymentStatus.trim();
+  }
+  if (search && typeof search === 'string' && search.trim()) {
+    // Tìm kiếm theo tên sản phẩm hoặc email user
+    query.$or = [
+      { 'items.productName': { $regex: search.trim(), $options: 'i' } }
+    ];
+  }
 
   const orders = await Order.find(query)
-    .populate('user', 'fullName email')
+    .populate('user', 'fullName email phone')
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(+limit);
@@ -217,6 +241,32 @@ exports.getAllOrders = async (req, res) => {
     },
     Messages.ORDER_FETCH_SUCCESS
   );
+};
+
+/* ============================================================ *
+ * 4.1. ADMIN – GET ORDER STATS                                  *
+ * ============================================================ */
+exports.getOrderStats = async (req, res) => {
+  try {
+    const totalOrders = await Order.countDocuments();
+    const pendingOrders = await Order.countDocuments({ status: 'Chờ xác nhận' });
+    const completedOrders = await Order.countDocuments({ status: 'Đã hoàn thành' });
+    const cancelledOrders = await Order.countDocuments({ status: 'Hủy' });
+    const processingOrders = await Order.countDocuments({ 
+      status: { $in: ['Xác nhận', 'Đang giao hàng'] } 
+    });
+
+    return sendSuccess(res, 200, {
+      totalOrders,
+      pendingOrders,
+      completedOrders,
+      cancelledOrders,
+      processingOrders
+    }, 'Thống kê đơn hàng');
+  } catch (err) {
+    console.error('[ORDER STATS]', err);
+    return sendError(res, 500, err.message);
+  }
 };
 
 /* ============================================================ *
@@ -276,18 +326,27 @@ exports.updateOrderStatus = async (req, res) => {
     const flowChk = validateFlow(order.status, status, pin);
     if (!flowChk.ok) return sendError(res, 400, flowChk.msg);
 
-    // B1. Chuyển sang “Xác nhận” → trừ kho
+    // B1. Chuyển sang "Xác nhận" → trừ kho
     if (order.status === 'Chờ xác nhận' && status === 'Xác nhận') {
-      const lack = order.items.find(it =>
-        it.product.pricingAndInventory.stockQuantity < it.quantity
-      );
-      if (lack)
-        return sendError(res, 400,
-          `Sản phẩm ${lack.product} không đủ hàng.`);
-      await updateStock(order.items, -1);
+      // Kiểm tra tồn kho từng sản phẩm
+      for (const it of order.items) {
+        if (!it.product || !it.product.pricingAndInventory) {
+          return sendError(res, 400, `Sản phẩm trong đơn hàng đã bị xóa hoặc thiếu thông tin tồn kho.`);
+        }
+        if (it.product.pricingAndInventory.stockQuantity < it.quantity) {
+          return sendError(res, 400, `Sản phẩm ${it.product._id || ''} không đủ hàng.`);
+        }
+      }
+      // Trừ kho từng sản phẩm
+      for (const it of order.items) {
+        await Product.updateOne(
+          { _id: it.product._id },
+          { $inc: { 'pricingAndInventory.stockQuantity': -it.quantity } }
+        );
+      }
     }
 
-    // B2. Sang “Đang giao hàng” → cần shippingInfo
+    // B2. Sang "Đang giao hàng" → cần shippingInfo
     if (status === 'Đang giao hàng') {
       if (!shippingInfo?.trackingNumber)
         return sendError(res, 400, 'Thiếu thông tin vận chuyển.');

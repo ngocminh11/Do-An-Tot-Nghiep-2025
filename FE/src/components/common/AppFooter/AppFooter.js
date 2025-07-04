@@ -10,21 +10,21 @@ const AppFooter = () => {
     return (
         <Footer className="app-footer">
             <Row gutter={[16, 16]}>
-                <Col xs={24} md={8}>
+                <Col xs={24} md={8} className="footer-col footer-logo-col">
                     <Title level={4} className="footer-logo">CoCoo</Title>
                     <Text>© 2025 CoCoo. Bản quyền thuộc về CoCoo</Text>
                 </Col>
-                <Col xs={24} md={8}>
+                <Col xs={24} md={8} className="footer-col footer-contact-col">
                     <Title level={5}>Thông tin liên hệ</Title>
-                    <Space direction="vertical">
+                    <Space direction="vertical" align="center">
                         <Text>Hỗ trợ khách hàng</Text>
                         <Link href="#">Chính sách đổi trả</Link>
                     </Space>
                 </Col>
-                <Col xs={24} md={8}>
-                    <Title level={5}>Hỗ trợ khách hàng</Title>
-                    <Space direction="vertical">
-                        <Link href="#">Thông tin liên hệ</Link>
+                <Col xs={24} md={8} className="footer-col footer-support-col">
+                    <Title level={5}>Kết nối với chúng tôi</Title>
+                    <Space direction="vertical" align="center">
+                        <Link href="#">Liên hệ</Link>
                         <Link href="#">Chính sách đổi trả</Link>
                     </Space>
                     <Space size="middle" className="social-icons">

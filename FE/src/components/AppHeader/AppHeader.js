@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Layout, Menu, Button, Avatar, Dropdown, Badge } from 'antd';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { UserOutlined, ShoppingCartOutlined, LogoutOutlined, BellOutlined } from '@ant-design/icons';
@@ -7,6 +7,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectUnreadCount } from '../../store/slices/notificationSlice';
 import { selectCartItemCount, setCartItems } from '../../store/slices/cartSlice';
 import cartService from '../../services/cartService';
+import { LoginModal, RegisterModal } from '../common/AuthModals';
 import './AppHeader.scss';
 
 const { Header } = Layout;
@@ -18,6 +19,8 @@ const AppHeader = () => {
     const unreadNotificationCount = useSelector(selectUnreadCount);
     const cartItemCount = useSelector(selectCartItemCount);
     const dispatch = useDispatch();
+    const [showLogin, setShowLogin] = useState(false);
+    const [showRegister, setShowRegister] = useState(false);
 
     const menuItems = [
         {
@@ -59,7 +62,7 @@ const AppHeader = () => {
             icon: <LogoutOutlined />,
             onClick: () => {
                 logout();
-                navigate('/login');
+                // Logout luôn về trang chủ, không redirect sang /login
             }
         }
     ];
@@ -104,51 +107,55 @@ const AppHeader = () => {
     }, [user, dispatch]);
 
     return (
-        <Header className="app-header">
-            <div className="logo">
-                <Link to="/">Beauty Store</Link>
-            </div>
-            <Menu
-                mode="horizontal"
-                selectedKeys={[location.pathname]}
-                items={menuItems}
-                className="main-menu"
-            />
-            <div className="header-right">
-                {user ? (
-                    <Dropdown
-                        menu={{ items: userMenuItems }}
-                        placement="bottomRight"
-                        trigger={['click']}
-                    >
-                        <Avatar icon={<UserOutlined />} />
-                    </Dropdown>
-                ) : (
-                    <div className="auth-buttons">
-                        <Button type="link" onClick={() => navigate('/login')}>
-                            Đăng nhập
-                        </Button>
-                        <Button type="primary" onClick={() => navigate('/register')}>
-                            Đăng ký
-                        </Button>
-                    </div>
-                )}
-                <Badge count={cartItemCount} offset={[5, 0]} className="cart-badge">
-                    <Button
-                        type="text"
-                        icon={<ShoppingCartOutlined style={{ fontSize: '20px' }} />}
-                        onClick={() => navigate('/cart')}
-                    />
-                </Badge>
-                <Badge count={unreadNotificationCount} offset={[5, 0]} className="notification-badge">
-                    <Button
-                        type="text"
-                        icon={<BellOutlined style={{ fontSize: '20px' }} />}
-                    // onClick={...}
-                    />
-                </Badge>
-            </div>
-        </Header>
+        <>
+            <Header className="app-header">
+                <div className="logo">
+                    <Link to="/">Beauty Store</Link>
+                </div>
+                <Menu
+                    mode="horizontal"
+                    selectedKeys={[location.pathname]}
+                    items={menuItems}
+                    className="main-menu"
+                />
+                <div className="header-right">
+                    {user ? (
+                        <Dropdown
+                            menu={{ items: userMenuItems }}
+                            placement="bottomRight"
+                            trigger={['click']}
+                        >
+                            <Avatar icon={<UserOutlined />} />
+                        </Dropdown>
+                    ) : (
+                        <div className="auth-buttons">
+                            <Button type="link" onClick={() => setShowLogin(true)}>
+                                Đăng nhập
+                            </Button>
+                            <Button type="primary" onClick={() => setShowRegister(true)}>
+                                Đăng ký
+                            </Button>
+                        </div>
+                    )}
+                    <Badge count={cartItemCount} offset={[5, 0]} className="cart-badge">
+                        <Button
+                            type="text"
+                            icon={<ShoppingCartOutlined style={{ fontSize: '20px' }} />}
+                            onClick={() => navigate('/cart')}
+                        />
+                    </Badge>
+                    <Badge count={unreadNotificationCount} offset={[5, 0]} className="notification-badge">
+                        <Button
+                            type="text"
+                            icon={<BellOutlined style={{ fontSize: '20px' }} />}
+                        // onClick={...}
+                        />
+                    </Badge>
+                </div>
+            </Header>
+            <LoginModal open={showLogin} onClose={() => setShowLogin(false)} />
+            <RegisterModal open={showRegister} onClose={() => setShowRegister(false)} />
+        </>
     );
 };
 

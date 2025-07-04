@@ -24,7 +24,7 @@ module.exports = async function checkPin(req) {
   /* ---- Đọc pin mới nhất trong DB (tránh rely cache req.user) ---- */
   const fresh = await Account.findById(req.user._id).select('pin');
   if (!fresh) throw new Error('Tài khoản không tồn tại.');
-  const isMatch = pinInput === fresh.pin;
+  const isMatch = String(pinInput).trim() === String(fresh.pin).trim();
   if (!isMatch)
     throw new Error('PIN không chính xác.');
 };

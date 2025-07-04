@@ -3,7 +3,7 @@ import { Carousel, Card, Row, Col, Button, Space, Input, Form, message, Typograp
 import { useNavigate } from 'react-router-dom';
 import { UpOutlined, MailOutlined, CheckCircleOutlined, StarOutlined, HeartOutlined, MessageOutlined, SendOutlined, CloseOutlined, CustomerServiceOutlined, ShoppingOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import ChatBot from '../../../components/ChatBot/ChatBot';
-import productService, { getImageUrl } from '../../../services/productService';
+import { productService, getAllProductsUser } from '../../../services/productService';
 import categoryService from '../../../services/categoryService';
 import './Home.scss';
 import screenshotImg from '../../../upload/an_elegant_product_image_.png';
@@ -12,6 +12,7 @@ import facialImg from '../../../upload/a_bottle_of_facial_image_.png';
 import cocoWImg from '../../../upload/a_bottle_of_coco_w_image_.png';
 import tubeImg from '../../../upload/a_tube_of_cocoo_su_image_.png';
 import productImg1 from '../../../upload/a_product_image_of_image_.png';
+import config from '../../../config';
 
 const { Title, Text } = Typography;
 
@@ -93,6 +94,37 @@ const Home = () => {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [imageUrls, setImageUrls] = useState({});
+
+    const getImageUrl = async (imgPath) => {
+        if (!imgPath) return '/images/products/default.jpg';
+        try {
+            const response = await fetch(`${config.API_BASE_URL}${imgPath}`);
+            if (!response.ok) throw new Error('Image fetch failed');
+            const blob = await response.blob();
+            return URL.createObjectURL(blob);
+        } catch {
+            if (imgPath.startsWith('http')) return imgPath;
+            return `${config.API_BASE_URL}${imgPath}`;
+        }
+    };
+
+    useEffect(() => {
+        if (!Array.isArray(products)) return;
+        products.forEach(async (product) => {
+            let imgPath = '';
+            if (product.mediaFiles && Array.isArray(product.mediaFiles.images) && product.mediaFiles.images[0]?.path) {
+                imgPath = product.mediaFiles.images[0].path;
+            } else if (product.media && product.media.mainImage) {
+                imgPath = product.media.mainImage;
+            }
+            if (imgPath && !imageUrls[product._id]) {
+                const url = await getImageUrl(imgPath);
+                setImageUrls(prev => ({ ...prev, [product._id]: url }));
+            }
+        });
+        // eslint-disable-next-line
+    }, [products]);
 
     // Memoized event handlers
     const handleScroll = useCallback(
@@ -179,8 +211,8 @@ const Home = () => {
             setLoading(true);
             try {
                 const [productRes, categoryRes] = await Promise.all([
-                    productService.getAllProducts({ page: 1, limit: 10 }),
-                    categoryService.getAllCategories({ page: 1, limit: 10 })
+                    getAllProductsUser({ page: 1, limit: 10 }),
+                    categoryService.getCategories({ page: 1, limit: 10 })
                 ]);
 
                 if (isMounted) {
