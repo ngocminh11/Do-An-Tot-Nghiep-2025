@@ -39,19 +39,26 @@ async function findRelevantProducts(message) {
 
     // Ưu tiên tìm theo skin type > tag > ingredients
     products = await Product.find({
-      'basicInformation.status': 'active',
+      'basicInformation.status': 'Hiển Thị',
       $or: [
         { 'technicalDetails.suitableSkinTypes': { $in: foundKeywords } },
         { 'basicInformation.tagIds': { $in: tagIds } },
         { 'technicalDetails.ingredients': { $in: foundKeywords } }
       ]
-    }).limit(2); // Giới hạn 2 sản phẩm
+    })
+      .limit(2)
+      .populate({
+        path: 'detailId',
+        select: 'description media',
+      })
+      .lean();
   }
 
   return products.map(p => ({
     name: p.basicInformation.productName,
-    skinTypes: p.technicalDetails.suitableSkinTypes,
-    url: `/product/${p.seo?.urlSlug || p._id}`
+    url: `/product/${p.basicInformation.seo?.urlSlug || p._id}`,
+    mainImageId: p.basicInformation.mainImageId,
+    shortDescription: p.detailId && p.detailId.description && p.detailId.description.shortDescription
   }));
 }
 
@@ -84,10 +91,13 @@ async function askOpenAI(message) {
       { role: 'user', content: message }
     ],
     max_tokens: 200, // Giảm 33% độ dài
-    temperature: 0.3, // Tăng tính chính xác
+    temperature: 0.1, // Tăng tính chính xác
   });
 
-  return completion.choices[0].message.content;
+  return {
+    reply: completion.choices[0].message.content,
+    products
+  };
 }
 
 module.exports = { askOpenAI };

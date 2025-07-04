@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import './ChatBot.scss';
 import { MessageOutlined, UserOutlined, RobotOutlined, ShoppingOutlined, CustomerServiceOutlined, QuestionCircleOutlined, SendOutlined, CloseOutlined, CheckCircleOutlined, HeartOutlined, GiftOutlined } from '@ant-design/icons';
+import productService, { getImageUrl } from '../../services/productService';
 
 // API URL configuration
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -63,14 +64,12 @@ const ChatBot = () => {
                 };
                 setMessages(prev => [...prev, botMessage]);
 
-                // Tách phần gợi ý sản phẩm nếu có (dạng link hoặc tên sản phẩm)
-                const productLinks = [];
-                const regex = /Xem chi tiết: (\/product\/[\w-]+)/g;
-                let match;
-                while ((match = regex.exec(response.data.reply)) !== null) {
-                    productLinks.push(match[1]);
+                // Nếu có sản phẩm gợi ý, set vào state
+                if (response.data.products && Array.isArray(response.data.products)) {
+                    setSuggestedProducts(response.data.products);
+                } else {
+                    setSuggestedProducts([]);
                 }
-                setSuggestedProducts(productLinks);
             } else {
                 throw new Error('Không nhận được phản hồi từ chatbot.');
             }
@@ -206,7 +205,7 @@ const ChatBot = () => {
                                     )}
                                 </div>
                                 <div className="message-bubble">
-                                    <div className="message-content">{message.content}</div>
+                                    <div className="message-content" dangerouslySetInnerHTML={{ __html: message.content }} />
                                     <div className="message-time">{new Date(message.timestamp).toLocaleTimeString()}</div>
                                 </div>
                             </div>
@@ -225,16 +224,26 @@ const ChatBot = () => {
                         {suggestedProducts.length > 0 && (
                             <div className="suggested-products">
                                 <strong><ShoppingOutlined style={{ color: 'var(--cocoon-gold)', marginRight: 4 }} />Sản phẩm gợi ý:</strong>
-                                <ul>
-                                    {suggestedProducts.map((link, idx) => (
-                                        <li key={idx}>
-                                            <a href={link} target="_blank" rel="noopener noreferrer">
-                                                <GiftOutlined style={{ color: 'var(--cocoon-gold)', marginRight: 4 }} />
-                                                {link}
-                                            </a>
-                                        </li>
+                                <div className="suggested-product-list">
+                                    {suggestedProducts.map((prod, idx) => (
+                                        <div className="suggested-product-card" key={idx}>
+                                            {prod.mainImageId && (
+                                                <img
+                                                    src={prod.mainImageId.toString().length === 24 ? `${API_URL}/api/media/${prod.mainImageId}` : prod.mainImageId}
+                                                    alt={prod.name}
+                                                    className="suggested-product-img"
+                                                />
+                                            )}
+                                            <div className="suggested-product-info">
+                                                <div className="suggested-product-name">{prod.name}</div>
+                                                {prod.shortDescription && <div className="suggested-product-desc">{prod.shortDescription}</div>}
+                                                <a href={prod.url} target="_blank" rel="noopener noreferrer" className="suggested-product-link">
+                                                    Xem chi tiết
+                                                </a>
+                                            </div>
+                                        </div>
                                     ))}
-                                </ul>
+                                </div>
                             </div>
                         )}
                         <div ref={messagesEndRef} />

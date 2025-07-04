@@ -41,9 +41,8 @@ const ProductSchema = new Schema(
           ref: 'Tag',
           required: true
         }
-      ]
+      ],
     },
-
     // Tham chiếu 1-1 tới bảng chi tiết sản phẩm
     detailId: {
       type: Schema.Types.ObjectId,
