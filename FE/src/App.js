@@ -28,8 +28,9 @@ import CommentManagement from './pages/admin/CommentManagement/CommentManagement
 import { AuthModalProvider, useAuthModal } from './contexts/AuthModalContext';
 import { AuthProviderWithNavigate } from './contexts/AuthContext';
 import { LoginModal } from './components/common/AuthModals';
-import InventoryImport from './pages/admin/ProductManagement/InventoryImport';
-import ImportStorageManagement from './pages/admin/ProductManagement/ImportStorageManagement';
+import InventoryImport from './pages/admin/ImportStorageManagement/InventoryImport';
+import ImportStorageManagement from './pages/admin/ImportStorageManagement/ImportStorageManagement';
+import SelectProductsForImport from './pages/admin/ImportStorageManagement/SelectProductsForImport';
 
 // Lazy load user components with preloading hints
 const Home = lazy(() => import('./pages/user/Home/Home'));
@@ -129,6 +130,7 @@ function AppContent() {
     { path: '/admin/products', element: <AdminLayout><ProductManagement /></AdminLayout> },
     { path: '/admin/products/add', element: <AdminLayout><AddProduct /></AdminLayout> },
     { path: '/admin/products/:id', element: <AdminLayout><EditProduct /></AdminLayout> },
+    { path: '/admin/inventory-import/select-products', element: <AdminLayout><SelectProductsForImport /></AdminLayout> },
     { path: '/admin/inventory-import', element: <AdminLayout><InventoryImport /></AdminLayout> },
     { path: '/admin/import-storage', element: <AdminLayout><ImportStorageManagement /></AdminLayout> },
     { path: '/admin/categories', element: <AdminLayout><CategoryManagement /></AdminLayout> },

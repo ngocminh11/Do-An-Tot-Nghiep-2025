@@ -112,9 +112,6 @@ exports.createComment = async (req, res) => {
 
     const order = await Order.findOne(orderQuery);
     if (order) {
-      console.log('Order status:', order.status);
-      console.log('Order user:', order.user);
-      console.log('Order items:', order.items.map(item => ({ product: item.product, productName: item.productName })));
     }
 
     if (!order)

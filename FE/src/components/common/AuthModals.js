@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import debounce from 'lodash/debounce'; // Cần cài: npm install lodash
 import AddressForm from './AddressForm';
 import vietnamAddressData from '../../pages/user/AddressManagement/vietnamAddressData';
+import { userAPI } from '../../services/userService';
 
 const { Title, Text } = Typography;
 
@@ -247,6 +248,7 @@ export function RegisterModal({ open, onClose }) {
 
                 if (missingFields.length > 0) {
                     message.error('Vui lòng điền đầy đủ thông tin!');
+                    setLoading(false);
                     return;
                 }
 
@@ -262,13 +264,14 @@ export function RegisterModal({ open, onClose }) {
                 const address = [values.address, values.ward, values.district, values.city].filter(Boolean).join(', ');
 
                 const registerValues = { fullName, email, password, phone, skinType, address, gender };
-                const { otpToken } = await sendRegisterOTP(email);
+                const { otpToken } = await userAPI.sendRegisterOTP(email);
                 setOtpToken(otpToken);
                 setRegisterData(registerValues);
                 setStep(2);
                 message.success('Đã gửi OTP đến email!');
             } else if (step === 2) {
-                const { verifiedOtpToken, user } = await verifyRegisterOTP(otpToken, values.otp);
+                const { otp } = values;
+                const { otpToken: verifiedOtpToken, user } = await userAPI.verifyRegisterOTP(otpToken, otp);
                 setVerifiedOtpToken(verifiedOtpToken);
                 setRegisterData(prev => ({ ...prev, verifiedOtpToken, user }));
                 setStep(3);
@@ -280,8 +283,7 @@ export function RegisterModal({ open, onClose }) {
                     setLoading(false);
                     return;
                 }
-
-                await register(registerData, otpTokenToUse);
+                await userAPI.register(registerData, otpTokenToUse);
                 setStep(1);
                 setOtpToken('');
                 setVerifiedOtpToken('');
@@ -479,7 +481,7 @@ export function RegisterModal({ open, onClose }) {
                 {step === 2 && (
                     <>
                         <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                            <Text>Mã OTP đã được gửi đến email: <strong>{loginEmail}</strong></Text>
+                            <Text>Mã OTP đã được gửi đến email: <strong>{registerData.email || form.getFieldValue('email') || ''}</strong></Text>
                         </div>
                         <Form.Item
                             name="otp"

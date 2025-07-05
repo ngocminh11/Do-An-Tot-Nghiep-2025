@@ -3,8 +3,9 @@ import { Carousel, Card, Row, Col, Button, Space, Input, Form, message, Typograp
 import { useNavigate } from 'react-router-dom';
 import { UpOutlined, MailOutlined, CheckCircleOutlined, StarOutlined, HeartOutlined, MessageOutlined, SendOutlined, CloseOutlined, CustomerServiceOutlined, ShoppingOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import ChatBot from '../../../components/ChatBot/ChatBot';
-import { productService, getAllProductsUser } from '../../../services/productService';
+import { productService, getAllProductsUser, normalizeProductUser } from '../../../services/productService';
 import categoryService from '../../../services/categoryService';
+import tagService from '../../../services/tagService';
 import './Home.scss';
 import screenshotImg from '../../../upload/an_elegant_product_image_.png';
 import stylishImg from '../../../upload/a_stylish_and_simp_image_.png';
@@ -30,17 +31,40 @@ const debounce = (func, wait) => {
 };
 
 // Memoized Product Card Component
-const ProductCard = React.memo(({ product, onViewProduct, productImg1 }) => {
-    const imageUrl = useMemo(() => getImageUrl(product.imageUrls?.[0]), [product.imageUrls]);
-
+const ProductCard = React.memo(({ product, onViewProduct, productImg1, categories, tags }) => {
+    const imageUrl = useMemo(() => {
+        if (product.mediaFiles && Array.isArray(product.mediaFiles.images) && product.mediaFiles.images[0]?.path) {
+            const path = product.mediaFiles.images[0].path;
+            return path.startsWith('http') ? path : `${config.API_BASE_URL}${path}`;
+        }
+        return productImg1;
+    }, [product, productImg1]);
+    const categoryNames = useMemo(() => {
+        if (!Array.isArray(product.basicInformation?.categoryIds)) return [];
+        return product.basicInformation.categoryIds.map(cat =>
+            typeof cat === 'object' ? cat.name : (categories.find(c => c._id === cat)?.name || 'Không phân loại')
+        );
+    }, [product, categories]);
+    const tagNames = useMemo(() => {
+        if (!Array.isArray(product.basicInformation?.tagIds)) return [];
+        return product.basicInformation.tagIds.map(tag =>
+            typeof tag === 'object' ? tag.name : (tags.find(t => t._id === tag)?.name || 'Không tag')
+        );
+    }, [product, tags]);
+    const priceInfo = useMemo(() => {
+        const originalPrice = product.pricingAndInventory?.originalPrice || product.price || 0;
+        const salePrice = product.pricingAndInventory?.salePrice || product.price || 0;
+        const discount = originalPrice > salePrice ? Math.round(((originalPrice - salePrice) / originalPrice) * 100) : 0;
+        return { originalPrice, salePrice, discount };
+    }, [product]);
     return (
         <Col xs={24} sm={12} md={8} lg={4} className="home-scale-on-hover">
             <Card
                 hoverable
                 cover={
                     <img
-                        alt={product.name}
-                        src={imageUrl || productImg1}
+                        alt={product.basicInformation?.productName}
+                        src={imageUrl}
                         onError={e => { e.target.onerror = null; e.target.src = productImg1; }}
                         style={{
                             transition: 'transform 0.4s',
@@ -55,11 +79,28 @@ const ProductCard = React.memo(({ product, onViewProduct, productImg1 }) => {
                 style={{ boxShadow: '0 4px 16px rgba(44,62,80,0.10)', borderRadius: '16px' }}
             >
                 <Card.Meta
-                    title={product.name}
+                    title={product.basicInformation?.productName}
                     description={
                         <Space direction="vertical" size={0} className="product-meta-content">
+                            <div className="category">{categoryNames.join(', ')}</div>
+                            <div className="tags">{tagNames.map(name => <span key={name} className="tag-item">{name}</span>)}</div>
                             <Rate allowHalf disabled defaultValue={product.averageRating || 0} className="product-rating" />
-                            <Text className="price-text">{`${product.price?.toLocaleString('vi-VN') || ''} VNĐ`}</Text>
+                            <Text className="price-text">{`${priceInfo.salePrice.toLocaleString('vi-VN')} VNĐ`}</Text>
+                            {priceInfo.discount > 0 && (
+                                <span className="discount-badge" style={{ marginLeft: 8, color: '#fff', background: '#f5222d', borderRadius: 4, padding: '2px 6px', fontSize: 12 }}>
+                                    -{priceInfo.discount}%
+                                </span>
+                            )}
+                            <div className="stock-status">
+                                {product.pricingAndInventory?.stockQuantity > 0 ? (
+                                    <span className="in-stock">Còn {product.pricingAndInventory.stockQuantity} {product.pricingAndInventory.unit || ''}</span>
+                                ) : (
+                                    <span className="out-of-stock">Hết hàng</span>
+                                )}
+                            </div>
+                            <div className="status">
+                                <span className={`status-badge status-${(product.basicInformation?.status || '').replace(/\s/g, '').toLowerCase()}`}>{product.basicInformation?.status || 'N/A'}</span>
+                            </div>
                         </Space>
                     }
                 />
@@ -93,6 +134,7 @@ const Home = () => {
     const [newsletterForm] = Form.useForm();
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [tags, setTags] = useState([]);
     const [loading, setLoading] = useState(true);
     const [imageUrls, setImageUrls] = useState({});
 
@@ -206,23 +248,25 @@ const Home = () => {
     // Optimized useEffect for data fetching
     useEffect(() => {
         let isMounted = true;
-
         async function fetchData() {
             setLoading(true);
             try {
-                const [productRes, categoryRes] = await Promise.all([
+                const [productRes, categoryRes, tagRes] = await Promise.all([
                     getAllProductsUser({ page: 1, limit: 10 }),
-                    categoryService.getCategories({ page: 1, limit: 10 })
+                    categoryService.getCategories({ page: 1, limit: 10 }),
+                    tagService.getAllTags({ page: 1, limit: 100 })
                 ]);
-
                 if (isMounted) {
-                    setProducts(productRes.data || []);
-                    setCategories(categoryRes.data || []);
+                    const productsRaw = Array.isArray(productRes?.data?.data) ? productRes.data.data : [];
+                    setProducts(productsRaw.map(normalizeProductUser).filter(Boolean));
+                    setCategories(Array.isArray(categoryRes?.data) ? categoryRes.data : []);
+                    setTags(Array.isArray(tagRes?.data) ? tagRes.data : []);
                 }
             } catch (err) {
                 if (isMounted) {
                     setProducts([]);
                     setCategories([]);
+                    setTags([]);
                 }
             } finally {
                 if (isMounted) {
@@ -230,9 +274,7 @@ const Home = () => {
                 }
             }
         }
-
         fetchData();
-
         return () => {
             isMounted = false;
         };
@@ -285,7 +327,7 @@ const Home = () => {
                 <Title level={2}>SẢN PHẨM NỔI BẬT</Title>
                 <Row gutter={[24, 24]}>
                     {productList.map(product => (
-                        <ProductCard key={product._id} product={product} onViewProduct={handleViewProduct} productImg1={productImg1} />
+                        <ProductCard key={product._id} product={product} onViewProduct={handleViewProduct} productImg1={productImg1} categories={categories} tags={tags} />
                     ))}
                 </Row>
             </div>

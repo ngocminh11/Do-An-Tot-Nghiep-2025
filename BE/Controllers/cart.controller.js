@@ -1,5 +1,6 @@
 const Cart = require('../Models/Carts');
 const Product = require('../Models/Products');
+const ProductDetail = require('../Models/ProductDetail');
 const { sendSuccess, sendError } = require('../Utils/responseHelper');
 const StatusCodes = require('../Constants/ResponseCode');
 const Messages = require('../Constants/ResponseMessage');
@@ -12,30 +13,27 @@ exports.addToCart = async (req, res) => {
   const userId = req.user._id;
   const { productId, quantity = 1 } = req.body;
 
-  // 1) Validate id
   if (!isValidId(productId))
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
 
   try {
-    // 2) Lấy sản phẩm + tồn kho
     const product = await Product.findById(productId);
     if (!product)
       return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.PRODUCT_NOT_FOUND);
 
-    const stockLeft = product.pricingAndInventory.stockQuantity;
+    const detail = await ProductDetail.findById(product.detailId);
+    if (!detail)
+      return sendError(res, StatusCodes.ERROR_NOT_FOUND, 'Không tìm thấy chi tiết sản phẩm');
 
-    // 3) Lấy (hoặc tạo mới) giỏ hàng của user
+    const stockLeft = detail.pricingAndInventory?.stockQuantity ?? 0;
+
     let cart = await Cart.findOne({ userId });
     if (!cart) cart = new Cart({ userId, items: [] });
 
-    // 4) Kiểm tra xem sản phẩm đã có trong cart chưa
     const idx = cart.items.findIndex(i => i.productId.equals(productId));
     const currentQtyInCart = idx !== -1 ? cart.items[idx].quantity : 0;
-
-    // 5) Xác định tổng qty sau khi thêm
     const newTotalQty = currentQtyInCart + quantity;
 
-    // 6) Nếu vượt quá tồn kho → báo lỗi
     if (newTotalQty > stockLeft) {
       return sendError(
         res,
@@ -44,7 +42,6 @@ exports.addToCart = async (req, res) => {
       );
     }
 
-    // 7) Nếu đủ kho → cập nhật cart
     if (idx !== -1) {
       cart.items[idx].quantity = newTotalQty;
     } else {
@@ -52,9 +49,9 @@ exports.addToCart = async (req, res) => {
     }
 
     await cart.save();
-    // Emit realtime event
     const io = req.app.get('io');
     io && io.emit('cart-updated', { userId });
+    await cart.populate({ path: 'items.productId', populate: { path: 'detailId' } });
     return sendSuccess(res, StatusCodes.SUCCESS_OK, cart, Messages.CART_UPDATED);
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
@@ -66,30 +63,29 @@ exports.updateQuantity = async (req, res) => {
   const userId = req.user._id;
   const { productId, quantity } = req.body;
 
-  // 1) Validate đầu vào
   if (!isValidId(productId) || !Number.isInteger(quantity) || quantity < 1) {
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_INPUT);
   }
 
   try {
-    // 2) Lấy sản phẩm để kiểm tra tồn kho
-    const product = await Product.findById(productId, 'pricingAndInventory.stockQuantity');
+    const product = await Product.findById(productId);
     if (!product)
       return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.PRODUCT_NOT_FOUND);
 
-    const stockLeft = product.pricingAndInventory.stockQuantity;
+    const detail = await ProductDetail.findById(product.detailId);
+    if (!detail)
+      return sendError(res, StatusCodes.ERROR_NOT_FOUND, 'Không tìm thấy chi tiết sản phẩm');
 
-    // 3) Lấy giỏ hàng của user
+    const stockLeft = detail.pricingAndInventory?.stockQuantity ?? 0;
+
     const cart = await Cart.findOne({ userId });
     if (!cart)
       return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CART_NOT_FOUND);
 
-    // 4) Tìm item trong giỏ
     const item = cart.items.find(i => i.productId.equals(productId));
     if (!item)
       return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.PRODUCT_NOT_IN_CART);
 
-    // 5) Kiểm tra vượt tồn kho?
     if (quantity > stockLeft) {
       return sendError(
         res,
@@ -98,18 +94,16 @@ exports.updateQuantity = async (req, res) => {
       );
     }
 
-    // 6) Cập nhật & lưu
     item.quantity = quantity;
     await cart.save();
-    // Emit realtime event
     const io = req.app.get('io');
     io && io.emit('cart-updated', { userId });
+    await cart.populate({ path: 'items.productId', populate: { path: 'detailId' } });
     return sendSuccess(res, StatusCodes.SUCCESS_OK, cart, Messages.CART_UPDATED);
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
   }
 };
-
 
 exports.removeFromCart = async (req, res) => {
   const userId = req.user._id;
@@ -124,9 +118,9 @@ exports.removeFromCart = async (req, res) => {
 
     cart.items = cart.items.filter(item => !item.productId.equals(productId));
     await cart.save();
-    // Emit realtime event
     const io = req.app.get('io');
     io && io.emit('cart-updated', { userId });
+    await cart.populate({ path: 'items.productId', populate: { path: 'detailId' } });
     return sendSuccess(res, StatusCodes.SUCCESS_OK, cart, Messages.CART_UPDATED);
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);
@@ -136,7 +130,11 @@ exports.removeFromCart = async (req, res) => {
 exports.getMyCart = async (req, res) => {
   const userId = req.user._id;
   try {
-    const cart = await Cart.findOne({ userId }).populate('items.productId');
+    const cart = await Cart.findOne({ userId })
+      .populate({
+        path: 'items.productId',
+        populate: { path: 'detailId' }
+      });
     if (!cart) return sendSuccess(res, StatusCodes.SUCCESS_OK, { items: [] }, Messages.CART_EMPTY);
     return sendSuccess(res, StatusCodes.SUCCESS_OK, cart);
   } catch (err) {
@@ -151,7 +149,6 @@ exports.clearMyCart = async (req, res) => {
     if (!cart) return sendError(res, StatusCodes.ERROR_NOT_FOUND, Messages.CART_NOT_FOUND);
     cart.items = [];
     await cart.save();
-    // Emit realtime event
     const io = req.app.get('io');
     io && io.emit('cart-updated', { userId });
     return sendSuccess(res, StatusCodes.SUCCESS_OK, null, Messages.CART_CLEARED);
@@ -162,7 +159,9 @@ exports.clearMyCart = async (req, res) => {
 
 exports.getAllCarts = async (req, res) => {
   try {
-    const carts = await Cart.find().populate('userId', 'fullName email').populate('items.productId');
+    const carts = await Cart.find()
+      .populate('userId', 'fullName email')
+      .populate({ path: 'items.productId', populate: { path: 'detailId' } });
     return sendSuccess(res, StatusCodes.SUCCESS_OK, carts);
   } catch (err) {
     return sendError(res, StatusCodes.ERROR_INTERNAL_SERVER, err.message);

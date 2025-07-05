@@ -19,6 +19,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import storeService from '../../../services/StoreService';
 import productService, { getProductMainImageUrl } from '../../../services/productService';
 import dayjs from 'dayjs';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const { Option } = Select;
 const { Title } = Typography;
@@ -56,7 +57,19 @@ const supplierOptions = [
     }
 ];
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+// Hàm lấy URL ảnh sản phẩm an toàn
+function getSafeProductImageUrl(productData) {
+    const mainImagePath = productData?.mediaFiles?.images?.[0]?.path;
+    return mainImagePath
+        ? (mainImagePath.startsWith('http') ? mainImagePath : `${API_URL}${mainImagePath}`)
+        : '/images/products/default.jpg';
+}
+
 const InventoryImport = () => {
+    const location = useLocation();
+    const navigate = useNavigate();
     const [products, setProducts] = useState([]);
     const [selectedRowKeys, setSelectedRowKeys] = useState([]);
     const [importData, setImportData] = useState({});
@@ -81,7 +94,12 @@ const InventoryImport = () => {
     });
 
     useEffect(() => {
-        fetchProducts();
+        // Nếu có selectedProducts từ location.state, chỉ hiển thị các sản phẩm đó
+        if (location.state && Array.isArray(location.state.selectedProducts) && location.state.selectedProducts.length > 0) {
+            setProducts(location.state.selectedProducts);
+        } else {
+            fetchProducts();
+        }
     }, []);
 
     // Hàm chuẩn hóa dữ liệu sản phẩm từ { product, detail }
@@ -143,7 +161,7 @@ const InventoryImport = () => {
             key: 'image',
             render: (_, record) => (
                 <img
-                    src={getProductMainImageUrl(record)}
+                    src={getSafeProductImageUrl(record)}
                     alt="Ảnh"
                     style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }}
                 />
@@ -187,41 +205,6 @@ const InventoryImport = () => {
                     min={0}
                     value={importData[record._id]?.originalPrice || ''}
                     onChange={val => handleImportFieldChange(record._id, 'originalPrice', val)}
-                />
-            )
-        },
-        {
-            title: 'Mã lô',
-            dataIndex: 'batchCode',
-            key: 'batchCode',
-            render: (_, record) => (
-                <Input
-                    value={importData[record._id]?.batchCode || ''}
-                    onChange={e => handleImportFieldChange(record._id, 'batchCode', e.target.value)}
-                />
-            )
-        },
-        {
-            title: 'NSX',
-            dataIndex: 'mfgDate',
-            key: 'mfgDate',
-            render: (_, record) => (
-                <DatePicker
-                    value={importData[record._id]?.mfgDate}
-                    onChange={date => handleImportFieldChange(record._id, 'mfgDate', date)}
-                    format="DD/MM/YYYY"
-                />
-            )
-        },
-        {
-            title: 'HSD',
-            dataIndex: 'expDate',
-            key: 'expDate',
-            render: (_, record) => (
-                <DatePicker
-                    value={importData[record._id]?.expDate}
-                    onChange={date => handleImportFieldChange(record._id, 'expDate', date)}
-                    format="DD/MM/YYYY"
                 />
             )
         },
@@ -277,9 +260,6 @@ const InventoryImport = () => {
                     type: 'import',
                     quantity: d.quantity,
                     originalPrice: d.originalPrice,
-                    batchCode: d.batchCode,
-                    mfgDate: d.mfgDate ? d.mfgDate.format('YYYY-MM-DD') : undefined,
-                    expDate: d.expDate ? d.expDate.format('YYYY-MM-DD') : undefined,
                     note: d.note,
                     // Thông tin hóa đơn chung
                     billCode: billInfo.billCode,
@@ -319,6 +299,18 @@ const InventoryImport = () => {
         selectedRowKeys,
         onChange: setSelectedRowKeys,
     };
+
+    // Nếu không có sản phẩm nào để nhập kho (user vào trực tiếp), hiển thị thông báo và nút quay lại
+    if (products.length === 0) {
+        return (
+            <div style={{ padding: 32, textAlign: 'center' }}>
+                <Card>
+                    <Title level={3}>Vui lòng chọn sản phẩm để nhập kho trước!</Title>
+                    <Button type="primary" onClick={() => navigate('/admin/inventory-import/select-products')}>Chọn sản phẩm</Button>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="inventory-import-page">

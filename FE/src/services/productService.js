@@ -126,9 +126,7 @@ const productService = {
    */
   getImageById: async (id) => {
     try {
-      const response = await api.get(`/admin/media/${id}`, {
-        responseType: 'blob'
-      });
+      const response = await api.get(`/admin/media/${id}`, { responseType: 'blob' });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -624,12 +622,42 @@ export const getImageByIdUser = async (id) => {
   }
 };
 
-export function getProductMainImageUrl(product) {
-  const imageId = product?.mediaFiles?.images?.[0]?._id || product?.mediaFiles?.images?.[0]?.id;
-  if (imageId) {
-    return `${API_URL}/admin/media/${imageId}`;
+export function getProductMainImageUrl(item) {
+  // item là object gồm { product, detail }
+  const images = item?.detail?.mediaFiles?.images;
+  if (Array.isArray(images) && images.length > 0 && images[0]?.path) {
+    const path = images[0].path;
+    // Nếu path đã là URL tuyệt đối
+    if (path.startsWith('http')) return path;
+    // Nếu path đã bắt đầu bằng '/admin/media/'
+    if (path.startsWith('/admin/media/')) return `${API_URL}${path}`;
+    // Nếu path là id, thì ghép /admin/media/
+    return `${API_URL}/admin/media/${path}`;
   }
   return '/images/products/default.jpg';
+}
+
+// Chuẩn hóa dữ liệu sản phẩm cho FE user (merge product + detail)
+export function normalizeProductUser(item) {
+  if (!item || !item.product) return null;
+  const { product, detail } = item;
+  let merged = { ...product };
+  if (detail) {
+    merged = {
+      ...merged,
+      pricingAndInventory: detail.pricingAndInventory,
+      description: detail.description,
+      technicalDetails: detail.technicalDetails,
+      seo: detail.seo,
+      policy: detail.policy,
+      media: detail.media,
+      mediaFiles: detail.mediaFiles,
+      isDeleted: detail.isDeleted,
+      createdAt: detail.createdAt,
+      updatedAt: detail.updatedAt,
+    };
+  }
+  return merged;
 }
 
 export default productService;

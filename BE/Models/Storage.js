@@ -9,9 +9,6 @@ const StorageSchema = new Schema({
     type: { type: String, enum: ['import', 'export'], required: true }, // nhập/xuất
     quantity: { type: Number, required: true },
     originalPrice: { type: Number }, // giá nhập
-    batchCode: { type: String },
-    mfgDate: { type: Date },
-    expDate: { type: Date },
     note: { type: String },
     supplier: { type: String },
     supplierCode: { type: String },
@@ -31,7 +28,7 @@ const StorageSchema = new Schema({
     totalAfterDiscount: { type: Number },
     totalVAT: { type: Number },
     totalFinal: { type: Number },
-    status: { type: String, enum: ['Đợi Duyệt', 'Đã Duyệt','Trả Hàng'], default: 'Đợi Duyệt' }, // trạng thái phiếu nhập kho
+    status: { type: String, enum: ['Đợi Duyệt', 'Đã Duyệt', 'Trả Hàng'], default: 'Đợi Duyệt' }, // trạng thái phiếu nhập kho
 }, { timestamps: true });
 
 module.exports = mongoose.model('Storage', StorageSchema); 

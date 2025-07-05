@@ -1,11 +1,20 @@
+:root {
+    --cocoon-gold: #C7A15A;
+    --cocoon-brown: #3A2E1F;
+    --cocoon-bg: #FAF7EF;
+    --cocoon-white: #fff;
+}
+
 .product-detail {
     width: 1000px;
     min-width: 1000px;
     margin: 0 auto;
     padding: 32px 24px;
-    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    background: var(--cocoon-white);
     min-height: 100vh;
     overflow-x: auto;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(199, 161, 90, 0.12);
 
     .ant-row {
         margin-bottom: 0;
@@ -34,25 +43,29 @@
             width: 450px;
             height: 350px;
             object-fit: cover;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 16px rgba(199, 161, 90, 0.10);
         }
 
         .thumbnail-list {
             display: flex;
             gap: 12px;
             padding: 8px 0;
-            .thumbnail {
-                width: 90px;
-                height: 90px;
-                object-fit: cover;
+            margin-top: 8px;
+
+            img {
                 border-radius: 8px;
+                border: 2px solid var(--cocoon-bg);
+                margin-right: 8px;
+                width: 60px;
+                height: 60px;
+                object-fit: cover;
                 cursor: pointer;
-                border: 2px solid transparent;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-                &.active {
-                    border-color: #3b82f6;
+
+                &.active,
+                &:hover {
+                    border-color: var(--cocoon-gold);
                 }
             }
         }
@@ -70,38 +83,54 @@
         top: 24px;
 
         h1 {
-            font-size: 28px;
+            font-size: 2rem;
             font-weight: 700;
             margin-bottom: 20px;
-            color: #1e293b;
+            color: var(--cocoon-brown);
+        }
+
+        .category,
+        .tags {
+            margin-bottom: 8px;
+
+            .tag-item {
+                background: var(--cocoon-gold);
+                color: var(--cocoon-white);
+                border-radius: 8px;
+                padding: 2px 8px;
+                font-size: 13px;
+                margin-right: 4px;
+            }
         }
 
         .price {
-            font-size: 32px;
+            color: var(--cocoon-gold);
+            font-size: 1.3rem;
             font-weight: 700;
-            color: #ef4444;
             margin-bottom: 20px;
             display: flex;
             align-items: center;
             gap: 8px;
+
             &::before {
                 content: '₫';
                 font-size: 24px;
                 color: #ef4444;
             }
+
             .original-price {
-                font-size: 20px;
-                color: #9ca3af;
+                color: #888;
                 text-decoration: line-through;
-                font-weight: 400;
+                margin-left: 8px;
             }
+
             .discount-badge {
-                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-                color: white;
-                padding: 4px 12px;
-                border-radius: 20px;
-                font-size: 14px;
-                font-weight: 600;
+                background: var(--cocoon-brown);
+                color: var(--cocoon-gold);
+                border-radius: 8px;
+                padding: 2px 8px;
+                margin-left: 8px;
+                font-size: 13px;
             }
         }
 
@@ -114,14 +143,17 @@
             background: #f8fafc;
             border-radius: 12px;
             border: 1px solid #e2e8f0;
+
             .ant-rate {
                 font-size: 18px;
             }
+
             .review-count {
                 color: #64748b;
                 font-weight: 500;
                 font-size: 14px;
             }
+
             .rating-score {
                 background: #3b82f6;
                 color: white;
@@ -152,11 +184,13 @@
             background: #f8fafc;
             border-radius: 12px;
             border: 1px solid #e2e8f0;
+
             span {
                 font-weight: 600;
                 color: #374151;
                 font-size: 16px;
             }
+
             .ant-input-number {
                 border-radius: 8px;
                 border: 2px solid #e2e8f0;
@@ -166,63 +200,80 @@
             }
         }
 
+        .status-badge {
+            background: var(--cocoon-bg);
+            color: var(--cocoon-brown);
+            border-radius: 8px;
+            padding: 2px 8px;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .in-stock {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .out-of-stock {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
         .actions {
             display: flex;
             gap: 16px;
             margin-bottom: 28px;
+
             .ant-btn {
                 flex: 1;
                 height: 52px;
-                border-radius: 12px;
+                border-radius: 24px;
+                font-size: 1.1rem;
                 font-weight: 600;
-                font-size: 16px;
                 border: none;
+                background: var(--cocoon-gold);
+                color: var(--cocoon-white);
+
+                &:hover {
+                    background: var(--cocoon-brown);
+                    color: var(--cocoon-gold);
+                }
             }
         }
+    }
 
-        .product-meta {
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 24px;
-            border: 1px solid #e2e8f0;
-            .meta-item {
-                display: flex;
-                align-items: center;
-                margin-bottom: 16px;
-                padding: 12px 0;
-                border-bottom: 1px solid #e2e8f0;
-                &:last-child {
-                    margin-bottom: 0;
-                    border-bottom: none;
-                }
-                .label {
-                    width: 120px;
-                    color: #64748b;
-                    font-weight: 600;
-                    font-size: 14px;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-                .value {
-                    font-weight: 500;
-                    color: #374151;
-                    flex: 1;
-                }
-                .status-badge {
-                    padding: 4px 12px;
-                    border-radius: 20px;
-                    font-size: 12px;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                    &.in-stock {
-                        background: #10b981;
-                        color: white;
-                    }
-                    &.out-of-stock {
-                        background: #ef4444;
-                        color: white;
-                    }
-                }
+    .product-meta {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 24px;
+        border: 1px solid #e2e8f0;
+        margin-top: 16px;
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+
+            &:last-child {
+                margin-bottom: 0;
+                border-bottom: none;
+            }
+
+            .label {
+                width: 120px;
+                color: var(--cocoon-brown);
+                font-weight: 600;
+                font-size: 14px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .value {
+                font-weight: 500;
+                color: #555;
+                flex: 1;
             }
         }
     }
@@ -233,10 +284,12 @@
         overflow: hidden;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
         width: 100%;
+
         .ant-tabs-nav {
             background: #f8fafc;
             margin: 0;
             padding: 0 24px;
+
             .ant-tabs-tab {
                 padding: 20px 24px;
                 margin: 0;
@@ -244,11 +297,14 @@
                 background: transparent;
             }
         }
+
         .ant-tabs-content-holder {
             background: #fff;
         }
+
         .tab-content {
             padding: 32px;
+
             h3 {
                 font-size: 20px;
                 font-weight: 700;
@@ -265,38 +321,62 @@
 .fade-in {
     animation: fadeIn 0.6s ease-in-out;
 }
+
 .slide-up {
     animation: slideUp 0.5s ease-out;
 }
+
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
+
 @keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
+
 .hover-lift {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+
     &:hover {
         transform: translateY(-4px);
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
     }
 }
+
 .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 transparent;
+
     &::-webkit-scrollbar {
         width: 6px;
         height: 6px;
     }
+
     &::-webkit-scrollbar-track {
         background: #f1f5f9;
         border-radius: 3px;
     }
+
     &::-webkit-scrollbar-thumb {
         background: #cbd5e1;
         border-radius: 3px;
+
         &:hover {
             background: #94a3b8;
         }
@@ -474,18 +554,23 @@
 @media (max-width: 600px) {
     .product-detail {
         padding: 6px 2px;
+
         .ant-row {
             flex-direction: column !important;
             gap: 0 !important;
         }
+
         .product-images {
             padding: 6px;
+
             .main-image {
                 height: 180px;
                 border-radius: 8px;
             }
+
             .thumbnail-list {
                 gap: 4px;
+
                 .thumbnail {
                     width: 40px;
                     height: 40px;
@@ -493,71 +578,89 @@
                 }
             }
         }
+
         .product-info {
             padding: 10px 6px;
             margin-top: 12px;
+
             h1 {
                 font-size: 16px;
                 margin-bottom: 8px;
             }
+
             .price {
                 font-size: 18px;
                 margin-bottom: 10px;
             }
+
             .rating {
                 flex-direction: column;
                 gap: 4px;
                 padding: 8px;
                 font-size: 13px;
             }
+
             .description {
                 font-size: 13px;
                 padding: 8px;
                 margin-bottom: 10px;
             }
+
             .quantity-selector {
                 gap: 8px;
                 margin-bottom: 10px;
                 padding: 8px;
                 font-size: 13px;
             }
+
             .actions {
                 flex-direction: column;
                 gap: 8px;
                 margin-bottom: 10px;
+
                 .ant-btn {
                     height: 40px;
                     font-size: 14px;
                 }
             }
+
             .product-meta {
                 padding: 10px 4px;
+
                 .meta-item {
                     flex-direction: column;
                     align-items: flex-start;
                     gap: 2px;
+
                     .label {
                         font-size: 12px;
                     }
+
                     .value {
                         font-size: 13px;
                     }
                 }
             }
         }
+
         .product-tabs {
             margin-top: 16px;
+
             .ant-tabs-nav {
                 padding: 0 4px;
+
                 .ant-tabs-tab {
                     padding: 8px 6px;
+
                     .ant-tabs-tab-btn {
                         font-size: 12px;
                     }
                 }
             }
+
             .tab-content {
                 padding: 10px 4px;
+
                 h3 {
                     font-size: 15px;
                     margin-bottom: 8px;

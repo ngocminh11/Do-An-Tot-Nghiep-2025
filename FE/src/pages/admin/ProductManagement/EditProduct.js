@@ -26,6 +26,15 @@ import './ProductManagement.scss';
 const { Option } = Select;
 const { TextArea } = Input;
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+function getSafeProductImageUrl(detail) {
+    const mainImagePath = detail?.mediaFiles?.images?.[0]?.path;
+    return mainImagePath
+        ? (mainImagePath.startsWith('http') ? mainImagePath : `${API_URL}${mainImagePath}`)
+        : '/images/products/default.jpg';
+}
+
 const EditProduct = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -56,119 +65,122 @@ const EditProduct = () => {
                     throw new Error('Không thể lấy thông tin sản phẩm');
                 }
 
-                const product = response.data;
+                const product = response.data.product;
+                const detail = response.data.detail;
 
                 // Main image
                 let mainImageArr = [];
-                if (product.mediaFiles?.images?.length > 0) {
-                    const img = product.mediaFiles.images[0];
-                    const imageId = img._id || img.id;
-                    if (imageId) {
-                        const url = `${API_URL}/admin/media/${imageId}`;
-                        mainImageArr = [{
-                            uid: '-main',
+                if (detail && detail.mediaFiles?.images?.length > 0) {
+                    const img = detail.mediaFiles.images[0];
+                    const url = getSafeProductImageUrl(detail);
+                    mainImageArr = [{
+                        uid: '-main',
+                        name: img.filename,
+                        status: 'done',
+                        url,
+                        type: img.mimetype,
+                        originFileObj: null
+                    }];
+                }
+                setMainImageList(mainImageArr);
+                // Gallery images
+                let galleryArr = [];
+                if (detail && detail.mediaFiles?.images?.length > 1) {
+                    galleryArr = detail.mediaFiles.images.slice(1).map((img, index) => {
+                        const path = img.path;
+                        const url = path
+                            ? (path.startsWith('http') ? path : `${API_URL}${path}`)
+                            : '/images/products/default.jpg';
+                        return {
+                            uid: `-gallery-${index}`,
                             name: img.filename,
                             status: 'done',
                             url,
                             type: img.mimetype,
                             originFileObj: null
-                        }];
-                    }
-                }
-                setMainImageList(mainImageArr);
-                // Gallery images
-                let galleryArr = [];
-                if (product.mediaFiles?.images?.length > 1) {
-                    galleryArr = product.mediaFiles.images.slice(1).map((img, index) => {
-                        const imageId = img._id || img.id;
-                        if (imageId) {
-                            return {
-                                uid: `-gallery-${index}`,
-                                name: img.filename,
-                                status: 'done',
-                                url: `${API_URL}/admin/media/${imageId}`,
-                                type: img.mimetype,
-                                originFileObj: null
-                            };
-                        }
-                        return null;
-                    }).filter(Boolean);
+                        };
+                    });
                 }
                 setGalleryList(galleryArr);
 
-                // Set giá trị vào form
+                // Lưu lại id danh mục và tag để set lại sau khi categories/tags load xong
+                const categoryIds = (product.basicInformation?.categoryIds || []).map(cat => typeof cat === 'object' ? cat._id : cat);
+                const tagIds = (product.basicInformation?.tagIds || []).map(tag => typeof tag === 'object' ? tag._id : tag);
+
+                // Set giá trị vào form (có thể bị ghi đè nếu categories/tags chưa load xong)
                 form.setFieldsValue({
                     idProduct: product._id,
                     basicInformation: {
                         productName: product.basicInformation?.productName || '',
                         sku: product.basicInformation?.sku || '',
                         brand: product.basicInformation?.brand || 'CoCo',
-                        categoryIds: (product.basicInformation?.categoryIds || []).map(cat => typeof cat === 'object' ? cat._id : cat),
-                        tagIds: (product.basicInformation?.tagIds || []).map(tag => typeof tag === 'object' ? tag._id : tag),
+                        categoryIds,
+                        tagIds,
                     },
                     pricingAndInventory: {
-                        originalPrice: product.pricingAndInventory?.originalPrice ?? 0,
-                        salePrice: product.pricingAndInventory?.salePrice ?? 0,
-                        stockQuantity: product.pricingAndInventory?.stockQuantity ?? 0,
-                        unit: product.pricingAndInventory?.unit || '',
-                        currency: product.pricingAndInventory?.currency || 'VND'
+                        originalPrice: detail?.pricingAndInventory?.originalPrice ?? 0,
+                        salePrice: detail?.pricingAndInventory?.salePrice ?? 0,
+                        stockQuantity: detail?.pricingAndInventory?.stockQuantity ?? 0,
+                        unit: detail?.pricingAndInventory?.unit || '',
+                        currency: detail?.pricingAndInventory?.currency || 'VND'
                     },
                     description: {
-                        shortDescription: product.description?.shortDescription || '',
-                        detailedDescription: product.description?.detailedDescription || '',
-                        ingredients: Array.isArray(product.description?.ingredients)
-                            ? product.description.ingredients.join(', ')
-                            : (product.description?.ingredients || ''),
-                        usageInstructions: Array.isArray(product.description?.usageInstructions)
-                            ? product.description.usageInstructions.join('\n')
-                            : (product.description?.usageInstructions || ''),
-                        expiration: product.description?.expiration || ''
+                        shortDescription: detail?.description?.shortDescription || '',
+                        detailedDescription: detail?.description?.detailedDescription || '',
+                        ingredients: Array.isArray(detail?.description?.ingredients)
+                            ? detail.description.ingredients.join(', ')
+                            : (detail?.description?.ingredients || ''),
+                        usageInstructions: Array.isArray(detail?.description?.usageInstructions)
+                            ? detail.description.usageInstructions.join('\n')
+                            : (detail?.description?.usageInstructions || ''),
+                        expiration: detail?.description?.expiration || ''
                     },
                     technicalDetails: {
-                        sizeOrWeight: product.technicalDetails?.sizeOrWeight || product.technicalDetails?.weight || '',
-                        suitableSkinTypes: Array.isArray(product.technicalDetails?.suitableSkinTypes)
-                            ? product.technicalDetails.suitableSkinTypes
-                            : (product.technicalDetails?.suitableSkinTypes
-                                ? [product.technicalDetails.suitableSkinTypes]
+                        sizeOrWeight: detail?.technicalDetails?.sizeOrWeight || detail?.technicalDetails?.weight || '',
+                        suitableSkinTypes: Array.isArray(detail?.technicalDetails?.suitableSkinTypes)
+                            ? detail.technicalDetails.suitableSkinTypes
+                            : (detail?.technicalDetails?.suitableSkinTypes
+                                ? [detail.technicalDetails.suitableSkinTypes]
                                 : []),
-                        origin: product.technicalDetails?.origin || '',
-                        certifications: Array.isArray(product.technicalDetails?.certifications)
-                            ? product.technicalDetails.certifications
-                            : (product.technicalDetails?.certifications
-                                ? [product.technicalDetails.certifications]
+                        origin: detail?.technicalDetails?.origin || '',
+                        certifications: Array.isArray(detail?.technicalDetails?.certifications)
+                            ? detail.technicalDetails.certifications
+                            : (detail?.technicalDetails?.certifications
+                                ? [detail.technicalDetails.certifications]
                                 : [])
                     },
                     seo: {
-                        keywords: Array.isArray(product.seo?.keywords)
-                            ? product.seo.keywords
-                            : (product.seo?.keywords ? [product.seo.keywords] : []),
-                        metaTitle: product.seo?.metaTitle || '',
-                        metaDescription: product.seo?.metaDescription || '',
-                        urlSlug: product.seo?.urlSlug || ''
+                        keywords: Array.isArray(detail?.seo?.keywords)
+                            ? detail.seo.keywords
+                            : (detail?.seo?.keywords ? [detail.seo.keywords] : []),
+                        metaTitle: detail?.seo?.metaTitle || '',
+                        metaDescription: detail?.seo?.metaDescription || '',
+                        urlSlug: detail?.seo?.urlSlug || ''
                     },
                     policy: {
-                        shippingReturnWarranty: Array.isArray(product.policy?.shippingReturnWarranty)
-                            ? product.policy.shippingReturnWarranty
-                            : (product.policy?.shippingReturnWarranty
-                                ? [product.policy.shippingReturnWarranty]
+                        shippingReturnWarranty: Array.isArray(detail?.policy?.shippingReturnWarranty)
+                            ? detail.policy.shippingReturnWarranty
+                            : (detail?.policy?.shippingReturnWarranty
+                                ? [detail.policy.shippingReturnWarranty]
                                 : []),
-                        additionalOptions: Array.isArray(product.policy?.additionalOptions)
-                            ? product.policy.additionalOptions
-                            : (product.policy?.additionalOptions
-                                ? [product.policy.additionalOptions]
+                        additionalOptions: Array.isArray(detail?.policy?.additionalOptions)
+                            ? detail.policy.additionalOptions
+                            : (detail?.policy?.additionalOptions
+                                ? [detail.policy.additionalOptions]
                                 : [])
                     }
                 });
-                // Chọn sẵn danh mục và tag trên Select
+
+                // Sau khi categories/tags load xong, set lại để Select hiển thị đúng
                 setTimeout(() => {
                     form.setFieldsValue({
                         basicInformation: {
                             ...form.getFieldValue('basicInformation'),
-                            categoryIds: (product.basicInformation?.categoryIds || []).map(cat => typeof cat === 'object' ? cat._id : cat),
-                            tagIds: (product.basicInformation?.tagIds || []).map(tag => typeof tag === 'object' ? tag._id : tag),
+                            categoryIds,
+                            tagIds,
                         }
                     });
-                }, 0);
+                }, 500);
             } catch (error) {
                 console.error('Error fetching product:', error);
                 message.error(error.message || 'Không thể lấy thông tin sản phẩm');
@@ -230,87 +242,53 @@ const EditProduct = () => {
             if (categoryIds.length === 0) throw new Error('Vui lòng chọn ít nhất một danh mục');
             const formData = new FormData();
 
-            // Append basic information
-            if (values.basicInformation) {
-                formData.append('basicInformation', JSON.stringify({
-                    productName: values.basicInformation.productName,
-                    sku: values.basicInformation.sku,
-                    brand: 'CoCo',
-                    categoryIds: categoryIds,
-                    tagIds: tagIds,
-                    status: 'Hiển Thị' // luôn đúng enum backend
-                }));
-            }
+            // Append các trường dạng JSON
+            formData.append('basicInformation', JSON.stringify(values.basicInformation));
+            formData.append('pricingAndInventory', JSON.stringify(values.pricingAndInventory));
+            formData.append('description', JSON.stringify(values.description));
+            formData.append('technicalDetails', JSON.stringify(values.technicalDetails));
+            formData.append('seo', JSON.stringify(values.seo));
+            formData.append('policy', JSON.stringify(values.policy));
+            if (values.batchCode) formData.append('batchCode', values.batchCode);
 
-            // Append pricing and inventory
-            if (values.pricingAndInventory) {
-                formData.append('pricingAndInventory', JSON.stringify({
-                    originalPrice: values.pricingAndInventory.originalPrice,
-                    salePrice: values.pricingAndInventory.salePrice,
-                    stockQuantity: values.pricingAndInventory.stockQuantity,
-                    unit: values.pricingAndInventory.unit
-                }));
-            }
-
-            // Append description
-            if (values.description) {
-                formData.append('description', JSON.stringify({
-                    shortDescription: values.description.shortDescription,
-                    detailedDescription: values.description.detailedDescription,
-                    ingredients: values.description.ingredients,
-                    usageInstructions: values.description.usageInstructions,
-                    expiration: values.description.expiration
-                }));
-            }
-
-            // Append technical details
-            if (values.technicalDetails) {
-                formData.append('technicalDetails', JSON.stringify({
-                    sizeOrWeight: values.technicalDetails.sizeOrWeight,
-                    suitableSkinTypes: values.technicalDetails.suitableSkinTypes,
-                    origin: values.technicalDetails.origin,
-                    certifications: values.technicalDetails.certifications
-                }));
-            }
-
-            // Append SEO
-            if (values.seo) {
-                formData.append('seo', JSON.stringify({
-                    keywords: values.seo.keywords,
-                    metaTitle: values.seo.metaTitle,
-                    metaDescription: values.seo.metaDescription
-                }));
-            }
-
-            // Append policy
-            if (values.policy) {
-                formData.append('policy', JSON.stringify({
-                    shippingReturnWarranty: values.policy.shippingReturnWarranty || '',
-                    additionalOptions: values.policy.additionalOptions || ''
-                }));
-            }
-
-            // Append images: mainImage trước, sau đó gallery
+            // Ảnh chính (cũ hoặc mới)
             if (mainImageList && mainImageList.length > 0) {
-                const mainImageFile = mainImageList[0].originFileObj;
-                if (mainImageFile) {
-                    formData.append('images', mainImageFile);
+                if (mainImageList[0].originFileObj) {
+                    // Ảnh chính mới
+                    formData.append('images', mainImageList[0].originFileObj);
+                } else if (mainImageList[0].url) {
+                    // Ảnh chính cũ, fetch blob và append
+                    const response = await fetch(mainImageList[0].url);
+                    const blob = await response.blob();
+                    const file = new File([blob], mainImageList[0].name || 'main.jpg', { type: blob.type });
+                    formData.append('images', file);
                 }
             }
+            // Gallery (cũ hoặc mới)
             if (galleryList && galleryList.length > 0) {
-                galleryList.forEach(fileItem => {
-                    const imageFile = fileItem.originFileObj;
-                    if (imageFile) {
-                        formData.append('images', imageFile);
+                for (const fileItem of galleryList) {
+                    if (fileItem.originFileObj) {
+                        formData.append('images', fileItem.originFileObj);
+                    } else if (fileItem.url) {
+                        // Ảnh gallery cũ, fetch blob và append
+                        const response = await fetch(fileItem.url);
+                        const blob = await response.blob();
+                        const file = new File([blob], fileItem.name || 'gallery.jpg', { type: blob.type });
+                        formData.append('images', file);
                     }
-                });
+                }
+            }
+
+            // Debug: log FormData
+            for (let pair of formData.entries()) {
+                console.log('FormData:', pair[0], pair[1]);
             }
 
             await productService.updateProduct(id, formData);
             message.success('Cập nhật sản phẩm thành công');
             navigate('/admin/products');
         } catch (error) {
-            console.error('Error updating product:', error);
+            console.error('Error updating product:', error, error.response?.data);
             if (error.response?.data?.message) {
                 message.error('Lỗi: ' + error.response.data.message);
             } else {
@@ -462,76 +440,58 @@ const EditProduct = () => {
                         </Col>
                         <Col xs={24} md={12}>
                             <Form.Item
-                                name={['basicInformation', 'categoryIds']}
+                                name={["basicInformation", "categoryIds"]}
                                 label="Danh mục"
                                 rules={[{ required: true, message: 'Vui lòng chọn ít nhất một danh mục' }]}
                                 className="form-item"
                             >
-                                <div className="select-with-icon">
-                                    <Select
-                                        mode="multiple"
-                                        placeholder="Chọn danh mục"
-                                        loading={loadingCategories}
-                                        optionFilterProp="children"
-                                        showSearch
-                                        className="form-select"
-                                        size="large"
-                                        filterOption={(input, option) =>
-                                            option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                                        }
-                                    >
-                                        {categories.map((category) => (
-                                            <Option key={category._id} value={category._id}>
-                                                {category.name}
-                                            </Option>
-                                        ))}
-                                    </Select>
-                                    <Button
-                                        type="dashed"
-                                        icon={<PlusCircleOutlined />}
-                                        onClick={() => setIsCategoryModalVisible(true)}
-                                        title="Thêm danh mục mới"
-                                        size="large"
-                                        className="add-button"
-                                    />
-                                </div>
+                                <Select
+                                    mode="multiple"
+                                    placeholder="Chọn danh mục"
+                                    loading={loadingCategories}
+                                    optionFilterProp="children"
+                                    showSearch
+                                    className="form-select"
+                                    size="large"
+                                    optionLabelProp="children"
+                                    filterOption={(input, option) =>
+                                        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                                    }
+                                >
+                                    {categories.map((category) => (
+                                        <Option key={category._id} value={category._id}>
+                                            {category.name}
+                                        </Option>
+                                    ))}
+                                </Select>
                             </Form.Item>
                         </Col>
                         <Col xs={24} md={12}>
                             <Form.Item
-                                name={['basicInformation', 'tagIds']}
+                                name={["basicInformation", "tagIds"]}
                                 label="Tags"
                                 rules={[{ required: true, message: 'Vui lòng chọn ít nhất một tag' }]}
                                 className="form-item"
                             >
-                                <div className="select-with-icon">
-                                    <Select
-                                        mode="multiple"
-                                        placeholder="Chọn tags"
-                                        loading={loadingTags}
-                                        optionFilterProp="children"
-                                        showSearch
-                                        className="form-select"
-                                        size="large"
-                                        filterOption={(input, option) =>
-                                            option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                                        }
-                                    >
-                                        {tags.map((tag) => (
-                                            <Option key={tag._id} value={tag._id}>
-                                                {tag.name}
-                                            </Option>
-                                        ))}
-                                    </Select>
-                                    <Button
-                                        type="dashed"
-                                        icon={<PlusCircleOutlined />}
-                                        onClick={() => setIsTagModalVisible(true)}
-                                        title="Thêm tag mới"
-                                        size="large"
-                                        className="add-button"
-                                    />
-                                </div>
+                                <Select
+                                    mode="multiple"
+                                    placeholder="Chọn tags"
+                                    loading={loadingTags}
+                                    optionFilterProp="children"
+                                    showSearch
+                                    className="form-select"
+                                    size="large"
+                                    optionLabelProp="children"
+                                    filterOption={(input, option) =>
+                                        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                                    }
+                                >
+                                    {tags.map((tag) => (
+                                        <Option key={tag._id} value={tag._id}>
+                                            {tag.name}
+                                        </Option>
+                                    ))}
+                                </Select>
                             </Form.Item>
                         </Col>
                     </Row>

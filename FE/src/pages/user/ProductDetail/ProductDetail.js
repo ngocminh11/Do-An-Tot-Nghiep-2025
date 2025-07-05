@@ -2,9 +2,11 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Row, Col, Card, Button, InputNumber, Rate, Tabs, message, Spin, Badge, Tag } from 'antd';
 import { ShoppingCartOutlined, HeartOutlined, StarFilled, ExclamationCircleOutlined } from '@ant-design/icons';
-import { productService, getImageByIdUser, getProductByIdUser } from '../../../services/productService';
+import { productService, getImageByIdUser, getProductByIdUser, normalizeProductUser } from '../../../services/productService';
 import cartService from '../../../services/cartService';
 import commentService from '../../../services/commentService';
+import categoryService from '../../../services/categoryService';
+import tagService from '../../../services/tagService';
 import './ProductDetail.scss';
 import config from '../../../config';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -117,10 +119,12 @@ const ProductDetail = () => {
     const [stockWarning, setStockWarning] = useState('');
     const { user } = useAuth();
     const { setShowLogin } = useAuthModal();
+    const [categories, setCategories] = useState([]);
+    const [tags, setTags] = useState([]);
 
     // Memoized event handlers
     const handleQuantityChange = useCallback((value) => {
-        const stock = product?.pricingAndInventory?.stockQuantity || 0;
+        const stock = product && product.pricingAndInventory ? product.pricingAndInventory.stockQuantity || 0 : 0;
         if (value > stock) {
             setStockWarning('Không đủ số lượng sản phẩm');
             setQuantity(stock > 0 ? stock : 1);
@@ -136,13 +140,17 @@ const ProductDetail = () => {
             setShowLogin(true);
             return;
         }
+        if (!product || !product._id) {
+            message.error('Không tìm thấy sản phẩm!');
+            return;
+        }
         try {
-            await cartService.addToCart(id, quantity);
+            await cartService.addToCart(product._id, quantity);
             message.success('Đã thêm sản phẩm vào giỏ hàng!');
         } catch (err) {
             message.error(err?.message || 'Thêm vào giỏ hàng thất bại!');
         }
-    }, [id, quantity, user, setShowLogin]);
+    }, [product, quantity, user, setShowLogin]);
 
     const handleBuyNow = useCallback(() => {
         if (!user) {
@@ -254,6 +262,24 @@ const ProductDetail = () => {
         };
     }, [productData.priceInfo]);
 
+    // Lấy danh mục và tag
+    useEffect(() => {
+        async function fetchMeta() {
+            try {
+                const [categoryRes, tagRes] = await Promise.all([
+                    categoryService.getCategories({ page: 1, limit: 100 }),
+                    tagService.getAllTags({ page: 1, limit: 100 })
+                ]);
+                setCategories(Array.isArray(categoryRes?.data) ? categoryRes.data : []);
+                setTags(Array.isArray(tagRes?.data) ? tagRes.data : []);
+            } catch (err) {
+                setCategories([]);
+                setTags([]);
+            }
+        }
+        fetchMeta();
+    }, []);
+
     // Optimized useEffect for product fetching
     useEffect(() => {
         if (!id) {
@@ -262,39 +288,31 @@ const ProductDetail = () => {
             setLoading(false);
             return;
         }
-
         let isMounted = true;
-
         async function fetchProduct() {
             setLoading(true);
             setErrorMsg('');
             try {
                 const res = await getProductByIdUser(id);
-                console.log('API response for getProductById:', res);
-
                 if (!isMounted) return;
-
                 if (res?.status === 'Error' || !res?.data) {
                     setProduct(null);
                     setErrorMsg(res?.message || 'Không tìm thấy sản phẩm');
                 } else {
-                    setProduct(res.data);
-                    console.log('Fetched product:', res.data);
+                    // Chuẩn hóa dữ liệu
+                    setProduct(normalizeProductUser(res.data));
                 }
             } catch (err) {
                 if (!isMounted) return;
                 setProduct(null);
                 setErrorMsg(err?.message || 'Không tìm thấy sản phẩm');
-                console.log('Error fetching product:', err);
             } finally {
                 if (isMounted) {
                     setLoading(false);
                 }
             }
         }
-
         fetchProduct();
-
         return () => {
             isMounted = false;
         };
@@ -378,6 +396,20 @@ const ProductDetail = () => {
         // eslint-disable-next-line
     }, [productData]);
 
+    // Lấy tên danh mục, tag
+    const categoryNames = useMemo(() => {
+        if (!Array.isArray(product?.basicInformation?.categoryIds)) return [];
+        return product.basicInformation.categoryIds.map(cat =>
+            typeof cat === 'object' ? cat.name : (categories.find(c => c._id === cat)?.name || 'Không phân loại')
+        );
+    }, [product, categories]);
+    const tagNames = useMemo(() => {
+        if (!Array.isArray(product?.basicInformation?.tagIds)) return [];
+        return product.basicInformation.tagIds.map(tag =>
+            typeof tag === 'object' ? tag.name : (tags.find(t => t._id === tag)?.name || 'Không tag')
+        );
+    }, [product, tags]);
+
     if (loading) return (
         <div className="loading-container">
             <Spin size="large" />
@@ -429,7 +461,8 @@ const ProductDetail = () => {
                 <Col xs={24} md={12}>
                     <div className="product-info hover-lift">
                         <h1>{basic.productName || 'Không có tên'}</h1>
-
+                        <div className="category">{categoryNames.join(', ')}</div>
+                        <div className="tags">{tagNames.map(name => <span key={name} className="tag-item">{name}</span>)}</div>
                         <div className="price">
                             {discountInfo.salePrice.toLocaleString('vi-VN')} VNĐ
                             {discountInfo.discount > 0 && (
@@ -460,13 +493,13 @@ const ProductDetail = () => {
                             <span>Số lượng:</span>
                             <InputNumber
                                 min={1}
-                                max={priceInfo.stockQuantity || 0}
+                                max={priceInfo && typeof priceInfo.stockQuantity === 'number' ? priceInfo.stockQuantity : 0}
                                 value={quantity}
                                 onChange={handleQuantityChange}
-                                disabled={(priceInfo.stockQuantity || 0) < 1}
+                                disabled={!(priceInfo && priceInfo.stockQuantity > 0)}
                             />
-                            <span style={{ marginLeft: 8, color: (priceInfo.stockQuantity || 0) < 1 ? '#ef4444' : '#10b981', fontWeight: 600 }}>
-                                {priceInfo.stockQuantity > 0 ? `Còn ${priceInfo.stockQuantity}` : 'Hết hàng'}
+                            <span style={{ marginLeft: 8, color: !(priceInfo && priceInfo.stockQuantity > 0) ? '#ef4444' : '#10b981', fontWeight: 600 }}>
+                                {priceInfo && priceInfo.stockQuantity > 0 ? `Còn ${priceInfo.stockQuantity}` : 'Hết hàng'}
                             </span>
                         </div>
                         {stockWarning && (
@@ -478,7 +511,7 @@ const ProductDetail = () => {
                                 icon={<ShoppingCartOutlined />}
                                 size="large"
                                 onClick={handleAddToCart}
-                                disabled={(priceInfo.stockQuantity || 0) < 1}
+                                disabled={!(priceInfo && priceInfo.stockQuantity > 0)}
                             >
                                 Thêm vào giỏ hàng
                             </Button>
@@ -486,7 +519,7 @@ const ProductDetail = () => {
                                 type="primary"
                                 size="large"
                                 onClick={handleBuyNow}
-                                disabled={(priceInfo.stockQuantity || 0) < 1}
+                                disabled={!(priceInfo && priceInfo.stockQuantity > 0)}
                             >
                                 Mua ngay
                             </Button>
@@ -500,16 +533,13 @@ const ProductDetail = () => {
                             <div className="meta-item">
                                 <span className="label">Danh mục:</span>
                                 <span className="value">
-                                    {Array.isArray(basic.categoryIds) && basic.categoryIds.length > 0
-                                        ? basic.categoryIds.map(cat => cat.name || cat).join(', ')
-                                        : (basic.category || 'Không rõ')
-                                    }
+                                    {categoryNames.length > 0 ? categoryNames.join(', ') : 'Không rõ'}
                                 </span>
                             </div>
                             <div className="meta-item">
                                 <span className="label">Tình trạng:</span>
-                                <span className={`status-badge ${(priceInfo.stockQuantity || 0) > 0 ? 'in-stock' : 'out-of-stock'}`}>
-                                    {(priceInfo.stockQuantity || 0) > 0 ? 'Còn hàng' : 'Hết hàng'}
+                                <span className={`status-badge ${(priceInfo && priceInfo.stockQuantity > 0) ? 'in-stock' : 'out-of-stock'}`}>
+                                    {(priceInfo && priceInfo.stockQuantity > 0) ? 'Còn hàng' : 'Hết hàng'}
                                 </span>
                             </div>
                         </div>

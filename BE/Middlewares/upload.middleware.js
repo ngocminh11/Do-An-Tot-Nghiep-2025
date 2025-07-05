@@ -22,13 +22,12 @@ const upload = multer({
   }
 }).array('images', maxFiles);
 
-// Middleware upload ảnh lên GridFS
-const uploadImagesToGridFS = async (req, res, next) => {
+// Middleware upload ảnh lên GridFS (bắt buộc có ảnh)
+const validateImageUpload = async (req, res, next) => {
   upload(req, res, async (err) => {
     if (err) {
       return res.status(400).json({ message: err.message });
     }
-
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: Messages.NO_IMAGE_PROVIDED });
     }
@@ -42,12 +41,9 @@ const uploadImagesToGridFS = async (req, res, next) => {
     try {
       const db = mongoose.connection.db;
       const bucket = new GridFSBucket(db, { bucketName: 'uploads' });
-
       const uploadedFiles = [];
-
       for (const file of req.files) {
         const stream = Readable.from(file.buffer);
-
         const uploadStream = bucket.openUploadStream(file.originalname, {
           contentType: file.mimetype,
           metadata: {
@@ -55,7 +51,6 @@ const uploadImagesToGridFS = async (req, res, next) => {
             originalName: file.originalname
           }
         });
-
         await new Promise((resolve, reject) => {
           stream.pipe(uploadStream)
             .on('error', reject)
@@ -69,10 +64,8 @@ const uploadImagesToGridFS = async (req, res, next) => {
             });
         });
       }
-
       req.uploadedImages = uploadedFiles;
       next();
-
     } catch (uploadErr) {
       console.error('Upload to GridFS error:', uploadErr);
       return res.status(500).json({ message: Messages.INTERNAL_SERVER_ERROR });
@@ -80,4 +73,49 @@ const uploadImagesToGridFS = async (req, res, next) => {
   });
 };
 
-module.exports = uploadImagesToGridFS;
+// Middleware upload ảnh lên GridFS (không bắt buộc có ảnh)
+const optionalImageUpload = async (req, res, next) => {
+  upload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ message: err.message });
+    }
+    if (!req.files || req.files.length === 0) {
+      // Không có ảnh, bỏ qua, next luôn
+      return next();
+    }
+    try {
+      const db = mongoose.connection.db;
+      const bucket = new GridFSBucket(db, { bucketName: 'uploads' });
+      const uploadedFiles = [];
+      for (const file of req.files) {
+        const stream = Readable.from(file.buffer);
+        const uploadStream = bucket.openUploadStream(file.originalname, {
+          contentType: file.mimetype,
+          metadata: {
+            uploadedAt: new Date(),
+            originalName: file.originalname
+          }
+        });
+        await new Promise((resolve, reject) => {
+          stream.pipe(uploadStream)
+            .on('error', reject)
+            .on('finish', () => {
+              uploadedFiles.push({
+                _id: uploadStream.id,
+                filename: uploadStream.filename,
+                contentType: uploadStream.options.contentType,
+              });
+              resolve();
+            });
+        });
+      }
+      req.uploadedImages = uploadedFiles;
+      next();
+    } catch (uploadErr) {
+      console.error('Upload to GridFS error:', uploadErr);
+      return res.status(500).json({ message: Messages.INTERNAL_SERVER_ERROR });
+    }
+  });
+};
+
+module.exports = { validateImageUpload, optionalImageUpload };
