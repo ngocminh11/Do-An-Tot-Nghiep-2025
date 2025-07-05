@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Tag, Select, message, Modal, Input, Popconfirm } from 'antd';
 import storeService from '../../../services/StoreService';
+import { useNavigate } from 'react-router-dom';
 
 const { Option } = Select;
 
@@ -22,6 +23,7 @@ const ImportStorageManagement = () => {
     const [cancelModal, setCancelModal] = useState({ visible: false, storageId: null });
     const [cancelPin, setCancelPin] = useState('');
     const [cancelling, setCancelling] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchData();
@@ -180,12 +182,18 @@ const ImportStorageManagement = () => {
 
     return (
         <div>
-            <h2>Quản lý phiếu nhập kho</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h2>Quản lý phiếu nhập kho</h2>
+                <Button type="primary" onClick={() => navigate('/admin/inventory-import/select-products')}>
+                    Nhập kho
+                </Button>
+            </div>
             <div style={{ marginBottom: 16 }}>
                 <span>Lọc trạng thái: </span>
                 <Select value={status} onChange={setStatus} style={{ width: 160 }} allowClear placeholder="Tất cả">
                     <Option value="Đợi Duyệt">Đợi Duyệt</Option>
                     <Option value="Đã Duyệt">Đã Duyệt</Option>
+                    <Option value="Trả Hàng">Đã Duyệt</Option>
                 </Select>
             </div>
             <Table

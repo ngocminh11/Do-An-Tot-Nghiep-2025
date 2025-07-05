@@ -17,33 +17,68 @@ import { DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import './Cart.scss';
 import cartService from '../../../services/cartService';
-import { productService, getImageByIdUser } from '../../../services/productService';
+import productService, { getImageByIdUser } from '../../../services/productService';
 import config from '../../../config';
 
 const { Title, Text } = Typography;
 
 // Memoized Cart Item Component
-const CartItem = React.memo(({ record, imageUrls, onQuantityChange, onDelete }) => {
-    const itemTotal = useMemo(() =>
-        (record.price * record.quantity).toLocaleString('vi-VN') + ' VNĐ',
-        [record.price, record.quantity]
-    );
-
-    const productImage = useMemo(() =>
-        imageUrls[record.productId] || record.imageUrl || '/images/products/default.jpg',
-        [imageUrls, record.productId, record.imageUrl]
-    );
-
+const CartItem = React.memo(({ record, imageUrls, categories, tags }) => {
+    const product = record.productId || {};
+    const productName = product.basicInformation?.productName || product.name || '';
+    const productImage = useMemo(() => {
+        if (imageUrls[product._id]) return imageUrls[product._id];
+        if (product.mediaFiles && Array.isArray(product.mediaFiles.images) && product.mediaFiles.images[0]?.path) {
+            const path = product.mediaFiles.images[0].path;
+            return path.startsWith('http') ? path : `${config.API_BASE_URL}${path}`;
+        }
+        if (product.media && product.media.mainImage) return product.media.mainImage;
+        return '/images/products/default.jpg';
+    }, [imageUrls, product]);
+    const categoryNames = useMemo(() => {
+        if (!Array.isArray(product.basicInformation?.categoryIds)) return [];
+        return product.basicInformation.categoryIds.map(cat =>
+            typeof cat === 'object' ? cat.name : (categories.find(c => c._id === cat)?.name || 'Không phân loại')
+        );
+    }, [product, categories]);
+    const tagNames = useMemo(() => {
+        if (!Array.isArray(product.basicInformation?.tagIds)) return [];
+        return product.basicInformation.tagIds.map(tag =>
+            typeof tag === 'object' ? tag.name : (tags.find(t => t._id === tag)?.name || 'Không tag')
+        );
+    }, [product, tags]);
+    const priceInfo = product.pricingAndInventory || {};
+    const itemTotal = (priceInfo.salePrice || 0) * record.quantity;
     return (
-        <Space>
+        <div className="cart-product-card">
             <img
                 src={productImage}
-                alt={record.name}
-                style={{ width: 60, height: 60, objectFit: 'cover' }}
+                alt={productName}
+                style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, marginRight: 12 }}
                 loading="lazy"
             />
-            <Text>{record.name}</Text>
-        </Space>
+            <div className="cart-product-info">
+                <div className="cart-product-title">{productName}</div>
+                <div className="category">{categoryNames.join(', ')}</div>
+                <div className="tags">{tagNames.map(name => <span key={name} className="tag-item">{name}</span>)}</div>
+                <div className="price">
+                    {priceInfo.salePrice?.toLocaleString('vi-VN')} VNĐ
+                    {priceInfo.originalPrice > priceInfo.salePrice && (
+                        <span className="original-price">{priceInfo.originalPrice.toLocaleString('vi-VN')} VNĐ</span>
+                    )}
+                </div>
+                <div className="stock-status">
+                    {priceInfo.stockQuantity > 0 ? (
+                        <span className="in-stock">Còn {priceInfo.stockQuantity} {priceInfo.unit || ''}</span>
+                    ) : (
+                        <span className="out-of-stock">Hết hàng</span>
+                    )}
+                </div>
+                <div className="status">
+                    <span className={`status-badge status-${(product.basicInformation?.status || '').replace(/\s/g, '').toLowerCase()}`}>{product.basicInformation?.status || 'N/A'}</span>
+                </div>
+            </div>
+        </div>
     );
 });
 
@@ -103,13 +138,22 @@ const Cart = () => {
     const [imageUrls, setImageUrls] = useState({});
     const [selectedRowKeys, setSelectedRowKeys] = useState([]);
     const [selectedItems, setSelectedItems] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [tags, setTags] = useState([]);
 
     // Memoized event handlers
     const handleQuantityChange = useCallback(async (value, recordId) => {
         const item = cartItems.find(i => i._id === recordId);
         if (!item) return;
+        const product = item.productId;
+        const productId = product?._id;
+        const stock = product?.pricingAndInventory?.stockQuantity ?? 0;
+        if (value > stock) {
+            message.error(`Chỉ còn ${stock} sản phẩm trong kho.`);
+            return;
+        }
         try {
-            await cartService.updateQuantity(item.productId, value);
+            await cartService.updateQuantity(productId, value);
             setCartItems(prevItems =>
                 prevItems.map(i =>
                     i._id === recordId ? { ...i, quantity: value } : i
@@ -123,8 +167,10 @@ const Cart = () => {
     const handleDelete = useCallback(async (recordId) => {
         const item = cartItems.find(i => i._id === recordId);
         if (!item) return;
+        const product = item.productId;
+        const productId = product?._id;
         try {
-            await cartService.removeFromCart(item.productId);
+            await cartService.removeFromCart(productId);
             setCartItems(prevItems => prevItems.filter(i => i._id !== recordId));
             message.success('Sản phẩm đã được xóa khỏi giỏ hàng!');
         } catch (err) {
@@ -137,7 +183,7 @@ const Cart = () => {
         try {
             await Promise.all(selectedRowKeys.map(id => {
                 const item = cartItems.find(i => i._id === id);
-                if (item) return cartService.removeFromCart(item.productId);
+                if (item) return cartService.removeFromCart(item.productId?._id);
                 return null;
             }));
             setCartItems(prev => prev.filter(i => !selectedRowKeys.includes(i._id)));
@@ -219,8 +265,8 @@ const Cart = () => {
                 <CartItem
                     record={record}
                     imageUrls={imageUrls}
-                    onQuantityChange={handleQuantityChange}
-                    onDelete={handleDelete}
+                    categories={categories}
+                    tags={tags}
                 />
             ),
         },
@@ -262,14 +308,19 @@ const Cart = () => {
                 </Popconfirm>
             ),
         },
-    ], [imageUrls, handleQuantityChange, handleDelete, cartItems, selectedRowKeys]);
+    ], [imageUrls, handleQuantityChange, handleDelete, cartItems, selectedRowKeys, categories, tags]);
 
     // Optimized image loading
     const loadProductImages = useCallback(async (items) => {
         const imagePromises = items.map(async (item) => {
-            const pid = item.productId?._id || item.productId;
-            let imgPath = item.productId?.media?.mainImage || item.imageUrl;
-
+            const product = item.productId;
+            const pid = product?._id;
+            let imgPath = '';
+            if (product.mediaFiles && Array.isArray(product.mediaFiles.images) && product.mediaFiles.images[0]?.path) {
+                imgPath = product.mediaFiles.images[0].path;
+            } else if (product.media && product.media.mainImage) {
+                imgPath = product.media.mainImage;
+            }
             if (imgPath && !imageUrls[pid]) {
                 try {
                     const url = await getImageUrl(imgPath);
@@ -280,7 +331,6 @@ const Cart = () => {
             }
             return null;
         });
-
         const results = await Promise.all(imagePromises);
         const newImageUrls = {};
         results.forEach(result => {
@@ -288,7 +338,6 @@ const Cart = () => {
                 newImageUrls[result.productId] = result.url;
             }
         });
-
         setImageUrls(prev => ({ ...prev, ...newImageUrls }));
     }, [imageUrls]);
 
@@ -303,19 +352,38 @@ const Cart = () => {
                 if (!isMounted) return;
 
                 if (cart && Array.isArray(cart.items)) {
-                    const processedItems = cart.items.map(item => ({
-                        _id: item._id || item.productId?._id || item.productId,
-                        productId: item.productId?._id || item.productId,
-                        name: item.productId?.basicInformation?.productName || item.productId?.name || '',
-                        imageUrl: item.productId?.media?.mainImage || '',
-                        price: item.productId?.pricingAndInventory?.salePrice || 0,
-                        quantity: item.quantity
-                    }));
+                    const processedItems = cart.items.map(item => {
+                        const product = item.productId;
+                        const detail = product?.detailId;
+                        // Merge như normalizeProductUser
+                        const merged = {
+                            ...product,
+                            ...(detail && {
+                                pricingAndInventory: detail.pricingAndInventory,
+                                description: detail.description,
+                                technicalDetails: detail.technicalDetails,
+                                seo: detail.seo,
+                                policy: detail.policy,
+                                media: detail.media,
+                                mediaFiles: detail.mediaFiles,
+                                isDeleted: detail.isDeleted,
+                                createdAt: detail.createdAt,
+                                updatedAt: detail.updatedAt,
+                            })
+                        };
+                        return {
+                            _id: item._id || product?._id,
+                            productId: merged,
+                            name: merged.basicInformation?.productName || merged.name || '',
+                            price: merged.pricingAndInventory?.salePrice || 0,
+                            quantity: item.quantity
+                        };
+                    });
 
                     setCartItems(processedItems);
 
                     // Load images in background
-                    loadProductImages(cart.items);
+                    loadProductImages(processedItems);
                 } else {
                     setCartItems([]);
                 }
@@ -343,13 +411,83 @@ const Cart = () => {
         calculateTotals();
     }, [calculateTotals]);
 
+    // Lấy danh mục và tag khi mount
+    useEffect(() => {
+        async function fetchMeta() {
+            try {
+                const [categoryRes, tagRes] = await Promise.all([
+                    productService.getCategories ? productService.getCategories({ page: 1, limit: 100 }) : [],
+                    productService.getAllTags ? productService.getAllTags({ page: 1, limit: 100 }) : []
+                ]);
+                setCategories(Array.isArray(categoryRes?.data) ? categoryRes.data : []);
+                setTags(Array.isArray(tagRes?.data) ? tagRes.data : []);
+            } catch (err) {
+                setCategories([]);
+                setTags([]);
+            }
+        }
+        fetchMeta();
+    }, []);
+
     return (
         <div className="cart-page">
             <Title level={2} className="page-title">GIỎ HÀNG CỦA BẠN</Title>
-            <Row gutter={[24, 24]}>
+            <Row gutter={[32, 32]}>
                 <Col xs={24} lg={16}>
-                    <Card className="cart-items-card">
-                        <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
+                    <div className="cart-list">
+                        {cartItems.length === 0 ? (
+                            <div className="cart-empty">Giỏ hàng của bạn đang trống.</div>
+                        ) : (
+                            cartItems.map(item => (
+                                <div className="cart-item-card" key={item._id}>
+                                    <img
+                                        src={(() => {
+                                            const product = item.productId;
+                                            if (product.mediaFiles && Array.isArray(product.mediaFiles.images) && product.mediaFiles.images[0]?.path) {
+                                                const path = product.mediaFiles.images[0].path;
+                                                return path.startsWith('http') ? path : `${config.API_BASE_URL}${path}`;
+                                            }
+                                            if (product.media && product.media.mainImage) return product.media.mainImage;
+                                            return '/images/products/default.jpg';
+                                        })()}
+                                        alt={item.productId.basicInformation?.productName || ''}
+                                        className="cart-item-image"
+                                    />
+                                    <div className="cart-item-info">
+                                        <div className="cart-item-title">{item.productId.basicInformation?.productName || ''}</div>
+                                        <div className="cart-item-tags">{(item.productId.basicInformation?.tagIds || []).map(tag => <span key={typeof tag === 'object' ? tag._id : tag} className="tag-item">{typeof tag === 'object' ? tag.name : (tags.find(t => t._id === tag)?.name || 'Không tag')}</span>)}</div>
+                                        <div className="cart-item-category">{(item.productId.basicInformation?.categoryIds || []).map(cat => typeof cat === 'object' ? cat.name : (categories.find(c => c._id === cat)?.name || 'Không phân loại')).join(', ')}</div>
+                                        <div className="cart-item-price">
+                                            {item.productId.pricingAndInventory?.salePrice?.toLocaleString('vi-VN')} VNĐ
+                                            {item.productId.pricingAndInventory?.originalPrice > item.productId.pricingAndInventory?.salePrice && (
+                                                <span className="original-price">{item.productId.pricingAndInventory?.originalPrice.toLocaleString('vi-VN')} VNĐ</span>
+                                            )}
+                                        </div>
+                                        <div className="cart-item-qty">
+                                            <InputNumber
+                                                min={1}
+                                                max={item.productId.pricingAndInventory?.stockQuantity || 0}
+                                                value={item.quantity}
+                                                onChange={value => handleQuantityChange(value, item._id)}
+                                                style={{ width: 90 }}
+                                            />
+                                            <Button danger icon={<DeleteOutlined />} onClick={() => handleDelete(item._id)} />
+                                        </div>
+                                        <div className="cart-item-status">
+                                            <span className={`status-badge status-${(item.productId.basicInformation?.status || '').replace(/\s/g, '').toLowerCase()}`}>{item.productId.basicInformation?.status || 'N/A'}</span>
+                                            {item.productId.pricingAndInventory?.stockQuantity > 0 ? (
+                                                <span className="in-stock" style={{ marginLeft: 8 }}>Còn {item.productId.pricingAndInventory.stockQuantity} {item.productId.pricingAndInventory.unit || ''}</span>
+                                            ) : (
+                                                <span className="out-of-stock" style={{ marginLeft: 8 }}>Hết hàng</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                    {cartItems.length > 0 && (
+                        <div style={{ marginTop: 24, display: 'flex', gap: 8 }}>
                             <Button danger onClick={handleDeleteSelected} disabled={selectedRowKeys.length === 0}>
                                 Xóa sản phẩm đã chọn
                             </Button>
@@ -357,25 +495,7 @@ const Cart = () => {
                                 Xóa tất cả
                             </Button>
                         </div>
-                        <Table
-                            columns={columns}
-                            dataSource={cartItems}
-                            rowKey="_id"
-                            pagination={false}
-                            summary={pageData => {
-                                return (
-                                    <Table.Summary.Row>
-                                        <Table.Summary.Cell index={0} colSpan={4} align="right">
-                                            <Text strong>Tổng phụ:</Text>
-                                        </Table.Summary.Cell>
-                                        <Table.Summary.Cell index={1} colSpan={2} align="left">
-                                            <Text strong>{subtotal.toLocaleString('vi-VN')} VNĐ</Text>
-                                        </Table.Summary.Cell>
-                                    </Table.Summary.Row>
-                                );
-                            }}
-                        />
-                    </Card>
+                    )}
                 </Col>
                 <Col xs={24} lg={8}>
                     <CartSummary

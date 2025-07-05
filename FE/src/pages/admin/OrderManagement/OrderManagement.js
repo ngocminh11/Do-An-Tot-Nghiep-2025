@@ -133,27 +133,24 @@ const OrderManagement = () => {
         try {
             const { orderId, newStatus } = pendingStatusChange;
             console.log('Submitting PIN for order:', orderId, 'new status:', newStatus);
-            
             await orderService.updateOrderStatus(orderId, {
                 status: newStatus,
                 pin: values.pin
             });
-            
             message.success('Cập nhật trạng thái thành công');
             setIsPinModalVisible(false);
             pinForm.resetFields();
             setPendingStatusChange(null);
             fetchOrders();
         } catch (error) {
-            console.log('PIN submit error:', error?.response?.data);
-            const msg = error?.response?.data?.message?.toLowerCase() || '';
-            
+            console.log('PIN submit error:', error, error?.response?.data);
+            const msg = error?.response?.data?.message?.toLowerCase() || error?.message || '';
             if (msg.includes('pin') || msg.includes('không chính xác') || msg.includes('thiếu mã pin')) {
                 message.error('Mã PIN không đúng hoặc thiếu. Vui lòng nhập lại!');
                 // Không đóng modal, để user nhập lại
             } else {
                 setIsPinModalVisible(false);
-                message.error(error.response?.data?.message || 'Không thể cập nhật trạng thái');
+                message.error(error?.response?.data?.message || error?.message || 'Không thể cập nhật trạng thái');
             }
         }
     };
@@ -267,8 +264,8 @@ const OrderManagement = () => {
                     >
                         Xuất Excel
                     </Button>
-                    <Button 
-                        type="dashed" 
+                    <Button
+                        type="dashed"
                         onClick={() => {
                             console.log('Test PIN modal button clicked');
                             setIsPinModalVisible(true);

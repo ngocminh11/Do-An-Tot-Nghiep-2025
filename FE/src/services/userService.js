@@ -95,5 +95,8 @@ export const userAPI = {
     loginDirect: async (email, password, accessToken) => {
         const res = await api.post('/login-direct', { email, password, accessToken });
         return res.data.data; // { user, accessToken, refreshToken, role }
-    }
+    },
+    // Alias cho đăng ký (register)
+    sendRegisterOTP: async (email) => userAPI.sendOTP(email),
+    verifyRegisterOTP: async (otpToken, otp) => userAPI.verifyOTP(otpToken, otp),
 }; 

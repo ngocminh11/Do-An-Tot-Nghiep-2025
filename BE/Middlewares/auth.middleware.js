@@ -17,23 +17,19 @@ const ROLE_ENUM = [
 /* =============== AUTHENTICATE ================= */
 exports.authenticateUser = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
-  console.log('[AUTH] Token FE gửi lên:', token);
   if (!token)
     return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, Messages.AUTH_NO_TOKEN);
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('[AUTH] Payload decode:', payload);
     const account = await Account.findById(payload.id).select('-passwordHash');
     if (!account)
       return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, Messages.AUTH_INVALID_TOKEN);
 
     req.user = account;
     req.user.roleFromToken = payload.role;
-    console.log('[AUTH] User:', account.email, 'Role from token:', payload.role, 'Role in DB:', account.role);
     next();
   } catch (err) {
-    console.log('[AUTH] Token verify fail:', err);
     return sendError(res, StatusCodes.ERROR_UNAUTHORIZED, Messages.AUTH_FAILED);
   }
 };
@@ -52,25 +48,19 @@ exports.authorizeRoles = (...allowed) => (req, res, next) => {
     // Chuẩn hóa để so sánh
     const normalizedUserRole = (typeof userRole === 'string' ? userRole : '').trim().toLowerCase();
     
-    // Log chi tiết để debug
-    console.log('[AUTHZ] Debug - Allowed before filter:', allowed);
-    console.log('[AUTHZ] Debug - Allowed types:', allowed?.map(r => ({ value: r, type: typeof r })));
     
     // Flatten array nếu cần (xử lý trường hợp allowed là [[...]])
     const flattenedAllowed = Array.isArray(allowed) ? allowed.flat(Infinity) : allowed;
-    console.log('[AUTHZ] Debug - Flattened allowed:', flattenedAllowed);
     
     const normalizedAllowed = (Array.isArray(flattenedAllowed) ? flattenedAllowed : [])
       .filter(r => {
         const isValid = r && typeof r === 'string';
         if (!isValid) {
-          console.log('[AUTHZ] Debug - Filtered out:', r, 'type:', typeof r);
         }
         return isValid;
       })
       .map(r => r.trim().toLowerCase());
 
-    console.log('[AUTHZ] Role check:', userRole, '| Normalized:', normalizedUserRole, '| Allowed:', allowed, '| Allowed type:', typeof allowed, '| Is array:', Array.isArray(allowed), '| Normalized allowed:', normalizedAllowed);
 
     if (!normalizedAllowed.includes(normalizedUserRole))
       return sendError(res, 403, Messages.ERROR_FORBIDDEN);
@@ -96,7 +86,6 @@ exports.authorizePinRoles = (req, res, next) =>
 
 /* =============== VERIFY OTP TOKEN =============== */
 exports.verifyOTPToken = (req, res, next) => {
-  console.log('HEADER AUTH:', req.headers.authorization);
   const token = req.headers.authorization?.split(' ')[1];
   if (!token)
     return sendError(res, 401, Messages.AUTH_NO_TOKEN);

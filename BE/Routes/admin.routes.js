@@ -28,7 +28,7 @@ const dashboardCtrl = require('../Controllers/dashboard.controller');
 const storageCtrl = require('../Controllers/StorageController');
 
 /* ==== Middlewares ==== */
-const validateImageUpload = require('../Middlewares/upload.middleware');
+const { validateImageUpload, optionalImageUpload } = require('../Middlewares/upload.middleware');
 const { authenticateUser, authorizeRoles } = require('../Middlewares/auth.middleware');
 
 /* ---- Helper ---- */
@@ -66,7 +66,7 @@ router.post('/products',
 
 router.put('/products/:id',
   authenticateUser, authorizeRoles(...['Quản Lý Kho', 'Quản Lý Chính']),
-  validateImageUpload,
+  optionalImageUpload,
   productCtrl.updateProduct);
 
 router.delete('/products/:id',

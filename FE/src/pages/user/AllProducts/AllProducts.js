@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Row, Col, Card, Input, Select, Button, Rate, Pagination } from 'antd';
 import { SearchOutlined, FilterOutlined } from '@ant-design/icons';
-import { productService, getAllProductsUser, getImageByIdUser, getProductsByCategoryUser } from '../../../services/productService';
+import { productService, getAllProductsUser, getImageByIdUser, getProductsByCategoryUser, normalizeProductUser } from '../../../services/productService';
 import categoryService from '../../../services/categoryService';
 import commentService from '../../../services/commentService';
+import tagService from '../../../services/tagService';
 import './AllProducts.scss';
 import { useNavigate } from 'react-router-dom';
 import config from '../../../config';
@@ -50,64 +51,48 @@ const debugProductStructure = (product, categories) => {
 };
 
 // Memoized Product Card Component
-const ProductCard = React.memo(({ product, categories, imageUrl, productRatings, onProductClick }) => {
+const ProductCard = React.memo(({ product, categories, tags, imageUrl, productRatings, onProductClick }) => {
     const productName = useMemo(() =>
-        product.name || product.basicInformation?.productName || '',
-        [product.name, product.basicInformation?.productName]
+        product.basicInformation?.productName || product.name || '',
+        [product]
     );
-
     const productImage = useMemo(() => {
         if (imageUrl) {
             return imageUrl;
-        } else if (Array.isArray(product.imageUrls) && product.imageUrls[0]) {
-            return product.imageUrls[0];
-        } else if (product.media && product.media.mainImage) {
-            return product.media.mainImage;
         } else if (product.mediaFiles && Array.isArray(product.mediaFiles.images) && product.mediaFiles.images[0]?.path) {
-            return product.mediaFiles.images[0].path;
+            const path = product.mediaFiles.images[0].path;
+            return path.startsWith('http') ? path : `${config.API_BASE_URL}${path}`;
         } else {
             return '/images/products/default.jpg';
         }
     }, [product, imageUrl]);
-
-    const categoryName = useMemo(() => {
-        // Chuẩn hóa lấy categoryId dạng string
-        let productCategoryId = getProductCategoryId(product);
-        if (typeof productCategoryId === 'object' && productCategoryId !== null) {
-            productCategoryId = productCategoryId._id || productCategoryId.id || '';
-        }
-        if (Array.isArray(productCategoryId)) {
-            productCategoryId = productCategoryId[0]?._id || productCategoryId[0]?.id || productCategoryId[0] || '';
-        }
-        if (typeof productCategoryId !== 'string') {
-            productCategoryId = String(productCategoryId || '');
-        }
-        // Tìm category theo _id
-        const cat = categories.find(c => String(c._id) === productCategoryId);
-        return cat ? cat.name : 'Không phân loại';
-    }, [categories, product]);
-
-    // === GIÁ TIỀN ===
+    const categoryNames = useMemo(() => {
+        if (!Array.isArray(product.basicInformation?.categoryIds)) return [];
+        return product.basicInformation.categoryIds.map(cat =>
+            typeof cat === 'object' ? cat.name : (categories.find(c => c._id === cat)?.name || 'Không phân loại')
+        );
+    }, [product, categories]);
+    const tagNames = useMemo(() => {
+        if (!Array.isArray(product.basicInformation?.tagIds)) return [];
+        return product.basicInformation.tagIds.map(tag =>
+            typeof tag === 'object' ? tag.name : (tags.find(t => t._id === tag)?.name || 'Không tag')
+        );
+    }, [product, tags]);
     const priceInfo = useMemo(() => {
         const originalPrice = product.pricingAndInventory?.originalPrice || product.price || 0;
         const salePrice = product.pricingAndInventory?.salePrice || product.price || 0;
         const discount = originalPrice > salePrice ? Math.round(((originalPrice - salePrice) / originalPrice) * 100) : 0;
         return { originalPrice, salePrice, discount };
     }, [product]);
-
     const description = useMemo(() => {
         const desc = typeof product.description === 'string'
             ? product.description
             : (product.description?.shortDescription || product.basicInformation?.description || '');
         return desc.length > 80 ? desc.slice(0, 80) + '...' : desc;
-    }, [product.description, product.basicInformation?.description]);
-
-    // Get rating data from productRatings
+    }, [product]);
     const ratingData = useMemo(() => {
         return productRatings[product._id] || { averageRating: 0, totalReviews: 0 };
     }, [productRatings, product._id]);
-
-    // Format rating display
     const ratingDisplay = useMemo(() => {
         const { averageRating, totalReviews } = ratingData;
         if (totalReviews === 0) {
@@ -118,7 +103,6 @@ const ProductCard = React.memo(({ product, categories, imageUrl, productRatings,
             text: `${averageRating.toFixed(1)} (${totalReviews} đánh giá)`
         };
     }, [ratingData]);
-
     return (
         <Col xs={24} sm={12} md={8} lg={6}>
             <Card
@@ -138,7 +122,8 @@ const ProductCard = React.memo(({ product, categories, imageUrl, productRatings,
                     title={productName}
                     description={
                         <>
-                            <div className="category">{categoryName}</div>
+                            <div className="category">{categoryNames.join(', ')}</div>
+                            <div className="tags">{tagNames.map(name => <span key={name} className="tag-item">{name}</span>)}</div>
                             <div className="price">
                                 {priceInfo.salePrice.toLocaleString('vi-VN')} VNĐ
                                 {priceInfo.discount > 0 && (
@@ -164,6 +149,16 @@ const ProductCard = React.memo(({ product, categories, imageUrl, productRatings,
                                 </span>
                             </div>
                             <div className="short-desc">{description}</div>
+                            <div className="stock-status">
+                                {product.pricingAndInventory?.stockQuantity > 0 ? (
+                                    <span className="in-stock">Còn {product.pricingAndInventory.stockQuantity} {product.pricingAndInventory.unit || ''}</span>
+                                ) : (
+                                    <span className="out-of-stock">Hết hàng</span>
+                                )}
+                            </div>
+                            <div className="status">
+                                <span className={`status-badge status-${(product.basicInformation?.status || '').replace(/\s/g, '').toLowerCase()}`}>{product.basicInformation?.status || 'N/A'}</span>
+                            </div>
                         </>
                     }
                 />
@@ -185,6 +180,7 @@ const AllProducts = () => {
     const [imageUrls, setImageUrls] = useState({});
     const [productRatings, setProductRatings] = useState({});
     const [categoryProducts, setCategoryProducts] = useState({}); // Cache sản phẩm theo danh mục
+    const [tags, setTags] = useState([]);
     const navigate = useNavigate();
     const isMountedRef = useRef(true);
 
@@ -425,26 +421,27 @@ const AllProducts = () => {
         async function fetchData() {
             setLoading(true);
             try {
-                const [productRes, categoryRes] = await Promise.all([
+                const [productRes, categoryRes, tagRes] = await Promise.all([
                     getAllProductsUser({ page: 1, limit: 100 }),
-                    categoryService.getCategories({ page: 1, limit: 100 })
+                    categoryService.getCategories({ page: 1, limit: 100 }),
+                    tagService.getAllTags({ page: 1, limit: 100 })
                 ]);
-                const products = Array.isArray(productRes?.data?.data) ? productRes.data.data :
-                    Array.isArray(productRes?.data) ? productRes.data : [];
-                const categories = Array.isArray(categoryRes?.data) ? categoryRes.data : [];
-                if (isMountedRef.current) {
-                    setProducts(products);
-                    setCategories(categories);
-                    if (products.length > 0) {
-                        await Promise.all([
-                            loadProductRatings(products)
-                        ]);
-                    }
+                // Chuẩn hóa sản phẩm
+                const productsRaw = Array.isArray(productRes?.data?.data) ? productRes.data.data : [];
+                const products = productsRaw.map(normalizeProductUser).filter(Boolean);
+                setProducts(products);
+                setCategories(Array.isArray(categoryRes?.data) ? categoryRes.data : []);
+                setTags(Array.isArray(tagRes?.data) ? tagRes.data : []);
+                if (products.length > 0) {
+                    await Promise.all([
+                        loadProductRatings(products)
+                    ]);
                 }
             } catch (err) {
                 if (isMountedRef.current) {
                     setProducts([]);
                     setCategories([]);
+                    setTags([]);
                 }
             } finally {
                 if (isMountedRef.current) {
@@ -524,6 +521,7 @@ const AllProducts = () => {
                             key={product._id}
                             product={product}
                             categories={categories}
+                            tags={tags}
                             imageUrl={imageUrls[product._id]}
                             productRatings={productRatings}
                             onProductClick={handleProductClick}

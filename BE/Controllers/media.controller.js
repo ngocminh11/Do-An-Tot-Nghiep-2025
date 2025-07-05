@@ -13,6 +13,10 @@ exports.streamImageById = async (req, res) => {
     }
 
     res.set('Content-Type', files[0].contentType);
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
     const downloadStream = bucket.openDownloadStream(fileId);
     downloadStream.pipe(res);
   } catch (error) {

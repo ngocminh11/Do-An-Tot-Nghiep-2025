@@ -50,8 +50,19 @@ const { Option } = Select;
 const { Title, Text } = Typography;
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
+// Hàm lấy URL ảnh sản phẩm an toàn
+function getSafeProductImageUrl(productData) {
+  const mainImagePath = productData?.detail?.mediaFiles?.images?.[0]?.path;
+  return mainImagePath
+    ? (mainImagePath.startsWith('http') ? mainImagePath : `${API_URL}${mainImagePath}`)
+    : '/images/products/default.jpg';
+}
+
 const ProductCard = ({ product, imageUrl, categories, onEdit, onDelete, onInventory, onChangeStatus, onShowLogs }) => {
-  const mainImage = product.mediaFiles?.images?.[0];
+  const mainImagePath = product?.mediaFiles?.images?.[0]?.path;
+  const computedImageUrl = mainImagePath
+    ? (mainImagePath.startsWith('http') ? mainImagePath : `${API_URL}${mainImagePath}`)
+    : '/images/products/default.jpg';
   const statusConfig = {
     'Hiển Thị': { color: 'green', text: 'Hiển Thị' },
     'Ẩn': { color: 'orange', text: 'Ẩn' },
@@ -66,10 +77,10 @@ const ProductCard = ({ product, imageUrl, categories, onEdit, onDelete, onInvent
   return (
     <AntCard
       className="product-card"
-      cover={mainImage ? (
+      cover={mainImagePath ? (
         <Image
-          src={getProductMainImageUrl(product)}
-          alt={mainImage.filename || 'Ảnh sản phẩm'}
+          src={computedImageUrl}
+          alt={product?.mediaFiles?.images?.[0]?.filename || 'Ảnh sản phẩm'}
           width={180}
           height={180}
           style={{ objectFit: 'cover', borderRadius: 8, margin: 'auto', marginTop: 12 }}
@@ -266,7 +277,8 @@ const ProductManagement = () => {
       }
       if (imgPath && !imageUrls[product._id]) {
         try {
-          const blob = await productService.getImageById(imgPath.replace('/media/', ''));
+          const imageId = imgPath.split('/').pop();
+          const blob = await productService.getImageById(imageId);
           const objectUrl = URL.createObjectURL(blob);
           setImageUrls(prev => ({ ...prev, [product._id]: objectUrl }));
         } catch (e) {
@@ -562,15 +574,6 @@ const ProductManagement = () => {
             >
               Thêm sản phẩm
             </Button>
-            <Button
-              type="default"
-              icon={<PlusSquareOutlined />}
-              onClick={handleInventoryClick}
-              className="inventory-import-btn"
-              size="large"
-            >
-              Nhập kho
-            </Button>
           </div>
         </div>
 
@@ -666,7 +669,7 @@ const ProductManagement = () => {
                   <Col xs={24} sm={12} md={8} lg={6} xl={6} key={product._id}>
                     <ProductCard
                       product={product}
-                      imageUrl={imageUrls[product._id]}
+                      imageUrl={getSafeProductImageUrl(product)}
                       categories={categories}
                       onEdit={() => navigate(`/admin/products/${product._id}`)}
                       onDelete={() => handleDelete(product._id)}

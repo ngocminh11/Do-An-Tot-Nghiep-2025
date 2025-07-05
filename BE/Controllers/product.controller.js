@@ -71,8 +71,6 @@ exports.getAllProducts = async (req, res) => {
       .lean();
     const ids = products.map(p => p.detailId);
     const details = await ProductDetail.find({ _id: { $in: ids } }).lean();
-    console.log('Detail IDs:', ids);
-    console.log('Details found:', details);
     const map = Object.fromEntries(details.map(d => [d._id.toString(), d]));
     const combined = products.map(p => combineProductAndDetail(p, map[p.detailId?.toString()] || null));
     return sendSuccess(res, StatusCodes.SUCCESS_OK, {
@@ -121,7 +119,6 @@ exports.createProduct = async (req, res) => {
     const seo = parseJSON(req.body, 'seo');
     const pol = parseJSON(req.body, 'policy');
     const batchCode = req.body.batchCode;
-    console.log(req.body, "basicInformation");
     // Validate trường bắt buộc
     if (!bi.productName || !bi.sku) {
       return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.PRODUCT_NAME_REQUIRED);
@@ -223,6 +220,7 @@ exports.updateProduct = async (req, res) => {
   if (!isValidId(id))
     return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.INVALID_ID);
   try {
+    // Parse dữ liệu
     const bi = parseJSON(req.body, 'basicInformation');
     const piv = parseJSON(req.body, 'pricingAndInventory');
     const desc = parseJSON(req.body, 'description');
@@ -230,6 +228,29 @@ exports.updateProduct = async (req, res) => {
     const seo = parseJSON(req.body, 'seo');
     const pol = parseJSON(req.body, 'policy');
     const batchCode = req.body.batchCode;
+    // Thêm log chi tiết để debug
+    console.log('updateProduct - id:', id);
+    console.log('bi:', bi);
+    console.log('piv:', piv);
+    console.log('desc:', desc);
+    console.log('tech:', tech);
+    console.log('seo:', seo);
+    console.log('pol:', pol);
+    console.log('batchCode:', batchCode);
+    // Validate trường bắt buộc
+    if (!bi.productName || !bi.sku) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, Messages.PRODUCT_NAME_REQUIRED);
+    }
+    if (!Array.isArray(bi.tagIds) || bi.tagIds.length === 0) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Vui lòng chọn ít nhất một tag!');
+    }
+    if (!Array.isArray(bi.categoryIds) || bi.categoryIds.length === 0) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Vui lòng chọn ít nhất một danh mục!');
+    }
+    if (!piv || piv.originalPrice == null || piv.salePrice == null || piv.stockQuantity == null || !piv.unit) {
+      return sendError(res, StatusCodes.ERROR_BAD_REQUEST, 'Vui lòng nhập đầy đủ thông tin giá và tồn kho!');
+    }
+
     // Đảm bảo các trường mảng trong detail là mảng
     if (desc) {
       if (!Array.isArray(desc.features)) desc.features = desc.features ? [desc.features] : [];
@@ -250,18 +271,56 @@ exports.updateProduct = async (req, res) => {
       if (!Array.isArray(pol.shippingReturnWarranty)) pol.shippingReturnWarranty = pol.shippingReturnWarranty ? [pol.shippingReturnWarranty] : [];
       if (!Array.isArray(pol.additionalOptions)) pol.additionalOptions = pol.additionalOptions ? [pol.additionalOptions] : [];
     }
+
+    // Xử lý file ảnh từ GridFS (nếu có upload mới)
+    let images = undefined;
+    if (req.uploadedImages && req.uploadedImages.length > 0) {
+      images = req.uploadedImages.map(file => ({
+        _id: file._id,
+        filename: file.filename,
+        mimetype: file.contentType,
+        path: `/admin/media/${file._id}`
+      }));
+    }
+
+    // Cập nhật bảng Products
     await Product.findByIdAndUpdate(id, { basicInformation: bi });
+
+    // Cập nhật bảng ProductDetail
     const product = await Product.findOne({ _id: id, isDeleted: false }).lean();
     if (product && product.detailId) {
-      await ProductDetail.findByIdAndUpdate(product.detailId, {
+      const updateDetail = {
         pricingAndInventory: piv,
         description: desc,
         technicalDetails: tech,
         seo: seo,
         policy: pol,
         batchCode: batchCode
-      });
+      };
+      if (images) {
+        updateDetail.mediaFiles = { images };
+      }
+      await ProductDetail.findByIdAndUpdate(product.detailId, updateDetail);
     }
+
+    // Ghi log cập nhật
+    await ProductLog.create({
+      productId: id,
+      action: 'UPDATE',
+      operatorId: req.user?._id,
+      payload: {
+        basicInformation: bi,
+        pricingAndInventory: piv,
+        description: desc,
+        technicalDetails: tech,
+        seo: seo,
+        policy: pol,
+        batchCode,
+        ...(images ? { mediaFiles: { images } } : {})
+      }
+    });
+
+    // Trả về sản phẩm đã cập nhật
     const updatedProduct = await Product.findOne({ _id: id, isDeleted: false })
       .populate('basicInformation.categoryIds', 'name')
       .populate('basicInformation.tagIds', 'name')
@@ -280,6 +339,7 @@ exports.updateProduct = async (req, res) => {
     }
     const code = err.message.includes('PIN') ? StatusCodes.ERROR_UNAUTHORIZED
       : StatusCodes.ERROR_BAD_REQUEST;
+    console.error('Error updating product:', err, err.response?.data);
     return sendError(res, code, err.message);
   }
 };
